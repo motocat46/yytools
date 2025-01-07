@@ -27,6 +27,7 @@ import (
 	"github.com/stormYuanYang/yytools/datastructure/queue"
 	"github.com/stormYuanYang/yytools/datastructure/sorted_set"
 	"github.com/stormYuanYang/yytools/datastructure/stack"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -42,6 +43,11 @@ type Command struct {
 
 var commands []*Command
 func init() {
+	commands = append(commands, &Command{
+		Key:     "http",
+		Note:    "可视化",
+		Handler: nil,
+	})
 	commands = append(commands, &Command{
 		Key:     "heap",
 		Note:    "最小堆",
@@ -116,6 +122,15 @@ func main() {
 		fmt.Printf("%-20s\t说明:执行所有命令\n", "all")
 		for i := 0; i < len(commands); i++ {
 			fmt.Printf("%-20s\t说明:%s\n", commands[i].Key, commands[i].Note)
+		}
+		return
+	}
+	
+	if command == "http" {
+		http.HandleFunc("/", graphHttpServer)
+		err := http.ListenAndServe(":8081", nil)
+		if err != nil {
+			panic(err)
 		}
 		return
 	}

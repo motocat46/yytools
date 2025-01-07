@@ -23,6 +23,8 @@ import (
 	"github.com/stormYuanYang/yytools/datastructure/stack"
 )
 
+const maxInsertion = 12
+
 func QuickSort[T base.Integer](arr []T) {
 	quickSort(arr, 0, len(arr))
 }
@@ -47,7 +49,7 @@ func quickSortTraversal[T base.Integer](arr []T, start, end int) {
 	s.Push(&StackData{Start: start, End: end})
 	for !s.Empty() {
 		tmp := s.Pop()
-		if tmp.End-tmp.Start < 10 {
+		if tmp.End-tmp.Start <= maxInsertion {
 			// 元素较少时，插入排序的效率是很高的
 			insertionSort(arr, tmp.Start, tmp.End)
 			continue
@@ -63,7 +65,7 @@ func quickSort[T base.Integer](arr []T, start, end int) {
 	if end <= start+1 {
 		return
 	}
-	if end-start < 10 {
+	if end-start <= maxInsertion {
 		// 元素较少时，插入排序的效率是很高的
 		// 元素较少时采用插入排序,减小快排的递归深度
 		insertionSort(arr, start, end)
@@ -118,7 +120,7 @@ func quickSortDescTraversal[T base.Integer](arr []T, start, end int) {
 	s.Push(&StackData{Start: start, End: end})
 	for !s.Empty() {
 		tmp := s.Pop()
-		if tmp.End-tmp.Start < 10 {
+		if tmp.End-tmp.Start <= maxInsertion {
 			// 元素较少时，插入排序的效率是很高的
 			insertionSortDesc(arr, tmp.Start, tmp.End)
 			continue
@@ -131,7 +133,7 @@ func quickSortDescTraversal[T base.Integer](arr []T, start, end int) {
 }
 
 func quickSortDesc[T base.Integer](arr []T, start, end int) {
-	if end-start < 10 {
+	if end-start <= maxInsertion {
 		// 元素较少时，插入排序的效率是很高的
 		// 元素较少时采用插入排序,减小快排的递归深度
 		insertionSortDesc(arr, start, end)
