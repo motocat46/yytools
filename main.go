@@ -108,6 +108,8 @@ func testAll(num int) {
 }
 
 func main() {
+	assert.SetAssert(true)
+	
 	// 第一个参数是可执行文件本身的路径
 	// 后续的参数是通过控制台传递的参数
 	args := os.Args[1:]
@@ -141,7 +143,6 @@ func main() {
 		return
 	}
 	
-	assert.SetAssert(true)
 	
 	if command == "all" {
 		testAll(num)
