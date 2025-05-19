@@ -18,11 +18,11 @@
 package sorted_set
 
 import (
-	"fmt"
-	"github.com/stormYuanYang/yytools/algorithm/math_tools/probability_distribution"
-	random2 "github.com/stormYuanYang/yytools/algorithm/math_tools/random"
-	"github.com/stormYuanYang/yytools/common/assert"
-	"time"
+    "fmt"
+    "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/probability_distribution"
+    random2 "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
+    "github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
+    "time"
 )
 
 var uniq = int64(0)

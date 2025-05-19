@@ -19,14 +19,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/stormYuanYang/yytools/algorithm/math_tools"
-	"github.com/stormYuanYang/yytools/algorithm/math_tools/probability_distribution"
-	"github.com/stormYuanYang/yytools/algorithm/sort"
-	"github.com/stormYuanYang/yytools/common/assert"
 	"github.com/stormYuanYang/yytools/datastructure/heap"
 	"github.com/stormYuanYang/yytools/datastructure/queue"
 	"github.com/stormYuanYang/yytools/datastructure/sorted_set"
 	"github.com/stormYuanYang/yytools/datastructure/stack"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/probability_distribution"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/sort"
+	"github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,7 +56,7 @@ func init() {
 	commands = append(commands, &Command{
 		Key:     "mathcommon",
 		Note:    "公共数学方法（比如gcd）",
-		Handler: math_tools.MathCommonTest,
+		Handler: mathutils.MathCommonTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "maxheap",

@@ -18,10 +18,10 @@
 package queue
 
 import (
-	"fmt"
-	"github.com/stormYuanYang/yytools/algorithm/math_tools/random"
-	"github.com/stormYuanYang/yytools/common/assert"
-	"time"
+    "fmt"
+    "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
+    "github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
+    "time"
 )
 
 // 用单调递增的变量来表示元素的顺序

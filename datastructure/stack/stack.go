@@ -20,7 +20,7 @@
 package stack
 
 import (
-	"github.com/stormYuanYang/yytools/common/assert"
+    "github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
 )
 
 type IStack[T any] interface {

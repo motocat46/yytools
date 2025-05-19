@@ -1,6 +1,26 @@
 # yytools
 提供一些工具方法和数据结构，方便日常使用。
 目录结构大致为:
+yytools/
+├── cmd/                   # 可执行程序入口（如果有）
+├── internal/              # 内部基础工具库（assert, common, timeutil等）
+├── pkg/                   # 核心功能模块
+│   ├── algorithms/        # 算法模块
+│   │   ├── concrete/      # 普通类型版
+│   │   └── generic/       # 泛型版
+│   ├── datastructures/    # 数据结构模块
+│   │   ├── concrete/
+│   │   └── generic/
+│   ├── concurrency/       # 并发控制模块
+│   │   ├── concrete/
+│   │   └── generic/
+│   ├── gameutils/         # 游戏业务常见功能
+│   │   ├── concrete/
+│   │   └── generic/
+├── examples/              # 示例代码
+├── tests/                 # 集成测试、基准测试
+└── README.md              # 项目总览文档
+
 
 algorithm —— 提供算法相关的方法 
 

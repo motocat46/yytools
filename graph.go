@@ -22,8 +22,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
-	"github.com/stormYuanYang/yytools/algorithm/math_tools/random"
-	"github.com/stormYuanYang/yytools/algorithm/sort"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
+	sort2 "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/sort"
 	"net/http"
 	syssort "sort"
 	"time"
@@ -106,22 +106,22 @@ func createLine() *charts.Line {
 
 		copy(auxArr, arr)
 		start = time.Now().UnixNano()
-		sort.QuickSort(auxArr)
+		sort2.QuickSort(auxArr)
 		end = time.Now().UnixNano()
 		duration = (end - start) / 1e6
 		quickSortInfo.CostMs = append(quickSortInfo.CostMs, duration)
 
 		copy(auxArr, arr)
 		start = time.Now().UnixNano()
-		sort.CountingSort(auxArr)
+		sort2.CountingSort(auxArr)
 		end = time.Now().UnixNano()
 		duration = (end - start) / 1e6
 		coutingSortInfo.CostMs = append(coutingSortInfo.CostMs, duration)
 
 		// copy(auxArr, arr)
-		// start = time.Now().UnixNano()
+		// start = timeutils.Now().UnixNano()
 		// sort.QuickSortTraversal(auxArr)
-		// end = time.Now().UnixNano()
+		// end = timeutils.Now().UnixNano()
 		// duration = (end - start) / 1e6
 		// quickSortTraversalInfo.CostMs = append(quickSortTraversalInfo.CostMs, duration)
 
@@ -142,7 +142,7 @@ func createLine() *charts.Line {
 			Title: "排序",
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
-			Name: "Cost time(ms)",
+			Name: "Cost timeutils(ms)",
 			SplitLine: &opts.SplitLine{
 				Show: opts.Bool(true),
 			},
