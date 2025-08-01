@@ -22,83 +22,81 @@ import (
 )
 
 func TestRandInt32(t *testing.T) {
-	type args struct {
-		low  int32
-		high int32
-	}
-	tests := []struct {
-		name string
-		args args
-		want int32
-	}{
-		// TODO: Add test cases.
-		{
-			name: "边界情况测试1",
-			args: args{
-				low:  0,
-				high: 0,
-			},
-			want: 0,
-		},
-		{
-			name: "边界情况测试2",
-			args: args{
-				low:  math.MaxInt32,
-				high: math.MaxInt32,
-			},
-			want: math.MaxInt32,
-		},
-		//{
-		//	name: "测试3",
-		//	args: args{
-		//		low:  -1,
-		//		high: mathutils.MaxInt32,
-		//	},
-		//	want: mathutils.MaxInt32,
-		//},
-		{
-			name: "测试4",
-			args: args{
-				low:  1,
-				high: math.MaxInt32,
-			},
-			want: 0,
-		},
-		{
-			name: "测试5",
-			args: args{
-				low:  0,
-				high: math.MaxInt32,
-			},
-			want: 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := RandInt32(tt.args.low, tt.args.high); got != tt.want {
-				t.Errorf("RandInt32() = %v, want %v", got, tt.want)
+	// 测试相等边界情况
+	t.Run("相等边界", func(t *testing.T) {
+		result := RandInt32(5, 5)
+		if result != 5 {
+			t.Errorf("RandInt32(5, 5) = %v, want 5", result)
+		}
+	})
+	
+	// 测试最大值边界
+	t.Run("最大值边界", func(t *testing.T) {
+		result := RandInt32(math.MaxInt32, math.MaxInt32)
+		if result != math.MaxInt32 {
+			t.Errorf("RandInt32(MaxInt32, MaxInt32) = %v, want %v", result, math.MaxInt32)
+		}
+	})
+	
+	// 测试范围验证
+	t.Run("范围验证", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
+			low, high := int32(1), int32(10)
+			result := RandInt32(low, high)
+			if result < low || result > high {
+				t.Errorf("RandInt32(%d, %d) = %d, 超出范围 [%d, %d]", low, high, result, low, high)
 			}
-		})
-	}
+		}
+	})
+	
+	// 测试参数交换
+	t.Run("参数自动交换", func(t *testing.T) {
+		for i := 0; i < 50; i++ {
+			result := RandInt32(10, 1) // high < low，应该自动交换
+			if result < 1 || result > 10 {
+				t.Errorf("RandInt32(10, 1) = %d, 超出交换后范围 [1, 10]", result)
+			}
+		}
+	})
+	
+	// 测试大范围（包括原来的边界情况）
+	t.Run("大范围测试", func(t *testing.T) {
+		for i := 0; i < 50; i++ {
+			result := RandInt32(0, math.MaxInt32)
+			if result < 0 {
+				t.Errorf("RandInt32(0, MaxInt32) = %d, 不应该为负数", result)
+			}
+		}
+	})
 }
 
 func TestRandInt64(t *testing.T) {
-	type args struct {
-		low  int64
-		high int64
-	}
-	tests := []struct {
-		name string
-		args args
-		want int64
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := RandInt64(tt.args.low, tt.args.high); got != tt.want {
-				t.Errorf("RandInt64() = %v, want %v", got, tt.want)
+	// 测试相等边界情况
+	t.Run("相等边界", func(t *testing.T) {
+		result := RandInt64(100, 100)
+		if result != 100 {
+			t.Errorf("RandInt64(100, 100) = %v, want 100", result)
+		}
+	})
+	
+	// 测试范围验证
+	t.Run("范围验证", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
+			low, high := int64(1), int64(1000)
+			result := RandInt64(low, high)
+			if result < low || result > high {
+				t.Errorf("RandInt64(%d, %d) = %d, 超出范围 [%d, %d]", low, high, result, low, high)
 			}
-		})
-	}
+		}
+	})
+	
+	// 测试大范围
+	t.Run("大范围测试", func(t *testing.T) {
+		for i := 0; i < 50; i++ {
+			result := RandInt64(0, math.MaxInt64)
+			if result < 0 {
+				t.Errorf("RandInt64(0, MaxInt64) = %d, 不应该为负数", result)
+			}
+		}
+	})
 }

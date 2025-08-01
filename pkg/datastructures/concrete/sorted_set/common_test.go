@@ -47,12 +47,12 @@ func Test_randomLevel(t *testing.T) {
 		//	want: 1,
 		//},
 		{
-			name: "测试3",
+			name: "边界测试_概率为0",
 			args: args{
 				maxLevel:           SKIPLIST_MAXLEVEL,
-				levelUpProbability: 1.1,
+				levelUpProbability: 0.0,
 			},
-			want: 1,
+			want: 1, // 概率为0时，level应该始终为1
 		},
 	}
 	for _, tt := range tests {
@@ -62,4 +62,15 @@ func Test_randomLevel(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 测试无效参数的断言行为
+func Test_randomLevel_InvalidParams(t *testing.T) {
+	// 测试断言开启时无效参数会panic
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("期望无效概率参数会触发panic，但没有发生")
+		}
+	}()
+	randomLevel(1.1) // 超出范围的概率值应该触发断言
 }

@@ -18,10 +18,10 @@
 package probability_distribution
 
 import (
-	"github.com/stormYuanYang/yytools/datastructure/stack"
-    "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
 	"github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
 	. "github.com/stormYuanYang/yytools/pkg/common/concrete/base"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/generic/stack"
 )
 
 /**
@@ -77,10 +77,10 @@ type IProbDist interface {
 }
 
 /*
-	普通实现 离散分布(利用二分搜索对查找进行优化)
- 	构建时间复杂度:O(n),空间复杂度O(n)
-	生成时间复杂度:O(logn)
-	比起vose's alias method效率要低一些（但实现要简单很多，也更容易理解）
+		普通实现 离散分布(利用二分搜索对查找进行优化)
+	 	构建时间复杂度:O(n),空间复杂度O(n)
+		生成时间复杂度:O(logn)
+		比起vose's alias method效率要低一些（但实现要简单很多，也更容易理解）
 */
 type NormalMethod[T Integer] struct {
 	WeightsSum []T // 权重和数组
@@ -162,10 +162,10 @@ func binarySearchInRange[T Integer](tmpList []T, n T) int {
 	if length == 0 {
 		return -1
 	}
-	
+
 	for low, high := 1, length-1; low <= high; {
 		mid := low + (high-low)/2
-		
+
 		if n > tmpList[mid-1] && n <= tmpList[mid] {
 			// 命中
 			return mid
@@ -201,10 +201,10 @@ func NewVoseAliasMethod[T Integer](weights []T) *VoseAliasMethod {
 	n := len(weights)
 	prob := make([]float, n)
 	alias := make([]int, n)
-	
+
 	small := stack.NewStackWithSize[int](n / 2)
 	large := stack.NewStackWithSize[int](n / 2)
-	
+
 	// 初始化概率数组(每个原概率值都乘以n,等比例放大;总体的概率分布是不变的)
 	// 概率值等比例放大后，概率平均值为1，概率总和为n
 	for i := 0; i < n; i++ {
@@ -216,7 +216,7 @@ func NewVoseAliasMethod[T Integer](weights []T) *VoseAliasMethod {
 			large.Push(i)
 		}
 	}
-	
+
 	// 当小概率集合和大概率集合都不为空时，循环处理
 	// 直到有一个集合为空，则结束循环
 	for !small.Empty() && !large.Empty() {
@@ -232,7 +232,7 @@ func NewVoseAliasMethod[T Integer](weights []T) *VoseAliasMethod {
 			large.Push(g) // 下标压入大概率下标集合
 		}
 	}
-	
+
 	// 判断大概率下标集合
 	for !large.Empty() {
 		g := large.Pop() // 得到下标
@@ -247,7 +247,7 @@ func NewVoseAliasMethod[T Integer](weights []T) *VoseAliasMethod {
 		alias[l] = -1    // 对应别名下标(该情况下，没有对应别名所以其下标设置为一个无效的-1)
 	}
 	// 至此，概率数组和别名数组都已构建完成
-	
+
 	ret := &VoseAliasMethod{
 		Prob:  prob,
 		Alias: alias,
@@ -272,7 +272,7 @@ func (this *VoseAliasMethod) Generate() int {
 }
 
 /*
-	工厂模式 可以更方便使用概率分布方法
+工厂模式 可以更方便使用概率分布方法
 */
 type MethodType int32
 

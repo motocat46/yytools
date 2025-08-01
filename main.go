@@ -19,18 +19,19 @@ package main
 
 import (
 	"fmt"
-	"github.com/stormYuanYang/yytools/datastructure/heap"
-	"github.com/stormYuanYang/yytools/datastructure/queue"
-	"github.com/stormYuanYang/yytools/datastructure/sorted_set"
-	"github.com/stormYuanYang/yytools/datastructure/stack"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/probability_distribution"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/sort"
-	"github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/probability_distribution"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/sort"
+	"github.com/stormYuanYang/yytools/pkg/common/concrete/assert"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/concrete/heap"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/concrete/sorted_set"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/generic/queue"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/generic/stack"
 )
 
 var commandsMap = map[string]int{}
@@ -42,6 +43,7 @@ type Command struct {
 }
 
 var commands []*Command
+
 func init() {
 	commands = append(commands, &Command{
 		Key:     "http",
@@ -109,7 +111,7 @@ func testAll(num int) {
 
 func main() {
 	assert.SetAssert(true)
-	
+
 	// 第一个参数是可执行文件本身的路径
 	// 后续的参数是通过控制台传递的参数
 	args := os.Args[1:]
@@ -127,7 +129,7 @@ func main() {
 		}
 		return
 	}
-	
+
 	if command == "http" {
 		http.HandleFunc("/", graphHttpServer)
 		err := http.ListenAndServe(":8081", nil)
@@ -136,14 +138,13 @@ func main() {
 		}
 		return
 	}
-	
+
 	num, err := strconv.Atoi(args[1])
 	if err != nil {
 		fmt.Printf("Command: %s Error: %+v\n", command, err)
 		return
 	}
-	
-	
+
 	if command == "all" {
 		testAll(num)
 	} else {
@@ -155,5 +156,5 @@ func main() {
 		handler := commands[index].Handler
 		handler(num)
 	}
-	
+
 }

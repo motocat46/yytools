@@ -18,9 +18,9 @@
 package sort
 
 import (
-    "github.com/stormYuanYang/yytools/datastructure/stack"
-    "github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
-    "github.com/stormYuanYang/yytools/pkg/common/concrete/base"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/concrete/mathutils/random"
+	"github.com/stormYuanYang/yytools/pkg/common/concrete/base"
+	"github.com/stormYuanYang/yytools/pkg/datastructures/generic/stack"
 )
 
 const maxInsertion = 12
@@ -147,7 +147,7 @@ func quickSortDesc[T base.Integer](arr []T, start, end int) {
 func partitionDesc[T base.Integer](arr []T, start, end int) int {
 	r := random.RandInt(start, end-1)
 	arr[r], arr[end-1] = arr[end-1], arr[r]
-	
+
 	i := start
 	j := end - 1
 	for ; i < j; i++ {

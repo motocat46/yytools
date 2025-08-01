@@ -48,7 +48,11 @@ func RandInt32(low, high int32) int32 {
 	if low > high {
 		low, high = high, low
 	}
-	assert.Assert(!(low == 0 && high == math.MaxInt32), "low等于0时，high不能为最大值")
+	// 处理可能的溢出情况
+	if high == math.MaxInt32 && low == 0 {
+		// 特殊处理：使用int64避免溢出
+		return int32(rand.Int63n(int64(math.MaxInt32) + 1))
+	}
 	n := high - low + 1
 	return rand.Int31n(n) + low
 }
@@ -63,7 +67,11 @@ func RandInt64(low, high int64) int64 {
 	if low > high {
 		low, high = high, low
 	}
-	assert.Assert(!(low == 0 && high == math.MaxInt64), "low等于0时，high不能为最大值")
+	// 处理可能的溢出情况
+	if high == math.MaxInt64 && low == 0 {
+		// 特殊处理：直接使用rand.Int63()然后取绝对值
+		return rand.Int63()
+	}
 	n := high - low + 1
 	return rand.Int63n(n) + low
 }
@@ -78,7 +86,15 @@ func RandInt(low, high int) int {
 	if low > high {
 		low, high = high, low
 	}
-	assert.Assert(!(low == 0 && high == math.MaxInt), "low等于0时，high不能为最大值")
+	// 处理可能的溢出情况
+	if high == math.MaxInt && low == 0 {
+		// 特殊处理：直接使用rand.Int()取非负值
+		result := rand.Int()
+		if result < 0 {
+			return -result
+		}
+		return result
+	}
 	n := high - low + 1
 	return rand.Intn(n) + low
 }
