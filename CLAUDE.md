@@ -4,30 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-yytools is a Go utilities library providing algorithms, data structures, and common tools for daily development. The project is organized into concrete (non-generic) and generic implementations, with a focus on performance and correctness.
+yytools is a Go utilities library providing algorithms, data structures, and common tools for daily development. The project uses a flat package structure, with a focus on performance and correctness.
 
 ## Architecture
 
 ### Core Structure
 - `pkg/`: Core functionality organized by domain
-  - `algorithms/concrete/`: Non-generic algorithm implementations (sorting, math utilities, binary search)
-  - `common/concrete/`: Common utilities (assertions, base types, OS utilities, time utilities)
-  - `datastructures/concrete/`: Data structure implementations
-  - `concurrency/concrete/`: Concurrency control utilities
-  - `gameutils/concrete/`: Game-specific utilities
-  - `*/generic/`: Generic versions of corresponding concrete implementations
+  - `algorithms/`: Algorithm implementations (sorting, math utilities, binary search)
+    - `binary_search/`: Binary search implementation
+    - `mathutils/`: GCD, probability distributions, common math
+      - `bits/`: Bit operation utilities
+      - `overflow/`: Numeric overflow check utilities
+      - `probability_distribution/`: Probability distribution utilities
+      - `random/`: Random number generation
+    - `sort/`: Multiple sorting algorithm implementations
+  - `common/`: Common utilities
+    - `assert/`: Runtime assertion framework that can be toggled on/off
+    - `base/`: Type definitions and constraints for generics
+    - `os/`: OS utility wrappers
+    - `safeexec/`: panic-safe function execution wrappers (Safe, SafeCall, SafeExecWithError, etc.)
+    - `timeutils/`: Time utility functions
+  - `concurrency/`: Concurrency control utilities
+    - `unbounded_channel/`: Unbounded channel implementation with multiple variants
+  - `datastructures/`: Data structure implementations (heap, queue, stack, sorted_set)
 
-- `datastructure/`: Legacy data structures (heap, queue, stack, sorted_set) - still in use
-- `template/`: Code templates and reference implementations
-- `examples/`: Usage examples
-- `tests/`: Integration and benchmark tests
-
-### Key Components
-- **Assertion System**: `pkg/common/concrete/assert/` - Runtime assertion framework that can be toggled on/off
-- **Base Types**: `pkg/common/concrete/base/` - Type definitions and constraints for generics
-- **Math Utilities**: `pkg/algorithms/concrete/mathutils/` - GCD, probability distributions, random number generation
-- **Sorting Algorithms**: `pkg/algorithms/concrete/sort/` - Multiple sorting implementations with performance testing
-- **Data Structures**: Both legacy (`datastructure/`) and new (`pkg/datastructures/`) implementations
+- `cmd/demo/`: Demo application with CLI and HTTP visualization server
 
 ## Common Commands
 
@@ -67,7 +68,7 @@ go test ./...
 go test -v ./...
 
 # Run specific test file
-go test ./pkg/algorithms/concrete/mathutils/random/
+go test ./pkg/algorithms/mathutils/random/
 
 # Format code
 go fmt ./...
@@ -85,18 +86,18 @@ go vet ./...
 - Performance testing includes visualization via go-echarts
 
 ### Assertion System
-- All code uses the custom assertion framework in `pkg/common/concrete/assert/`
+- All code uses the custom assertion framework in `pkg/common/assert/`
 - Assertions can be enabled/disabled globally via `assert.SetAssert(bool)`
 - Use `assert.Assert(condition, message...)` for conditional assertions
 - Use `assert.AssertFast(condition)` for simple boolean checks
 
 ### Code Conventions
-- Generic implementations use type constraints from `pkg/common/concrete/base/`
+- Generic implementations use type constraints from `pkg/common/base/`
 - Chinese comments are used throughout the codebase
 - Apache 2.0 license header in all files
-- Consistent naming: concrete vs generic package separation
+- Flat package structure: no `concrete/generic` intermediate directories except where both truly exist
 
 ### Performance Considerations
 - Sorting algorithms include performance comparison with Go's standard library
-- Use `graph.go` for performance visualization at `http://localhost:8081`
+- Use `cmd/demo/graph.go` for performance visualization at `http://localhost:8081`
 - Counting sort and quick sort implementations are optimized for different data ranges
