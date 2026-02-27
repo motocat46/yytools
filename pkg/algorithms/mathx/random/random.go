@@ -103,7 +103,7 @@ func RandInt(low, high int) int {
 // 使用了反射（reflection）来获取 low 的整数值，并根据其类型进行相应的计算和转换。
 // 请注意，使用反射会带来一些性能开销，因此在需要高性能的场景中，可能需要考虑其他方式来处理范围随机数的生成。
 // 此外，记得使用 rand.Seed 来设置随机数种子，以确保每次运行程序时都会获得不同的随机结果。
-func RandInteger[T base.Integer](low, high T) T {
+func RandInteger[T base.Signed](low, high T) T {
 	// 不能通过这样获取 v := reflect.Kind(low)
 	kind := reflect.ValueOf(low).Kind()
 	switch kind {

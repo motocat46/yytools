@@ -29,25 +29,25 @@ import (
 *   区别于 probability_distribution.go里的方法
  */
 
-type IDynamicProbDistr[T base.Integer] interface {
+type IDynamicProbDistr[T base.Signed] interface {
 	CanGenerate() bool
 	Generate() interface{}
 	SetReduce(reduce T)
 }
 
 // 可以得到一个周期的完整分布
-type DynamicWeights[T base.Integer] struct {
+type DynamicWeights[T base.Signed] struct {
 	Weights map[interface{}]T // 权重map
 	TtlWght T                 // 总权重
 	Reduce  T                 // 权重减少的值
 }
 
 // 一般而言reduce为1,表示减去一个单位的权重
-func NewDynamicWeights[T base.Integer](weights map[interface{}]T) *DynamicWeights[T] {
+func NewDynamicWeights[T base.Signed](weights map[interface{}]T) *DynamicWeights[T] {
 	return NewDynamicWeightsWithReduce[T](weights, 1)
 }
 
-func NewDynamicWeightsWithReduce[T base.Integer](weights map[interface{}]T, reduce T) *DynamicWeights[T] {
+func NewDynamicWeightsWithReduce[T base.Signed](weights map[interface{}]T, reduce T) *DynamicWeights[T] {
 	assert.Assert(len(weights) > 0)
 	assert.Assert(reduce > 0)
 	total := T(0)

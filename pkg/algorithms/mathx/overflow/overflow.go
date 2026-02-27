@@ -135,7 +135,7 @@ func DivInt32Assert(a int32, b int32) int32 {
 
 // 根据补码规则，对加法是否越界进行判断
 // 如果越界返回true，否则返回false
-func AddInt[T base.Integer](a T, b T) (T, bool) {
+func AddInt[T base.Signed](a T, b T) (T, bool) {
 	sum := a + b
 	// 当a为非负数，b为非负数，此时a+b小于0，则越界
 	if a >= 0 && b >= 0 && sum < 0 {
@@ -148,7 +148,7 @@ func AddInt[T base.Integer](a T, b T) (T, bool) {
 	return sum, false
 }
 
-func AddIntAssert[T base.Integer](a T, b T) T {
+func AddIntAssert[T base.Signed](a T, b T) T {
 	res, overflow := AddInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
@@ -156,7 +156,7 @@ func AddIntAssert[T base.Integer](a T, b T) T {
 
 // 根据补码规则，对减法是否越界进行判断
 // 如果越界返回true，否则返回false
-func SubInt[T base.Integer](a T, b T) (T, bool) {
+func SubInt[T base.Signed](a T, b T) (T, bool) {
 	// 当a为负数，b为整数，此时a-b大于等于0的话，就会越界
 	res := a - b
 	if a < 0 && b > 0 && res >= 0 {
@@ -170,7 +170,7 @@ func SubInt[T base.Integer](a T, b T) (T, bool) {
 	return res, false
 }
 
-func SubIntAssert[T base.Integer](a T, b T) T {
+func SubIntAssert[T base.Signed](a T, b T) T {
 	res, overflow := SubInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res

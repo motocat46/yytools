@@ -31,7 +31,7 @@ import (
 
 // 遍历查找
 // 时间复杂度O(n)
-func CalcIndexByWeight[T Integer](weightList []T, totalWeight T) int {
+func CalcIndexByWeight[T Signed](weightList []T, totalWeight T) int {
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := T(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
@@ -51,7 +51,7 @@ func CalcIndexByWeight[T Integer](weightList []T, totalWeight T) int {
 
 // 遍历查找(在map中根据权重查找)
 // 时间复杂度O(n)
-func CalcKeyByWeight[K comparable, V Integer](weightMap map[K]V, totalWeight V) K {
+func CalcKeyByWeight[K comparable, V Signed](weightMap map[K]V, totalWeight V) K {
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := V(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
@@ -82,11 +82,11 @@ type IProbDist interface {
 		生成时间复杂度:O(logn)
 		比起vose's alias method效率要低一些（但实现要简单很多，也更容易理解）
 */
-type NormalMethod[T Integer] struct {
+type NormalMethod[T Signed] struct {
 	WeightsSum []T // 权重和数组
 }
 
-func NewNormalMethod[T Integer](weights []T) *NormalMethod[T] {
+func NewNormalMethod[T Signed](weights []T) *NormalMethod[T] {
 	weightsSum := make([]T, 0, len(weights))
 	var totalWeight T
 	for _, weight := range weights {
@@ -281,7 +281,7 @@ const (
 	VoseAlias                   // 1 vose的别名方法
 )
 
-func ProbFactory[T Integer](typ MethodType, weights []T) IProbDist {
+func ProbFactory[T Signed](typ MethodType, weights []T) IProbDist {
 	switch typ {
 	case Normal:
 		return NewNormalMethod(weights)
