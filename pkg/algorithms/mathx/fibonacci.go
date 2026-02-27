@@ -24,7 +24,6 @@ import (
 	"github.com/stormYuanYang/yytools/pkg/common/base"
 )
 
-// TODO 可以考虑给出初始的两个数值(这里默认是0，1;可以继续扩展设定初始数字)
 type Fibonacci[T base.Integer] struct {
 	mem []T
 }

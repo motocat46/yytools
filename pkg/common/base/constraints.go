@@ -1,4 +1,4 @@
-// Package common.
+// Package base.
 
 // 版权所有(Copyright)[yangyuan]
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,8 @@
 
 // 作者:  yangyuan
 // 创建日期:2023/7/27
-package base
 
-import "cmp"
+// Package base provides common type constraints used across yytools.
 
 // 在 Go 的 泛型类型约束（type constraints） 中，~int 里的 ~ 不是取反，也不是位运算，它有一个非常关键但容易被忽略的语义：
 // ~T 表示：所有“底层类型（underlying type）是 T 的类型”。
@@ -43,6 +42,9 @@ import "cmp"
 // uint
 // float64
 // 因为它们的 underlying type 不是 int。
+package base
+
+import "cmp"
 
 // 有符号的整数
 type Signed interface {
