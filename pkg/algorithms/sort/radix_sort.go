@@ -64,8 +64,12 @@ func RadixSort[T base.Integer](array []T) {
 		for j := 1; j < len(aux); j++ {
 			aux[j] += aux[j-1]
 		}
-		// 遍历数组，将元素按位上的大小放置到临时数组
-		// TODO 🎃
+		// 从右往左遍历，将元素按当前位的大小放入临时数组（保证稳定性）
+		for k := len(array) - 1; k >= 0; k-- {
+			single := (array[k] / radix) % 10
+			aux[single]--
+			tmp[aux[single]] = array[k]
+		}
 		// 将排序后的数组拷贝回原数组
 		copy(array, tmp)
 		// 增大基数，进行下一位判断

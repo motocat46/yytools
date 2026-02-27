@@ -22,7 +22,7 @@ import (
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathutils/random"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	sort2 "github.com/stormYuanYang/yytools/pkg/algorithms/sort"
 	"net/http"
 	syssort "sort"

@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+用中文回答.
+
 ## Project Overview
 
 yytools is a Go utilities library providing algorithms, data structures, and common tools for daily development. The project uses a flat package structure, with a focus on performance and correctness.
@@ -12,21 +14,30 @@ yytools is a Go utilities library providing algorithms, data structures, and com
 - `pkg/`: Core functionality organized by domain
   - `algorithms/`: Algorithm implementations (sorting, math utilities, binary search)
     - `binary_search/`: Binary search implementation
-    - `mathutils/`: GCD, probability distributions, common math
+    - `mathx/`: GCD, probability distributions, common math (package: `mathx`)
       - `bits/`: Bit operation utilities
       - `overflow/`: Numeric overflow check utilities
       - `probability_distribution/`: Probability distribution utilities
       - `random/`: Random number generation
     - `sort/`: Multiple sorting algorithm implementations
-  - `common/`: Common utilities
+  - `slicex/`: Slice utility functions (MinInSlice, MaxInSlice, MinBy, MaxBy, etc.)
+  - `common/`: Minimal common utilities
     - `assert/`: Runtime assertion framework that can be toggled on/off
-    - `base/`: Type definitions and constraints for generics
-    - `os/`: OS utility wrappers
+    - `base/`: Type definitions and constraints for generics (Integer, Ordered, etc.)
+  - `numconst/`: Numeric and time constants (千/万/亿, time unit constants)
+  - `ds/`: Data structure implementations
+    - `heap/`: Min-heap and max-heap implementations
+    - `queue/`: Ring-buffer queue with auto expand/shrink
+    - `stack/`: Stack implementation
+    - `sorted_set/`: Skip-list based sorted set (similar to Redis ZADD)
+  - `infra/`: Infrastructure utilities
     - `safeexec/`: panic-safe function execution wrappers (Safe, SafeCall, SafeExecWithError, etc.)
-    - `timeutils/`: Time utility functions
-  - `concurrency/`: Concurrency control utilities
-    - `unbounded_channel/`: Unbounded channel implementation with multiple variants
-  - `datastructures/`: Data structure implementations (heap, queue, stack, sorted_set)
+    - `timeutil/`: Time utility functions (package: `timeutil`)
+    - `os/`: OS utility wrappers
+    - `concurrency/unbounded_channel/`: Unbounded channel implementation with multiple variants
+
+- `internal/bench/`: Benchmark/demo runner functions (not for external use)
+  - `heap/`, `queue/`, `stack/`, `sort/`, `sorted_set/`, `mathx/`, `probability_distribution/`
 
 - `cmd/demo/`: Demo application with CLI and HTTP visualization server
 
@@ -68,7 +79,7 @@ go test ./...
 go test -v ./...
 
 # Run specific test file
-go test ./pkg/algorithms/mathutils/random/
+go test ./pkg/algorithms/mathx/random/
 
 # Format code
 go fmt ./...

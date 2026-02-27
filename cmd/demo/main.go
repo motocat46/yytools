@@ -24,14 +24,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathutils"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathutils/probability_distribution"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/sort"
+	benchheap "github.com/stormYuanYang/yytools/internal/bench/heap"
+	benchmathx "github.com/stormYuanYang/yytools/internal/bench/mathx"
+	benchprobdist "github.com/stormYuanYang/yytools/internal/bench/probability_distribution"
+	benchqueue "github.com/stormYuanYang/yytools/internal/bench/queue"
+	benchsort "github.com/stormYuanYang/yytools/internal/bench/sort"
+	benchsortedset "github.com/stormYuanYang/yytools/internal/bench/sorted_set"
+	benchstack "github.com/stormYuanYang/yytools/internal/bench/stack"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/datastructures/heap"
-	"github.com/stormYuanYang/yytools/pkg/datastructures/queue"
-	"github.com/stormYuanYang/yytools/pkg/datastructures/sorted_set"
-	"github.com/stormYuanYang/yytools/pkg/datastructures/stack"
 )
 
 var commandsMap = map[string]int{}
@@ -53,47 +53,47 @@ func init() {
 	commands = append(commands, &Command{
 		Key:     "heap",
 		Note:    "最小堆",
-		Handler: heap.HeapTest,
+		Handler: benchheap.HeapTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "mathcommon",
 		Note:    "公共数学方法（比如gcd）",
-		Handler: mathutils.MathCommonTest,
+		Handler: benchmathx.MathCommonTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "maxheap",
 		Note:    "最大堆",
-		Handler: heap.MaxHeapTest,
+		Handler: benchheap.MaxHeapTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "prob",
 		Note:    "概率分布",
-		Handler: probability_distribution.ProbabilityDistributionTest,
+		Handler: benchprobdist.ProbabilityDistributionTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "pq",
 		Note:    "优先级队列",
-		Handler: heap.PriorityQueueTest,
+		Handler: benchheap.PriorityQueueTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "queue",
 		Note:    "队列",
-		Handler: queue.QueueTest,
+		Handler: benchqueue.QueueTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "sort",
 		Note:    "排序",
-		Handler: sort.SortTest,
+		Handler: benchsort.SortTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "sortedset",
 		Note:    "有序集合",
-		Handler: sorted_set.SortedSetTest,
+		Handler: benchsortedset.SortedSetTest,
 	})
 	commands = append(commands, &Command{
 		Key:     "stack",
 		Note:    "栈",
-		Handler: stack.StackTest,
+		Handler: benchstack.StackTest,
 	})
 
 	for i, c := range commands {
@@ -156,5 +156,4 @@ func main() {
 		handler := commands[index].Handler
 		handler(num)
 	}
-
 }

@@ -18,9 +18,9 @@
 package sort
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathutils/random"
+	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	"github.com/stormYuanYang/yytools/pkg/common/base"
-	"github.com/stormYuanYang/yytools/pkg/datastructures/stack"
+	"github.com/stormYuanYang/yytools/pkg/ds/stack"
 )
 
 const maxInsertion = 12

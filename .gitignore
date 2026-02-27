@@ -5,3 +5,4 @@ bin/game
 tools/pkg
 bin/yytools
 coverage.out
+demo
