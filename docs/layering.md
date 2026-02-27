@@ -52,7 +52,7 @@ L3：infra（工程基础设施）
 •	pkg/infra/timer（规划中，暂未实现）
 •	pkg/infra/obs（规划中，暂未实现）
 
-L4：gameplay（玩法组件）
+L4：mechanics(可复用领域机制）
 
 当前 yytools 已实现 L0–L3；L4 为预留层，待需求明确后实现。
 
@@ -60,23 +60,23 @@ L4：gameplay（玩法组件）
 •	特征：偏业务但必须可配置、可观测、可替换；不得绑定某个项目的具体常量/结构
 
 建议路径：
-•	pkg/gameplay/condition（规划中，暂未实现）
-•	pkg/gameplay/reward（规划中，暂未实现）
-•	pkg/gameplay/schedule（规划中，暂未实现）
+•	pkg/mechanics/condition（规划中，暂未实现）
+•	pkg/mechanics/reward（规划中，暂未实现）
+•	pkg/mechanics/schedule（规划中，暂未实现）
 
 依赖规则
 
 允许依赖关系（只允许从高层依赖低层）
-•	L4 gameplay → L3 infra / L2 ds / L1 algorithms / L0 common
+•	L4 mechanics → L3 infra / L2 ds / L1 algorithms / L0 common
 •	L3 infra → L2 ds / L1 algorithms / L0 common
 •	L2 ds → L1 algorithms / L0 common
 •	L1 algorithms → L0 common
 •	L0 common → 标准库（仅）
 
 禁止依赖关系
-•	algorithms/ds/infra 禁止依赖 gameplay
+•	algorithms/ds/infra 禁止依赖 mechanics
 •	common 禁止依赖除标准库之外的任何内部包
-•	gameplay 禁止引入具体项目的配置结构、全局单例、项目常量（必须通过配置/接口注入）
+•	mechanics 禁止引入具体项目的配置结构、全局单例、项目常量（必须通过配置/接口注入）
 
 algorithms 与 ds 的依赖原则（软约束）
 
@@ -105,7 +105,7 @@ infra：必须满足
 •	明确时钟/调度策略（真实时间、可注入时钟等）
 •	可观测性接口可注入（logger/metrics/tracer）
 
-gameplay：必须满足
+mechanics必须满足
 •	配置驱动（cfg 或 options）
 •	核心行为可测试（可注入随机源、时钟、依赖接口）
 •	对外 API 稳定且语义清晰（尤其空输入、并列规则、稳定性）

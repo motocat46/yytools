@@ -42,7 +42,8 @@ yytools/
 │   ├── common/
 │   │   ├── assert/            # 运行时断言框架（可全局开关）
 │   │   └── base/              # 泛型类型约束（Integer、Ordered 等）
-│   ├── numconst/              # 数字和时间常量（千/万/亿、时间单位）
+│   ├── numconst/              # 数字和时间常量（时间单位等）
+│   ├── mechanics/             # 规则机制（分布策略、调度策略等）
 │   └── slicex/                # 切片工具函数（MinBy、MaxBy 等）
 ├── examples/                  # 示例代码（待补充）
 ├── docs/
@@ -140,6 +141,12 @@ go run . http          # 启动排序性能可视化服务
 - 代码注释使用中文
 - 所有文件包含 Apache 2.0 License 头
 - 使用 `assert.Assert` 做运行时契约检查，生产环境可关闭
+
+## 文档参考
+
+ [项目分层](docs/layering.md)
+
+ [项目风格](docs/style.md)
 
 ## License
 
