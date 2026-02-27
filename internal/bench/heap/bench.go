@@ -19,7 +19,6 @@ package benchheap
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
@@ -87,7 +86,6 @@ func heapMustBeLegal(h heap.InterfaceHeap[any], deleted []*heap.Item[any]) {
 
 func HeapTest(num int) {
 	println("最小堆测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	scale := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000, 100000, 1000000}
 	for i := 1; i <= num; i++ {
 		fmt.Printf("第%d轮测试开始\n", i)

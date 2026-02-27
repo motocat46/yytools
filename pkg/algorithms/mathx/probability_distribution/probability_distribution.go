@@ -35,7 +35,7 @@ func CalcIndexByWeight[T Signed](weightList []T, totalWeight T) int {
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := T(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
-	r := random.RandInteger(1, totalWeight)
+	r := random.RandInt[T](1, totalWeight)
 	for i, weight := range weightList {
 		// 最后一次循环后，traverse会等于totalWeight,此时必然有r <= totalWeight
 		traverse += weight
@@ -55,7 +55,7 @@ func CalcKeyByWeight[K comparable, V Signed](weightMap map[K]V, totalWeight V) K
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := V(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
-	r := random.RandInteger(1, totalWeight)
+	r := random.RandInt[V](1, totalWeight)
 	for key, weight := range weightMap {
 		// 最后一次循环后，traverse会等于totalWeight,此时必然有r <= totalWeight
 		traverse += weight
@@ -114,7 +114,7 @@ func (this *NormalMethod[T]) Generate() int {
 	}
 	// 接下来，总权重至少为1
 	// 利用二分搜索提高查找的效率(比起遍历，时间复杂度从O(n)改善到O(logn))
-	randNum := random.RandInteger(1, totalWeight)
+	randNum := random.RandInt[T](1, totalWeight)
 	index := searchLeftBound(this.WeightsSum, randNum)
 	assert.Assert(index != -1)
 	return index

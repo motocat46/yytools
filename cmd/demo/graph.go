@@ -33,7 +33,7 @@ import (
 func generateLineItems() []opts.LineData {
 	items := make([]opts.LineData, 0)
 	for i := 0; i < 12; i++ {
-		items = append(items, opts.LineData{Value: random.RandInt32(1, 30)})
+		items = append(items, opts.LineData{Value: random.RandInt[int32](1, 30)})
 	}
 	return items
 }
@@ -92,7 +92,7 @@ func createLine() *charts.Line {
 		limit := 1e5 * (i + 1)
 		arr := make([]int32, limit, limit)
 		for j := 0; j < int(limit); j++ {
-			r := random.RandInt32(1, 100000)
+			r := random.RandInt[int32](1, 100000)
 			arr[j] = r
 		}
 

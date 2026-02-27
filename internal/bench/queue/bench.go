@@ -19,7 +19,6 @@ package benchqueue
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
@@ -95,7 +94,6 @@ func queueMustBeLegal(q *queue.Queue[int]) {
 
 func QueueTest(num int) {
 	println("队列测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	// 起始规模
 	scale := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 1e4, 1e5, 1e6}
 	for i := 1; i <= num; i++ {

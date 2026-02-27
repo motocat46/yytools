@@ -31,7 +31,7 @@ func BubbleSortTest(cnt int) {
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e3)
+			arr[i] = random.RandInt[int32](1, 1e3)
 		}
 		sort.BubbleSort(arr)
 		for z := 1; z < len(arr); z++ {
@@ -46,7 +46,7 @@ func BubbleSortDescTest(cnt int) {
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e3)
+			arr[i] = random.RandInt[int32](1, 1e3)
 		}
 		sort.BubbleSortDesc(arr)
 		for z := 1; z < len(arr); z++ {
@@ -61,7 +61,7 @@ func InsertionSortTest(cnt int) {
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e3)
+			arr[i] = random.RandInt[int32](1, 1e3)
 		}
 		sort.InsertionSort(arr)
 		for z := 1; z < len(arr); z++ {
@@ -76,7 +76,7 @@ func InsertionSortDescTest(cnt int) {
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e3)
+			arr[i] = random.RandInt[int32](1, 1e3)
 		}
 		sort.InsertionSortDesc(arr)
 		for z := 1; z < len(arr); z++ {
@@ -91,7 +91,7 @@ func runSortBenchmark(sortFunc func(arr []int32), cnt int, desc bool) {
 	totalDuration := int64(0)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e5)
+			arr[i] = random.RandInt[int32](1, 1e5)
 		}
 		start := time.Now().UnixNano()
 		sortFunc(arr)
@@ -142,7 +142,7 @@ func CountingSortTest(cnt int) {
 	totalDuration := int64(0)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(1, 1e5)
+			arr[i] = random.RandInt[int32](1, 1e5)
 		}
 		before := map[int32]int32{}
 		for _, v := range arr {
@@ -177,7 +177,7 @@ func RadixSortTest(cnt int) {
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
-			arr[i] = random.RandInt32(100, 999)
+			arr[i] = random.RandInt[int32](100, 999)
 		}
 		before := map[int32]int32{}
 		for _, v := range arr {

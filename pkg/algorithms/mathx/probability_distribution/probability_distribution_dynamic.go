@@ -83,7 +83,7 @@ func (this *DynamicWeights[T]) Generate() interface{} {
 	assert.Assert(this.TtlWght > 0, "总权重需要大于0：", this.TtlWght)
 	traverse := T(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
-	r := random.RandInteger(1, this.TtlWght)
+	r := random.RandInt[T](1, this.TtlWght)
 	for key, weight := range this.Weights {
 		// 最后一次循环后，traverse会等于totalWeight,此时必然有r <= totalWeight
 		traverse += weight

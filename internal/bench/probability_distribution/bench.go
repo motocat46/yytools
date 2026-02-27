@@ -19,7 +19,6 @@ package benchprobdist
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
@@ -132,7 +131,6 @@ var probabilityDistributionHandlers = []func(num []int){
 
 func ProbabilityDistributionTest(num int) {
 	println("概率分布测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	for i := 1; i <= num; i++ {
 		fmt.Printf("第%d轮测试开始\n", i)
 		var x []int

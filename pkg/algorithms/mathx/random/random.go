@@ -1,4 +1,4 @@
-// Package tools.
+// Package random.
 
 // 版权所有(Copyright)[yangyuan]
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,139 +18,133 @@
 package random
 
 import (
+	"math/rand/v2"
+	"unsafe"
+	
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
 	"github.com/stormYuanYang/yytools/pkg/common/base"
-	"math"
-	"math/rand"
-	"reflect"
 )
 
-func RandSeed(seed int64) {
-	rand.Seed(seed)
+// randSource 是内部随机源抽象
+// *rand.Rand（本地实例）和全局函数包装器均实现此接口，
+// 使 RandInt 与 RandIntWith 共用同一套核心逻辑。
+type randSource interface {
+	Int64N(int64) int64
+	Uint64N(uint64) uint64
+	Uint64() uint64
 }
 
-// 返回闭区间[low,high]中的某一个数
-func RandInt8(low, high int8) int8 {
-	return int8(RandInt32(int32(low), int32(high)))
-}
+// globalSource 将 math/rand/v2 包级函数（goroutine 安全）封装为 randSource
+type globalSource struct{}
 
-func RandInt16(low, high int16) int16 {
-	return int16(RandInt32(int32(low), int32(high)))
-}
+func (globalSource) Int64N(n int64) int64    { return rand.Int64N(n) }
+func (globalSource) Uint64N(n uint64) uint64 { return rand.Uint64N(n) }
+func (globalSource) Uint64() uint64          { return rand.Uint64() }
 
-// 返回闭区间[low,high]中的某一个数
-func RandInt32(low, high int32) int32 {
-	assert.Assert(low >= 0, "invalid low:", low)
-	assert.Assert(high >= 0, "invalid high:", high)
+var globalSrc randSource = globalSource{}
+
+// RandInt 返回闭区间 [low, high] 内均匀分布的随机整数。
+// 使用全局随机源（goroutine 安全，自动以 OS 熵初始化，不支持确定性重放）。
+// 支持所有整数类型及其派生类型（如 type Score int8）。
+// low > high 时触发 assert。
+func RandInt[T base.Integer](low, high T) T {
+	assert.Assert(low <= high)
 	if low == high {
 		return low
 	}
-	if low > high {
-		low, high = high, low
-	}
-	// 处理可能的溢出情况
-	if high == math.MaxInt32 && low == 0 {
-		// 特殊处理：使用int64避免溢出
-		return int32(rand.Int63n(int64(math.MaxInt32) + 1))
-	}
-	n := high - low + 1
-	return rand.Int31n(n) + low
+	return randIntImpl[T](globalSrc, low, high)
 }
 
-// 返回闭区间[low,high]中的某一个数
-func RandInt64(low, high int64) int64 {
-	assert.Assert(low >= 0, "invalid low:", low)
-	assert.Assert(high >= 0, "invalid high:", high)
+// RandIntWith 使用指定随机源返回闭区间 [low, high] 内的随机整数。
+// 配合 NewRand(seed) 可实现确定性重放：相同 seed + 相同调用序列 = 完全相同的结果。
+// rng 非 goroutine 安全，请勿在多 goroutine 间共享同一实例。
+func RandIntWith[T base.Integer](rng *rand.Rand, low, high T) T {
+	assert.AssertFast(rng != nil)
+	assert.Assert(low <= high)
 	if low == high {
 		return low
 	}
-	if low > high {
-		low, high = high, low
-	}
-	// 处理可能的溢出情况
-	if high == math.MaxInt64 && low == 0 {
-		// 特殊处理：直接使用rand.Int63()然后取绝对值
-		return rand.Int63()
-	}
-	n := high - low + 1
-	return rand.Int63n(n) + low
+	return randIntImpl[T](rng, low, high)
 }
 
-// 返回闭区间[low,high]中的某一个数
-func RandInt(low, high int) int {
-	assert.Assert(low >= 0, "invalid low:", low)
-	assert.Assert(high >= 0, "invalid high:", high)
-	if low == high {
-		return low
-	}
-	if low > high {
-		low, high = high, low
-	}
-	// 处理可能的溢出情况
-	if high == math.MaxInt && low == 0 {
-		// 特殊处理：直接使用rand.Int()取非负值
-		result := rand.Int()
-		if result < 0 {
-			return -result
+// NewRand 创建使用固定种子的本地随机数生成器。
+// 相同 seed 始终产生完全相同的随机序列，适用于单元测试、仿真复现等场景。
+// 返回的 *rand.Rand 非 goroutine 安全，需要并发使用时由调用方加锁。
+func NewRand(seed uint64) *rand.Rand {
+	return rand.New(rand.NewPCG(seed, 0))
+}
+
+// randIntImpl 是内部核心实现。
+// 通过 unsafe.Sizeof + signed 检测将泛型 T 派发到具体宽度的处理函数，
+// 该检测在编译期即可确定，开销为零。
+func randIntImpl[T base.Integer](src randSource, low, high T) T {
+	var zero T
+	signed := T(0)-T(1) < 0
+	size := unsafe.Sizeof(zero)
+	
+	if signed {
+		switch size {
+		case 1:
+			return T(signedRandN(int64(int8(low)), int64(int8(high)), src))
+		case 2:
+			return T(signedRandN(int64(int16(low)), int64(int16(high)), src))
+		case 4:
+			return T(signedRandN(int64(int32(low)), int64(int32(high)), src))
+		case 8:
+			return T(signedRand64(int64(low), int64(high), src))
 		}
-		return result
+	} else {
+		switch size {
+		case 1:
+			return T(unsignedRandN(uint64(uint8(low)), uint64(uint8(high)), src))
+		case 2:
+			return T(unsignedRandN(uint64(uint16(low)), uint64(uint16(high)), src))
+		case 4:
+			return T(unsignedRandN(uint64(uint32(low)), uint64(uint32(high)), src))
+		case 8:
+			return T(unsignedRand64(uint64(low), uint64(high), src))
+		}
 	}
+	panic("unsupported integer type")
+}
+
+// signedRandN 处理 int8/int16/int32：提升到 int64 做中间计算，不可能溢出。
+// 最大范围 n = MaxInt32 - MinInt32 + 1 = 4294967296，int64 可完整容纳。
+func signedRandN(low, high int64, src randSource) int64 {
 	n := high - low + 1
-	return rand.Intn(n) + low
+	return src.Int64N(n) + low
 }
 
-// 泛型方法
-// 使用了反射（reflection）来获取 low 的整数值，并根据其类型进行相应的计算和转换。
-// 请注意，使用反射会带来一些性能开销，因此在需要高性能的场景中，可能需要考虑其他方式来处理范围随机数的生成。
-// 此外，记得使用 rand.Seed 来设置随机数种子，以确保每次运行程序时都会获得不同的随机结果。
-func RandInteger[T base.Signed](low, high T) T {
-	// 不能通过这样获取 v := reflect.Kind(low)
-	kind := reflect.ValueOf(low).Kind()
-	switch kind {
-	case reflect.Int8:
-		return T(RandInt8(int8(low), int8(high)))
-	case reflect.Int16:
-		return T(RandInt16(int16(low), int16(high)))
-	case reflect.Int32:
-		return T(RandInt32(int32(low), int32(high)))
-	case reflect.Int64:
-		return T(RandInt64(int64(low), int64(high)))
-	case reflect.Int:
-		return T(RandInt(int(low), int(high)))
-	default:
-		panic("unsupported type")
+// signedRand64 处理 int64：用 uint64 2补数算术计算范围，避免有符号溢出。
+// 例如 low=-1, high=MaxInt64 时，n = MaxInt64+2 有符号溢出，但 uint64 计算正确。
+// 最终通过 int64(uint64(low) + r) 而非 low + int64(r) 避免加法溢出。
+func signedRand64(low, high int64, src randSource) int64 {
+	n := uint64(high) - uint64(low) + 1
+	if n == 0 {
+		// 全范围 [MinInt64, MaxInt64]：任意 uint64 位模式都是有效的 int64
+		return int64(src.Uint64())
 	}
+	return int64(uint64(low) + src.Uint64N(n))
 }
 
-// 不使用泛型的实现方式
-// 和上面泛型的实现方式进行比较:
-// 1.第一种实现使用了泛型类型约束 [T base.Integer]，可以保证传入的参数 low 和 high 是整数类型。
-// 	这样可以避免在运行时进行类型断言或反射操作，减少了额外的开销。
-// 2.第一种实现使用了静态类型判断，根据 reflect.ValueOf(low).Kind() 的结果直接选择对应的函数。
-//	这样可以在编译时确定具体的类型分支，避免了动态类型检查和转换的开销。
-// 3.反射操作 reflect.ValueOf(low).Kind() 在运行时会带来一定的性能开销，包括类型转换和动态类型检查。
-// 综上所述，尽管第一种实现涉及一次反射操作，但由于使用了静态类型约束和静态类型判断，以及避免了类型断言和动态类型检查的开销，其效率更高。
-func RandInteger1(low, high interface{}) interface{} {
-	switch low := low.(type) {
-	case int8:
-		return RandInt8(low, high.(int8))
-	case int16:
-		return RandInt16(low, high.(int16))
-	case int32:
-		return RandInt32(low, high.(int32))
-	case int64:
-		return RandInt64(low, high.(int64))
-	case int:
-		return RandInt(low, high.(int))
-	default:
-		panic("unsupported type")
+// unsignedRandN 处理 uint8/uint16/uint32：提升到 uint64 做中间计算，不可能溢出。
+// 最大范围 n = MaxUint32 + 1 = 4294967296，uint64 可完整容纳。
+func unsignedRandN(low, high uint64, src randSource) uint64 {
+	n := high - low + 1
+	return src.Uint64N(n) + low
+}
+
+// unsignedRand64 处理 uint64：检测全范围溢出（[0, MaxUint64] 时 n 溢出为 0）。
+func unsignedRand64(low, high uint64, src randSource) uint64 {
+	n := high - low + 1
+	if n == 0 {
+		// 全范围 [0, MaxUint64]
+		return src.Uint64()
 	}
+	return src.Uint64N(n) + low
 }
 
-func RandFloat32() float32 {
-	return rand.Float32()
-}
-
+// RandFloat64 返回 [0.0, 1.0) 内均匀分布的随机浮点数。
 func RandFloat64() float64 {
 	return rand.Float64()
 }

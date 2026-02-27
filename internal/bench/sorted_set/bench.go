@@ -19,7 +19,6 @@ package benchsortedset
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
@@ -130,7 +129,6 @@ var rangeOps = []func(ss *sorted_set.SortedSet[int], num int){
 
 func SortedSetTest(total int) {
 	println("有序集合测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	nums := []int{1, 2, 3, 4, 5, 10, 100, 1000, 10000}
 	for a := 1; a <= total; a++ {
 		fmt.Printf("-------第%d轮测试开始-------\n", a)

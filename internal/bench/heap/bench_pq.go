@@ -19,7 +19,6 @@ package benchheap
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
@@ -100,7 +99,6 @@ func priorityQueueMustBeLegal(pq heap.InterfacePriorityQueue[any]) {
 
 func PriorityQueueTest(num int) {
 	println("优先级队列测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	scale := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000, 100000, 1000000}
 	for i := 1; i <= num; i++ {
 		fmt.Printf("第%d轮测试开始\n", i)

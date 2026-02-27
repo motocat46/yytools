@@ -19,7 +19,6 @@ package benchmathx
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx"
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
@@ -43,7 +42,6 @@ var mathCommonHandlers = []func(num int){
 
 func MathCommonTest(num int) {
 	println("mathx.common测试开始...")
-	random.RandSeed(time.Now().UnixMilli())
 	for i := 1; i <= num; i++ {
 		fmt.Printf("第%d轮测试开始\n", i)
 		for k := 0; k < len(mathCommonHandlers); k++ {
