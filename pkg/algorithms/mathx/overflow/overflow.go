@@ -20,31 +20,46 @@ package overflow
 // 提供对常见四则运算(加减乘除)的计算和越界检查方法
 
 import (
+	"unsafe"
+
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
 	"github.com/stormYuanYang/yytools/pkg/common/base"
-	"math"
 )
 
 // 计算a*b，并判断是否越界
 // 返回值1：a*b的结果，返回值2：true->越界，false->未越界
-func MulInt32(a int32, b int32) (int32, bool) {
+func MulInt[T base.Signed](a, b T) (T, bool) {
 	// 0和任何数的乘积都为0
 	if a == 0 || b == 0 {
 		return 0, false
 	}
+	size := unsafe.Sizeof(a)
+	bits := uint(size) * 8
+	if size < 8 {
+		// int8/int16/int32：提升为 int64 做中间计算，检查结果是否超出 T 的范围
+		r := int64(a) * int64(b)
+		minT := -(int64(1) << (bits - 1))
+		maxT := int64(1)<<(bits-1) - 1
+		if r < minT || r > maxT {
+			return T(r), true
+		}
+		return T(r), false
+	}
+	// int64/int（64位平台）：符号感知的除法边界检查
 	res := a * b
 	// 最高位不同的话，异或之后的结果应该小于0
 	sign := (a ^ b) < 0
-	// 小心a或者b为math.MinInt32的情况
-	if sign { // 异号(一负一正) 结果一定是负数
-		if a < 0 && a < math.MinInt32/b { // b > 0
+	minT := T(1) << (bits - 1) // 补码：T(1)<<(bits-1) 即为 MinT
+	maxT := ^minT
+	if sign { // 异号（一负一正），结果一定是负数
+		if a < 0 && a < minT/b { // b > 0
 			return res, true
 		}
-		if a > 0 && b < math.MinInt32/a { // b < 0
+		if a > 0 && b < minT/a { // b < 0
 			return res, true
 		}
-	} else { // 同号(都为正，或都为负) 结果一定是正数
-		limit := math.MaxInt32 / b
+	} else { // 同号（都为正，或都为负），结果一定是正数
+		limit := maxT / b
 		if a < 0 && a < limit {
 			return res, true
 		}
@@ -55,80 +70,32 @@ func MulInt32(a int32, b int32) (int32, bool) {
 	return res, false
 }
 
-// func MulInteger[T base.Integer](a T, b T) (T, bool) {
-//	// 0和任何数的乘积都为0
-//	if a == 0 || b == 0 {
-//		return 0, false
-//	}
-//
-//	var minInt T
-//	var maxInt T
-//	// 不能通过这样获取 v := reflect.Kind(low)
-//	kind := reflect.ValueOf(a).Kind()
-//	switch kind {
-//	case reflect.Int32:
-//		minInt = math.MinInt32
-//		maxInt = math.MaxInt32
-//	case reflect.Int64:
-//		minInt = T(int64(math.MinInt64))
-//		maxInt = T(int64(math.MaxInt64))
-//	case reflect.Int:
-//		minInt = math.MinInt
-//		maxInt = math.MaxInt
-//	default:
-//		panic("unsupported type")
-//	}
-//
-//	res := a*b
-//	// 最高位不同的话，异或之后的结果应该小于0
-//	sign := (a^b)<0
-//	// 小心a或者b为math.MinInt32的情况
-//	if sign { // 异号(一负一正) 结果一定是负数
-//		if a < 0 && a < minInt/b {//b > 0
-//			return res, true
-//		}
-//		if a > 0 && b < maxInt/a { // b < 0
-//			return res, true
-//		}
-//	} else { // 同号(都为正，或都为负) 结果一定是正数
-//		limit := maxInt/b
-//		if a < 0 && a < limit {
-//			return res, true
-//		}
-//		if a > 0 && a > limit {
-//			return res, true
-//		}
-//	}
-//	return res, false
-// }
-
 // 计算a*b，并进行越界断言
-func MulInt32Assert(a int32, b int32) int32 {
-	res, overflow := MulInt32(a, b)
+func MulIntAssert[T base.Signed](a, b T) T {
+	res, overflow := MulInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
 }
 
-// 计算a/b,并判断是否越界
-func DivInt32(a int32, b int32) (int32, bool) {
-	// 本身go语言会在除以0时，调用panic,这里不再判断
-	// if b == 0 {
-	//	// 除0错误，结果趋近于无穷，必然越界
-	//	return math.MaxInt32, true
-	// }
-	
+// 计算a/b，并判断是否越界
+// 整数除法唯一的溢出情形是 MinT / -1（数学结果超出正数最大值）
+// 返回值1：a/b的结果，返回值2：true->越界，false->未越界
+func DivInt[T base.Signed](a, b T) (T, bool) {
+	// 本身go语言会在除以0时，调用panic，这里不再判断
+	bits := uint(unsafe.Sizeof(a)) * 8
+	minT := T(1) << (bits - 1) // 补码规则：T(1)<<(bits-1) 即为 MinT
 	// 负数除以负数应该是正数，但实际a/b的结果仍然是a本身
 	// 因为正数最大值比负数最小值的绝对值小1
-	// 根据补码规则，得到的结果仍然是a
-	// 所以实际上就是溢出了
-	if a == math.MinInt32 && b == -1 {
+	// 根据补码规则，得到的结果仍然是a，实际上就是溢出了
+	if a == minT && b == -1 {
 		return a, true
 	}
 	return a / b, false
 }
 
-func DivInt32Assert(a int32, b int32) int32 {
-	res, overflow := DivInt32(a, b)
+// 计算a/b，并进行越界断言
+func DivIntAssert[T base.Signed](a, b T) T {
+	res, overflow := DivInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
 }

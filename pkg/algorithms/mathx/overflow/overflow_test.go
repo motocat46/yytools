@@ -22,115 +22,248 @@ import (
 	"testing"
 )
 
-func TestMulInt32(t *testing.T) {
-	tests := []struct {
+func TestMulInt(t *testing.T) {
+	// int8 用例
+	int8Tests := []struct {
+		name     string
+		a, b     int8
+		expected int8
+		overflow bool
+	}{
+		{"正常乘法", 2, 3, 6, false},
+		{"零乘任何数", 0, 100, 0, false},
+		{"任何数乘零", 100, 0, 0, false},
+		{"负数乘法", -2, 3, -6, false},
+		{"负数乘法2", 2, -3, -6, false},
+		{"负数乘法3", -2, -3, 6, false},
+		{"MaxInt8乘1", math.MaxInt8, 1, math.MaxInt8, false},
+		{"MinInt8乘1", math.MinInt8, 1, math.MinInt8, false},
+		{"正数溢出", math.MaxInt8, 2, 0, true},
+		{"负数溢出", math.MinInt8, 2, 0, true},
+	}
+	for _, tt := range int8Tests {
+		t.Run("int8_"+tt.name, func(t *testing.T) {
+			result, overflow := MulInt(tt.a, tt.b)
+			if overflow != tt.overflow {
+				t.Errorf("MulInt[int8](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+			}
+			if !tt.overflow && result != tt.expected {
+				t.Errorf("MulInt[int8](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// int16 用例
+	int16Tests := []struct {
+		name     string
+		a, b     int16
+		expected int16
+		overflow bool
+	}{
+		{"正常乘法", 100, 200, 20000, false},
+		{"零乘任何数", 0, 1000, 0, false},
+		{"负数乘法", -100, 200, -20000, false},
+		{"MaxInt16乘1", math.MaxInt16, 1, math.MaxInt16, false},
+		{"MinInt16乘1", math.MinInt16, 1, math.MinInt16, false},
+		{"正数溢出", math.MaxInt16, 2, 0, true},
+		{"负数溢出", math.MinInt16, 2, 0, true},
+	}
+	for _, tt := range int16Tests {
+		t.Run("int16_"+tt.name, func(t *testing.T) {
+			result, overflow := MulInt(tt.a, tt.b)
+			if overflow != tt.overflow {
+				t.Errorf("MulInt[int16](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+			}
+			if !tt.overflow && result != tt.expected {
+				t.Errorf("MulInt[int16](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// int32 用例（等价原 TestMulInt32 全部用例）
+	int32Tests := []struct {
 		name     string
 		a, b     int32
 		expected int32
 		overflow bool
 	}{
-		// 正常情况
 		{"正常乘法", 2, 3, 6, false},
 		{"零乘任何数", 0, 5, 0, false},
 		{"任何数乘零", 5, 0, 0, false},
 		{"负数乘法", -2, 3, -6, false},
 		{"负数乘法2", 2, -3, -6, false},
 		{"负数乘法3", -2, -3, 6, false},
-
-		// 边界情况
-		{"最大正数乘1", math.MaxInt32, 1, math.MaxInt32, false},
-		{"1乘最大正数", 1, math.MaxInt32, math.MaxInt32, false},
-		{"最小负数乘1", math.MinInt32, 1, math.MinInt32, false},
-		{"1乘最小负数", 1, math.MinInt32, math.MinInt32, false},
-
-		// 溢出情况
+		{"MaxInt32乘1", math.MaxInt32, 1, math.MaxInt32, false},
+		{"1乘MaxInt32", 1, math.MaxInt32, math.MaxInt32, false},
+		{"MinInt32乘1", math.MinInt32, 1, math.MinInt32, false},
+		{"1乘MinInt32", 1, math.MinInt32, math.MinInt32, false},
 		{"正数溢出", math.MaxInt32, 2, 0, true},
 		{"负数溢出", math.MinInt32, 2, 0, true},
 		{"大数乘法", 1000000, 1000000, 0, true},
 		{"负数大数乘法", -1000000, 1000000, 0, true},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, overflow := MulInt32(tt.a, tt.b)
+	for _, tt := range int32Tests {
+		t.Run("int32_"+tt.name, func(t *testing.T) {
+			result, overflow := MulInt(tt.a, tt.b)
 			if overflow != tt.overflow {
-				t.Errorf("MulInt32(%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+				t.Errorf("MulInt[int32](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
 			}
 			if !tt.overflow && result != tt.expected {
-				t.Errorf("MulInt32(%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+				t.Errorf("MulInt[int32](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// int64 用例
+	int64Tests := []struct {
+		name     string
+		a, b     int64
+		expected int64
+		overflow bool
+	}{
+		{"正常乘法", 2, 3, 6, false},
+		{"零乘任何数", 0, math.MaxInt64, 0, false},
+		{"任何数乘零", math.MaxInt64, 0, 0, false},
+		{"负数乘法", -2, 3, -6, false},
+		{"负数乘法2", 2, -3, -6, false},
+		{"负数乘法3", -2, -3, 6, false},
+		{"MaxInt64乘1", math.MaxInt64, 1, math.MaxInt64, false},
+		{"MinInt64乘1", math.MinInt64, 1, math.MinInt64, false},
+		{"正数溢出", math.MaxInt64, 2, 0, true},
+		{"负数溢出", math.MinInt64, 2, 0, true},
+		{"大数乘法溢出", 1000000000, 10000000000, 0, true},
+		{"MinInt64乘-1溢出", math.MinInt64, -1, 0, true},
+	}
+	for _, tt := range int64Tests {
+		t.Run("int64_"+tt.name, func(t *testing.T) {
+			result, overflow := MulInt(tt.a, tt.b)
+			if overflow != tt.overflow {
+				t.Errorf("MulInt[int64](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+			}
+			if !tt.overflow && result != tt.expected {
+				t.Errorf("MulInt[int64](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestMulInt32Assert(t *testing.T) {
+func TestMulIntAssert(t *testing.T) {
 	t.Run("正常乘法", func(t *testing.T) {
-		result := MulInt32Assert(2, 3)
+		result := MulIntAssert(int32(2), int32(3))
 		if result != 6 {
-			t.Errorf("MulInt32Assert(2, 3) = %d, 期望 6", result)
+			t.Errorf("MulIntAssert[int32](2, 3) = %d, 期望 6", result)
 		}
 	})
 
 	t.Run("溢出时panic", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
-				t.Error("MulInt32Assert 在溢出时应该 panic")
+				t.Error("MulIntAssert 在溢出时应该 panic")
 			}
 		}()
-		MulInt32Assert(math.MaxInt32, 2)
+		MulIntAssert(int32(math.MaxInt32), int32(2))
 	})
 }
 
-func TestDivInt32(t *testing.T) {
-	tests := []struct {
+func TestDivInt(t *testing.T) {
+	// int8 用例
+	int8Tests := []struct {
 		name     string
-		a, b     int32
-		expected int32
+		a, b     int8
+		expected int8
 		overflow bool
 	}{
-		// 正常情况
 		{"正常除法", 6, 2, 3, false},
 		{"负数除法", -6, 2, -3, false},
 		{"负数除法2", 6, -2, -3, false},
 		{"负数除法3", -6, -2, 3, false},
 		{"零除任何数", 0, 5, 0, false},
-
-		// 边界情况
-		{"最大正数除1", math.MaxInt32, 1, math.MaxInt32, false},
-		{"最小负数除1", math.MinInt32, 1, math.MinInt32, false},
-
-		// 溢出情况
-		{"最小负数除-1", math.MinInt32, -1, 0, true}, // 这是唯一会溢出的除法情况
+		{"MaxInt8除1", math.MaxInt8, 1, math.MaxInt8, false},
+		{"MinInt8除1", math.MinInt8, 1, math.MinInt8, false},
+		{"MinInt8除-1溢出", math.MinInt8, -1, 0, true},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, overflow := DivInt32(tt.a, tt.b)
+	for _, tt := range int8Tests {
+		t.Run("int8_"+tt.name, func(t *testing.T) {
+			result, overflow := DivInt(tt.a, tt.b)
 			if overflow != tt.overflow {
-				t.Errorf("DivInt32(%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+				t.Errorf("DivInt[int8](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
 			}
 			if !tt.overflow && result != tt.expected {
-				t.Errorf("DivInt32(%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+				t.Errorf("DivInt[int8](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// int32 用例（等价原 TestDivInt32 全部用例）
+	int32Tests := []struct {
+		name     string
+		a, b     int32
+		expected int32
+		overflow bool
+	}{
+		{"正常除法", 6, 2, 3, false},
+		{"负数除法", -6, 2, -3, false},
+		{"负数除法2", 6, -2, -3, false},
+		{"负数除法3", -6, -2, 3, false},
+		{"零除任何数", 0, 5, 0, false},
+		{"MaxInt32除1", math.MaxInt32, 1, math.MaxInt32, false},
+		{"MinInt32除1", math.MinInt32, 1, math.MinInt32, false},
+		{"MinInt32除-1溢出", math.MinInt32, -1, 0, true},
+	}
+	for _, tt := range int32Tests {
+		t.Run("int32_"+tt.name, func(t *testing.T) {
+			result, overflow := DivInt(tt.a, tt.b)
+			if overflow != tt.overflow {
+				t.Errorf("DivInt[int32](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+			}
+			if !tt.overflow && result != tt.expected {
+				t.Errorf("DivInt[int32](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
+			}
+		})
+	}
+
+	// int64 用例
+	int64Tests := []struct {
+		name     string
+		a, b     int64
+		expected int64
+		overflow bool
+	}{
+		{"正常除法", 100, 7, 14, false},
+		{"负数除法", -100, 7, -14, false},
+		{"零除任何数", 0, math.MaxInt64, 0, false},
+		{"MaxInt64除1", math.MaxInt64, 1, math.MaxInt64, false},
+		{"MinInt64除1", math.MinInt64, 1, math.MinInt64, false},
+		{"MinInt64除-1溢出", math.MinInt64, -1, 0, true},
+	}
+	for _, tt := range int64Tests {
+		t.Run("int64_"+tt.name, func(t *testing.T) {
+			result, overflow := DivInt(tt.a, tt.b)
+			if overflow != tt.overflow {
+				t.Errorf("DivInt[int64](%d, %d) overflow = %t, 期望 %t", tt.a, tt.b, overflow, tt.overflow)
+			}
+			if !tt.overflow && result != tt.expected {
+				t.Errorf("DivInt[int64](%d, %d) = %d, 期望 %d", tt.a, tt.b, result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestDivInt32Assert(t *testing.T) {
+func TestDivIntAssert(t *testing.T) {
 	t.Run("正常除法", func(t *testing.T) {
-		result := DivInt32Assert(6, 2)
+		result := DivIntAssert(int32(6), int32(2))
 		if result != 3 {
-			t.Errorf("DivInt32Assert(6, 2) = %d, 期望 3", result)
+			t.Errorf("DivIntAssert[int32](6, 2) = %d, 期望 3", result)
 		}
 	})
 
 	t.Run("溢出时panic", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
-				t.Error("DivInt32Assert 在溢出时应该 panic")
+				t.Error("DivIntAssert 在溢出时应该 panic")
 			}
 		}()
-		DivInt32Assert(math.MinInt32, -1)
+		DivIntAssert(int32(math.MinInt32), int32(-1))
 	})
 }
 
@@ -254,8 +387,7 @@ func TestOverflowPerformance(t *testing.T) {
 		for i := 0; i < 10000; i++ {
 			a := int32(i % 1000)
 			b := int32(i % 1000)
-			_, overflow := MulInt32(a, b)
-			// 只检查不崩溃，不检查具体结果
+			_, overflow := MulInt(a, b)
 			_ = overflow
 		}
 	})
@@ -265,7 +397,6 @@ func TestOverflowPerformance(t *testing.T) {
 			a := i % 1000
 			b := i % 1000
 			_, overflow := AddInt(a, b)
-			// 只检查不崩溃，不检查具体结果
 			_ = overflow
 		}
 	})
@@ -275,7 +406,6 @@ func TestOverflowPerformance(t *testing.T) {
 			a := i % 1000
 			b := i % 1000
 			_, overflow := SubInt(a, b)
-			// 只检查不崩溃，不检查具体结果
 			_ = overflow
 		}
 	})
@@ -283,7 +413,6 @@ func TestOverflowPerformance(t *testing.T) {
 
 func TestOverflowEdgeCases(t *testing.T) {
 	t.Run("边界值测试", func(t *testing.T) {
-		// 测试各种边界值组合
 		testCases := []struct {
 			a, b int32
 		}{
@@ -298,13 +427,11 @@ func TestOverflowEdgeCases(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			// 测试乘法
-			_, mulOverflow := MulInt32(tc.a, tc.b)
+			_, mulOverflow := MulInt(tc.a, tc.b)
 			_ = mulOverflow
 
-			// 测试除法（避免除零）
 			if tc.b != 0 {
-				_, divOverflow := DivInt32(tc.a, tc.b)
+				_, divOverflow := DivInt(tc.a, tc.b)
 				_ = divOverflow
 			}
 		}
