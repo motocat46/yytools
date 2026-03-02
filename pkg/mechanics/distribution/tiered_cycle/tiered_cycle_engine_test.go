@@ -40,33 +40,42 @@ func TestEngine_Config_Validation(t *testing.T) {
 	}{
 		{
 			name: "CycleLen=0",
-			cfg:  Config{ConfigBase: ConfigBase{CycleLen: 0, R: r, Weight: stdWeight}},
+			cfg: Config{
+				ConfigBase:     ConfigBase{CycleLen: 0, R: r},
+				ConfigStandard: ConfigStandard{Weight: stdWeight},
+			},
 		},
 		{
 			name: "CycleLen<0",
-			cfg:  Config{ConfigBase: ConfigBase{CycleLen: -1, R: r, Weight: stdWeight}},
+			cfg: Config{
+				ConfigBase:     ConfigBase{CycleLen: -1, R: r},
+				ConfigStandard: ConfigStandard{Weight: stdWeight},
+			},
 		},
 		{
 			name: "Items非空但R为nil",
 			cfg: Config{
-				ConfigBase:    ConfigBase{CycleLen: 10, Weight: stdWeight},
-				ConfigSpecial: ConfigSpecial{Items: []SpecialItem{{Quota: 1, JoinAt: 0}}},
+				ConfigBase:     ConfigBase{CycleLen: 10},
+				ConfigStandard: ConfigStandard{Weight: stdWeight},
+				ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{Quota: 1, JoinAt: 0}}},
 			},
 		},
 		{
 			// sum(Quota)=3 > CycleLen=2
 			name: "sum(Quota)>CycleLen",
 			cfg: Config{
-				ConfigBase:    ConfigBase{CycleLen: 2, R: r, Weight: stdWeight},
-				ConfigSpecial: ConfigSpecial{Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
+				ConfigBase:     ConfigBase{CycleLen: 2, R: r},
+				ConfigStandard: ConfigStandard{Weight: stdWeight},
+				ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
 			},
 		},
 		{
 			name: "MinInterval过大导致不可行",
 			// CycleLen=5, MinInterval=3, n=3: 5-3*(3-1)=5-6=-1 < 3
 			cfg: Config{
-				ConfigBase:    ConfigBase{CycleLen: 5, R: r, Weight: stdWeight},
-				ConfigSpecial: ConfigSpecial{MinInterval: 3, Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
+				ConfigBase:     ConfigBase{CycleLen: 5, R: r},
+				ConfigStandard: ConfigStandard{Weight: stdWeight},
+				ConfigSpecial:  ConfigSpecial{MinInterval: 3, Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
 			},
 		},
 	}
@@ -83,8 +92,9 @@ func TestEngine_Config_Validation(t *testing.T) {
 	// 合法配置应该成功
 	t.Run("合法配置", func(t *testing.T) {
 		_, err := New(Config{
-			ConfigBase:    ConfigBase{CycleLen: 10, R: newTestRand(1), Weight: stdWeight},
-			ConfigSpecial: ConfigSpecial{MinInterval: 1, Items: []SpecialItem{{1, 0}, {1, 0}}},
+			ConfigBase:     ConfigBase{CycleLen: 10, R: newTestRand(1)},
+			ConfigStandard: ConfigStandard{Weight: stdWeight},
+			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: []SpecialItem{{1, 0}, {1, 0}}},
 		})
 		if err != nil {
 			t.Errorf("合法配置不应返回 error: %v", err)
@@ -94,7 +104,8 @@ func TestEngine_Config_Validation(t *testing.T) {
 	// 无特殊分布时 R 可以为 nil
 	t.Run("无Items时R可nil", func(t *testing.T) {
 		_, err := New(Config{
-			ConfigBase: ConfigBase{CycleLen: 10, Weight: stdWeight},
+			ConfigBase:     ConfigBase{CycleLen: 10},
+			ConfigStandard: ConfigStandard{Weight: stdWeight},
 		})
 		if err != nil {
 			t.Errorf("无 Items 时 R=nil 应合法: %v", err)
@@ -125,8 +136,9 @@ func TestEngine_FullCycle_PositionTypeMapping(t *testing.T) {
 		{Quota: 1, JoinAt: 0},
 	}
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: 10, R: newTestRand(42), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{MinInterval: 1, Items: items},
+		ConfigBase:     ConfigBase{CycleLen: 10, R: newTestRand(42)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -174,8 +186,9 @@ func TestEngine_FullCycle_JoinAtEnforced(t *testing.T) {
 		{Quota: 2, JoinAt: 4},
 	}
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: 20, R: newTestRand(7), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{MinInterval: 2, Items: items},
+		ConfigBase:     ConfigBase{CycleLen: 20, R: newTestRand(7)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -211,8 +224,9 @@ func TestEngine_FullCycle_QuotaEnforced(t *testing.T) {
 		{Quota: 2, JoinAt: 0},
 	}
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: 20, R: newTestRand(99), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{MinInterval: 1, Items: items},
+		ConfigBase:     ConfigBase{CycleLen: 20, R: newTestRand(99)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -245,8 +259,9 @@ func TestEngine_FullCycle_QuotaEnforced(t *testing.T) {
 func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 	const cycleLen = 8
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: cycleLen, R: newTestRand(1), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{MinInterval: 2, Items: []SpecialItem{{1, 0}, {1, 0}}},
+		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(1)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: []SpecialItem{{1, 0}, {1, 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -271,8 +286,9 @@ func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 	items := []SpecialItem{{Quota: 1, JoinAt: 0}}
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: 5, R: newTestRand(3), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{Items: items},
+		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(3)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -280,7 +296,7 @@ func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 	state := NewState()
 	eng.Init(state)
 
-	// 跑几步推进 posInCycle 和 specialUsed
+	// 跑几步推进 posInCycle 和特殊层状态
 	eng.Next(state) //nolint
 	eng.Next(state) //nolint
 
@@ -293,8 +309,11 @@ func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 	if state.PosInCycle() != 0 {
 		t.Errorf("Reset 后 posInCycle 应为 0，实际 %d", state.PosInCycle())
 	}
-	if len(state.specialUsed) != 0 {
-		t.Errorf("Reset 后 specialUsed 应为空，实际 %v", state.specialUsed)
+	if state.special.dw.TtlWght != 0 {
+		t.Errorf("Reset 后 dw.TtlWght 应为 0，实际 %d", state.special.dw.TtlWght)
+	}
+	if len(state.special.unlocked) != 0 {
+		t.Errorf("Reset 后 unlocked 应为空，实际 %v", state.special.unlocked)
 	}
 	// Plan 长度应等于 sum(Quota)，此处 totalQuota=1=len(items)，值相同但语义为特殊位置总数
 	if len(state.Plan()) != int(totalQuota(items)) {
@@ -306,8 +325,9 @@ func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 func TestEngine_NextAutoReset(t *testing.T) {
 	const cycleLen = 6
 	eng, err := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: cycleLen, R: newTestRand(5), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{Items: []SpecialItem{{1, 0}}},
+		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(5)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{1, 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -337,7 +357,8 @@ func TestEngine_NextAutoReset(t *testing.T) {
 // TestEngine_NoSpecials Items 为空时全部走 Standard
 func TestEngine_NoSpecials(t *testing.T) {
 	eng, err := New(Config{
-		ConfigBase: ConfigBase{CycleLen: 10, Weight: stdWeight},
+		ConfigBase:     ConfigBase{CycleLen: 10},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		// R=nil, Items=nil —— 合法：无特殊分布
 	})
 	if err != nil {
@@ -361,27 +382,27 @@ func TestEngine_NoSpecials(t *testing.T) {
 	}
 }
 
-// TestEngine_SpecialNoCandidate JoinAt（特殊序号门槛）不满足时返回 error，但状态仍推进
-func TestEngine_SpecialNoCandidate(t *testing.T) {
-	// 1. 直接验证 specialCycleCore：JoinAt=5，specialOccIdx=3 → no candidate
+// TestSpecialCycleCore_V1 保留旧实现的直接单元测试，用于对比 V1/V2 决策
+func TestSpecialCycleCore_V1(t *testing.T) {
 	items := []SpecialItem{{Quota: 1, JoinAt: 5}}
 	_, err := specialCycleCore(map[int32]int32{}, 3, items)
 	if err == nil {
 		t.Fatal("期望 error: JoinAt=5 > specialOccIdx=3")
 	}
-
-	// specialOccIdx=5 >= JoinAt=5 → 有候选
 	_, err = specialCycleCore(map[int32]int32{}, 5, items)
 	if err != nil {
 		t.Fatalf("specialOccIdx=5 >= JoinAt=5 时不应报错: %v", err)
 	}
+}
 
-	// 2. 通过 Engine 验证：出错时 posInCycle 仍然前进
+// TestEngine_SpecialNoCandidate JoinAt（特殊序号门槛）不满足时返回 error，但状态仍推进
+func TestEngine_SpecialNoCandidate(t *testing.T) {
 	// sum(quota)=1，plan 只有 1 个位置，该位置 occIdx 恒为 0，JoinAt=1 > 0 → 永远 no candidate
 	items2 := []SpecialItem{{Quota: 1, JoinAt: 1}}
 	e2, err2 := New(Config{
-		ConfigBase:    ConfigBase{CycleLen: 5, R: newTestRand(42), Weight: stdWeight},
-		ConfigSpecial: ConfigSpecial{Items: items2},
+		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(42)},
+		ConfigStandard: ConfigStandard{Weight: stdWeight},
+		ConfigSpecial:  ConfigSpecial{Items: items2},
 	})
 	if err2 != nil {
 		t.Fatal(err2)
@@ -421,8 +442,9 @@ func TestEngine_Replay(t *testing.T) {
 
 	getPlan := func() []int32 {
 		eng, err := New(Config{
-			ConfigBase:    ConfigBase{CycleLen: cycleLen, R: newTestRand(seed), Weight: stdWeight},
-			ConfigSpecial: ConfigSpecial{MinInterval: 1, Items: items},
+			ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(seed)},
+			ConfigStandard: ConfigStandard{Weight: stdWeight},
+			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -444,5 +466,110 @@ func TestEngine_Replay(t *testing.T) {
 		if p != plan2[i] {
 			t.Errorf("plan[%d] 不一致: %d vs %d", i, p, plan2[i])
 		}
+	}
+}
+
+// --- 各层独立单元测试 ---
+
+// TestStandardLayer_Generate_Distribution 验证普通层生成结果在权重范围内
+func TestStandardLayer_Generate_Distribution(t *testing.T) {
+	sl := newStandardLayer(NewWeight(map[int]int32{0: 1, 1: 2, 2: 3}))
+	state := sl.NewState()
+	for range 1000 {
+		idx := sl.Generate(&state)
+		if idx < 0 || idx > 2 {
+			t.Errorf("Generate 返回了非法下标 %d（应在 [0,2]）", idx)
+		}
+	}
+}
+
+// TestStandardLayer_Reset_NoOp 验证普通层 Reset 是无状态空操作
+func TestStandardLayer_Reset_NoOp(t *testing.T) {
+	sl := newStandardLayer(NewWeight(map[int]int32{0: 1}))
+	state := sl.NewState()
+	// Reset 不应 panic，也不改变任何外部可观测状态
+	sl.Reset(&state)
+	idx := sl.Generate(&state)
+	if idx != 0 {
+		t.Errorf("Reset 后 Generate 应返回 0，实际 %d", idx)
+	}
+}
+
+// TestSpecialLayer_GetOccIdx 验证 GetOccIdx 正确返回特殊位置序号
+func TestSpecialLayer_GetOccIdx(t *testing.T) {
+	items := []SpecialItem{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}
+	sl := newSpecialLayer(items, 1)
+	state := sl.NewState()
+	// 手动注入计划，隔离随机性
+	state.plan = []int32{3, 7}
+
+	cases := []struct {
+		pos    int32
+		expect int
+	}{
+		{0, -1},
+		{3, 0},
+		{7, 1},
+		{5, -1},
+		{2, -1},
+	}
+	for _, c := range cases {
+		got := sl.GetOccIdx(&state, c.pos)
+		if got != c.expect {
+			t.Errorf("GetOccIdx(pos=%d)=%d，期望 %d", c.pos, got, c.expect)
+		}
+	}
+}
+
+// TestSpecialLayer_Generate_JoinAt 直接测试特殊层的 JoinAt 约束（各阶段候选池正确）
+//
+// items: quota=[2,2], joinAt=[0,2]
+//   - occIdx=0,1: 只有 item[0] 在候选池（item[1].JoinAt=2 未满足）→ 单一候选，结果确定
+//   - occIdx=2: item[0] 配额耗尽，item[1] 进入候选池 → 结果确定为 item[1]
+func TestSpecialLayer_Generate_JoinAt(t *testing.T) {
+	items := []SpecialItem{
+		{Quota: 2, JoinAt: 0},
+		{Quota: 2, JoinAt: 2},
+	}
+	sl := newSpecialLayer(items, 0)
+	state := sl.NewState()
+
+	// occIdx=0：只有 item[0]，单候选必命中
+	idx, err := sl.Generate(&state, 0)
+	if err != nil {
+		t.Fatalf("occIdx=0 不应报错: %v", err)
+	}
+	if idx != 0 {
+		t.Errorf("occIdx=0 应命中 item[0]，实际 idx=%d", idx)
+	}
+
+	// occIdx=1：item[0] 还剩 1 次配额，item[1].JoinAt=2 未满足，单候选
+	idx, err = sl.Generate(&state, 1)
+	if err != nil {
+		t.Fatalf("occIdx=1 不应报错: %v", err)
+	}
+	if idx != 0 {
+		t.Errorf("occIdx=1 应命中 item[0]（配额剩 1），实际 idx=%d", idx)
+	}
+
+	// occIdx=2：item[0] 配额耗尽，item[1] 满足 JoinAt=2，单候选
+	idx, err = sl.Generate(&state, 2)
+	if err != nil {
+		t.Fatalf("occIdx=2 不应报错: %v", err)
+	}
+	if idx != 1 {
+		t.Errorf("occIdx=2 应命中 item[1]（item[0] 已耗尽），实际 idx=%d", idx)
+	}
+}
+
+// TestSpecialLayer_Generate_NoCandidate JoinAt 门槛未满足时返回 error
+func TestSpecialLayer_Generate_NoCandidate(t *testing.T) {
+	items := []SpecialItem{{Quota: 1, JoinAt: 3}}
+	sl := newSpecialLayer(items, 0)
+	state := sl.NewState()
+
+	_, err := sl.Generate(&state, 2) // occIdx=2 < JoinAt=3
+	if err == nil {
+		t.Error("occIdx=2 < JoinAt=3，应返回 no candidate error")
 	}
 }

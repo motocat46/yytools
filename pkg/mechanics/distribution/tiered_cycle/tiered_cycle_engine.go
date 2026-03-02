@@ -22,22 +22,20 @@ import (
 	"math/rand/v2"
 )
 
-// SpecialItem 每个特殊结果的配置，下标即 Result.Index
-type SpecialItem struct {
-	Quota  int32 // 此特殊结果在一个周期内可出现的最大次数
-	JoinAt int32 // 第几次特殊抽（0-based 特殊出现序号）时该奖励才开始进入候选池
-}
-
 type Config struct {
 	ConfigBase
+	ConfigStandard
 	ConfigSpecial
 }
 
 type ConfigBase struct {
 	// R 随机源，仅用于每轮周期的特殊分布计划生成；标准分布使用全局随机源
 	R        *rand.Rand
-	CycleLen int32  // 一个循环大周期分布数量
-	Weight   Weight // 普通分布的权重结构
+	CycleLen int32 // 一个循环大周期分布数量
+}
+
+type ConfigStandard struct {
+	Weight Weight // 普通分布的权重结构
 }
 
 type ConfigSpecial struct {
@@ -45,18 +43,16 @@ type ConfigSpecial struct {
 	Items       []SpecialItem // 各特殊结果配置，长度即特殊分布数量
 }
 
+// State 每个玩家/对象的进度，持有各层的运行时状态
 type State struct {
-	posInCycle  int32           // 当前分布位置，由 Engine 推进（周期内位置）
-	specialPlan []int32         // 特殊分布计划（有序）
-	specialUsed map[int32]int32 // 特殊分布已出现次数
+	posInCycle int32              // 当前分布位置，由 Engine 推进（周期内位置）
+	standard   StandardLayerState // 普通层状态
+	special    SpecialLayerState  // 特殊层状态
 }
 
+// NewState 创建一个新的空 State，调用 Engine.Init 后方可使用
 func NewState() *State {
-	return &State{
-		posInCycle:  0,
-		specialPlan: make([]int32, 0),
-		specialUsed: make(map[int32]int32),
-	}
+	return &State{}
 }
 
 // PosInCycle 返回当前周期内位置（只读）
@@ -66,7 +62,7 @@ func (s *State) PosInCycle() int32 {
 
 // Plan 返回本周期特殊分布计划（只读切片）
 func (s *State) Plan() []int32 {
-	return s.specialPlan
+	return s.special.plan
 }
 
 type DistributionType int
@@ -77,9 +73,24 @@ const (
 	Special  DistributionType = 1
 )
 
-// 非线程安全(主要是因为rand)，多个goroutine使用要加锁
-type Engine struct{ cfg Config }
+// Engine 持有不可变规则，纯调度；非线程安全（因 rand），多 goroutine 使用需加锁
+//	v1（当前）：固定两层 + 固定 state 形状，追求好用、稳定、易测
+//	v2（未来）：当出现需要不同 state 的 layer 时，引入可插拔 state 的 EngineV2（可以同仓库并存）
+type Engine struct {
+	cycleLen int32
+	r        *rand.Rand
+	standard StandardLayer
+	special  SpecialLayer
+}
 
+// TODO
+// 默认入口 New(cfg)：Config 固定（方便多数场景）
+// 目前New由固定的配置决定分层的规则
+// 假如有多个标准层的随机规则，要制定某一个规则（这就是工厂模式了），就无法再用Config控制
+// 如果后续有每层规则变化的情况，可以考虑单独构造Engine，独立设置每一层的结构体
+// Engine只暴露:Init()\Next()\NextAutoRest()\Reset()4个方法
+// 暂不过度设计
+// 保留了扩展的能力,如果确实需要为使用者提供独立可替换的Layer再考虑提供EngineV2
 func New(cfg Config) (*Engine, error) {
 	if cfg.CycleLen <= 0 {
 		return nil, fmt.Errorf("CycleLen must be > 0, got %d", cfg.CycleLen)
@@ -95,7 +106,12 @@ func New(cfg Config) (*Engine, error) {
 		return nil, fmt.Errorf("infeasible: CycleLen=%d cannot accommodate %d special occurrences with MinInterval=%d",
 			cfg.CycleLen, n, cfg.MinInterval)
 	}
-	return &Engine{cfg: cfg}, nil
+	return &Engine{
+		cycleLen: cfg.CycleLen,
+		r:        cfg.R,
+		standard: newStandardLayer(cfg.Weight),
+		special:  newSpecialLayer(cfg.Items, cfg.MinInterval),
+	}, nil
 }
 
 func (e *Engine) Init(state *State) {
@@ -117,53 +133,32 @@ func (e *Engine) NextAutoReset(state *State) (Result, error) {
 }
 
 func (e *Engine) Next(state *State) (Result, error) {
-	// 1.调用者先构造好基础数据，再使用Next
-	// 2.Next()执行；
-	// 3.调用者更新相关数据，方便下次再调用Next
 	res := Result{Index: -1, Type: Invalid}
 	var err error
 	
-	specialOccIdx := getSpecialCycleIndex(state.specialPlan, state.posInCycle)
-	if specialOccIdx == -1 {
-		res.Index = standardCycleCore(e.cfg.Weight)
+	occIdx := e.special.GetOccIdx(&state.special, state.posInCycle)
+	if occIdx == -1 {
+		res.Index = e.standard.Generate(&state.standard)
 		res.Type = Standard
 	} else {
 		var index int
-		index, err = specialCycleCore(state.specialUsed, int32(specialOccIdx), e.cfg.Items)
+		index, err = e.special.Generate(&state.special, int32(occIdx))
 		if err == nil {
 			res.Index = index
 			res.Type = Special
-			state.specialUsed[int32(index)]++
 		}
 	}
 	
 	// 状态推进：无论是否出错位置都前进，防止调用方陷入同一特殊位置的无限重试
 	state.posInCycle++
-	if state.posInCycle >= e.cfg.CycleLen {
-		// 不直接重置周期，由上层决定是否重置
+	if state.posInCycle >= e.cycleLen {
 		res.CycleEnd = true
 	}
 	return res, err
 }
 
 func (e *Engine) ResetCycle(state *State) {
-	// 重置周期
 	state.posInCycle = 0
-	// 重置特殊分布计划数据
-	n := totalQuota(e.cfg.Items)
-	if n == 0 {
-		if state.specialPlan == nil {
-			state.specialPlan = make([]int32, 0)
-		} else {
-			state.specialPlan = state.specialPlan[:0]
-		}
-	} else {
-		state.specialPlan = buildSpecialPlan(e.cfg.R, e.cfg.CycleLen, e.cfg.MinInterval, n)
-	}
-	// 清理不同特殊分布命中数据
-	if state.specialUsed == nil {
-		state.specialUsed = make(map[int32]int32)
-	} else {
-		clear(state.specialUsed)
-	}
+	e.standard.Reset(&state.standard)
+	e.special.Reset(&state.special, e.r, e.cycleLen)
 }

@@ -43,7 +43,9 @@ func Example_gachaSystem() {
 		ConfigBase: ConfigBase{
 			R:        rand.New(rand.NewPCG(42, 0)),
 			CycleLen: 100,
-			Weight:   NewWeight(map[int]int32{0: 70, 1: 20, 2: 10}),
+		},
+		ConfigStandard: ConfigStandard{
+			Weight: NewWeight(map[int]int32{0: 70, 1: 20, 2: 10}),
 		},
 		ConfigSpecial: ConfigSpecial{
 			MinInterval: 5,
@@ -95,7 +97,9 @@ func Example_multipleStates() {
 		ConfigBase: ConfigBase{
 			R:        rand.New(rand.NewPCG(1, 0)),
 			CycleLen: 20,
-			Weight:   NewWeight(map[int]int32{0: 1}),
+		},
+		ConfigStandard: ConfigStandard{
+			Weight: NewWeight(map[int]int32{0: 1}),
 		},
 		ConfigSpecial: ConfigSpecial{
 			MinInterval: 2,

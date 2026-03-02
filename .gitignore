@@ -6,3 +6,4 @@ tools/pkg
 bin/yytools
 coverage.out
 demo
+pkg/mechanics/distribution/.DS_Store

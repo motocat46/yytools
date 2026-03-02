@@ -63,13 +63,22 @@ func NewDynamicWeightsWithReduce[T base.Signed](weights map[interface{}]T, reduc
 	}
 }
 
+// NewDynamicWeightsProgressive 创建初始为空、支持后续动态增加权重的 DW。
+// 与 NewDynamicWeights 不同，此构造器不要求初始权重非空。
+func NewDynamicWeightsProgressive[T base.Signed]() *DynamicWeights[T] {
+	return &DynamicWeights[T]{
+		Weights: make(map[interface{}]T),
+		TtlWght: 0,
+		Reduce:  1,
+	}
+}
+
 // 判断是否可以继续获得
 func (this *DynamicWeights[T]) CanGenerate() bool {
 	if this.TtlWght > 0 {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func (this *DynamicWeights[T]) SetReduce(reduce T) {
