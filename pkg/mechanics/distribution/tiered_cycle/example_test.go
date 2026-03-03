@@ -18,6 +18,8 @@ package tiered_cycle
 import (
 	"fmt"
 	"math/rand/v2"
+
+	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // Example_gachaSystem 演示游戏抽卡保底系统。
@@ -33,7 +35,7 @@ import (
 //	特殊序号 7–8  → item[0..2] 可选（5星限定武器加入）
 //	特殊序号 9    → item[0..3] 全部可选（5星限定角色，终极保底）
 func Example_gachaSystem() {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 4, JoinAt: 0}, // 4星角色碎片：随时可出
 		{Quota: 3, JoinAt: 4}, // 4星武器：从第5次保底起
 		{Quota: 2, JoinAt: 7}, // 5星限定武器：从第8次保底起
@@ -52,14 +54,14 @@ func Example_gachaSystem() {
 			Items:       items,
 		},
 	}
-	
+
 	eng, err := New(cfg)
 	if err != nil {
 		panic(err)
 	}
 	state := NewState()
 	eng.Init(state)
-	
+
 	standardCount := 0
 	specialCounts := make([]int, len(items))
 	// 抽3个周期，engine自动重置，调用者只需要构造初始配置信息即可
@@ -76,7 +78,7 @@ func Example_gachaSystem() {
 			specialCounts[res.Index]++
 		}
 	}
-	
+
 	fmt.Printf("标准抽次数:   %d\n", standardCount)
 	fmt.Printf("4星角色碎片: %d次\n", specialCounts[0])
 	fmt.Printf("4星武器:     %d次\n", specialCounts[1])
@@ -89,7 +91,7 @@ func Example_gachaSystem() {
 // Engine 保存规则（不可变），State 保存每位玩家的进度。
 // 多个 State 互不干扰，体现 Engine/State 职责分离的设计价值。
 func Example_multipleStates() {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 3, JoinAt: 0},
 		{Quota: 2, JoinAt: 3},
 	}
@@ -106,19 +108,19 @@ func Example_multipleStates() {
 			Items:       items,
 		},
 	}
-	
+
 	eng, err := New(cfg)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	// 3 个玩家，独立进度
 	states := make([]*State, 3)
 	for i := range states {
 		states[i] = NewState()
 		eng.Init(states[i])
 	}
-	
+
 	// 每个玩家独立完整跑一个周期
 	for playerID, st := range states {
 		specialCount := 0

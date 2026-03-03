@@ -20,6 +20,8 @@ package tiered_cycle
 import (
 	"math/rand/v2"
 	"testing"
+
+	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // newTestRand 用固定种子创建随机源，保证计划生成可重放
@@ -57,7 +59,7 @@ func TestEngine_Config_Validation(t *testing.T) {
 			cfg: Config{
 				ConfigBase:     ConfigBase{CycleLen: 10},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
-				ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{Quota: 1, JoinAt: 0}}},
+				ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}}},
 			},
 		},
 		{
@@ -66,7 +68,7 @@ func TestEngine_Config_Validation(t *testing.T) {
 			cfg: Config{
 				ConfigBase:     ConfigBase{CycleLen: 2, R: r},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
-				ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
+				ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 			},
 		},
 		{
@@ -75,7 +77,7 @@ func TestEngine_Config_Validation(t *testing.T) {
 			cfg: Config{
 				ConfigBase:     ConfigBase{CycleLen: 5, R: r},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
-				ConfigSpecial:  ConfigSpecial{MinInterval: 3, Items: []SpecialItem{{1, 0}, {1, 0}, {1, 0}}},
+				ConfigSpecial:  ConfigSpecial{MinInterval: 3, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 			},
 		},
 	}
@@ -94,7 +96,7 @@ func TestEngine_Config_Validation(t *testing.T) {
 		_, err := New(Config{
 			ConfigBase:     ConfigBase{CycleLen: 10, R: newTestRand(1)},
 			ConfigStandard: ConfigStandard{Weight: stdWeight},
-			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: []SpecialItem{{1, 0}, {1, 0}}},
+			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 		})
 		if err != nil {
 			t.Errorf("合法配置不应返回 error: %v", err)
@@ -131,7 +133,7 @@ func runOneCycle(t *testing.T, eng *Engine, state *State) (positions []int32, re
 
 // TestEngine_FullCycle_PositionTypeMapping 全周期内：plan 位置 → Special，其余 → Standard
 func TestEngine_FullCycle_PositionTypeMapping(t *testing.T) {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 1, JoinAt: 0},
 		{Quota: 1, JoinAt: 0},
 	}
@@ -180,7 +182,7 @@ func TestEngine_FullCycle_PositionTypeMapping(t *testing.T) {
 //   - occIdx 2,3: item0,item1 可选
 //   - occIdx 4,5: 三者都可选
 func TestEngine_FullCycle_JoinAtEnforced(t *testing.T) {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 2, JoinAt: 0},
 		{Quota: 2, JoinAt: 2},
 		{Quota: 2, JoinAt: 4},
@@ -219,7 +221,7 @@ func TestEngine_FullCycle_JoinAtEnforced(t *testing.T) {
 
 // TestEngine_FullCycle_QuotaEnforced 每个周期内 Special 命中次数不超过 Quota
 func TestEngine_FullCycle_QuotaEnforced(t *testing.T) {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 1, JoinAt: 0},
 		{Quota: 2, JoinAt: 0},
 	}
@@ -261,7 +263,7 @@ func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 	eng, err := New(Config{
 		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(1)},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
-		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: []SpecialItem{{1, 0}, {1, 0}}},
+		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -284,7 +286,7 @@ func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 
 // TestEngine_ResetCycle_StateCleared Reset 后状态正确归零、新 Plan 生成
 func TestEngine_ResetCycle_StateCleared(t *testing.T) {
-	items := []SpecialItem{{Quota: 1, JoinAt: 0}}
+	items := []weight_cycle.Item{{Quota: 1, JoinAt: 0}}
 	eng, err := New(Config{
 		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(3)},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
@@ -309,15 +311,15 @@ func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 	if state.PosInCycle() != 0 {
 		t.Errorf("Reset 后 posInCycle 应为 0，实际 %d", state.PosInCycle())
 	}
-	if state.special.dw.TtlWght != 0 {
-		t.Errorf("Reset 后 dw.TtlWght 应为 0，实际 %d", state.special.dw.TtlWght)
+	if state.special.Dw.TtlWght != 0 {
+		t.Errorf("Reset 后 Dw.TtlWght 应为 0，实际 %d", state.special.Dw.TtlWght)
 	}
-	if len(state.special.unlocked) != 0 {
-		t.Errorf("Reset 后 unlocked 应为空，实际 %v", state.special.unlocked)
+	if len(state.special.Unlocked) != 0 {
+		t.Errorf("Reset 后 Unlocked 应为空，实际 %v", state.special.Unlocked)
 	}
-	// Plan 长度应等于 sum(Quota)，此处 totalQuota=1=len(items)，值相同但语义为特殊位置总数
-	if len(state.Plan()) != int(totalQuota(items)) {
-		t.Errorf("Reset 后 Plan 长度应为 %d（sum of Quota），实际 %d", totalQuota(items), len(state.Plan()))
+	// Plan 长度应等于 sum(Quota)，此处 TotalQuota=1=len(items)，值相同但语义为特殊位置总数
+	if len(state.Plan()) != int(weight_cycle.TotalQuota(items)) {
+		t.Errorf("Reset 后 Plan 长度应为 %d（sum of Quota），实际 %d", weight_cycle.TotalQuota(items), len(state.Plan()))
 	}
 }
 
@@ -327,7 +329,7 @@ func TestEngine_NextAutoReset(t *testing.T) {
 	eng, err := New(Config{
 		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(5)},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
-		ConfigSpecial:  ConfigSpecial{Items: []SpecialItem{{1, 0}}},
+		ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -382,23 +384,10 @@ func TestEngine_NoSpecials(t *testing.T) {
 	}
 }
 
-// TestSpecialCycleCore_V1 保留旧实现的直接单元测试，用于对比 V1/V2 决策
-func TestSpecialCycleCore_V1(t *testing.T) {
-	items := []SpecialItem{{Quota: 1, JoinAt: 5}}
-	_, err := specialCycleCore(map[int32]int32{}, 3, items)
-	if err == nil {
-		t.Fatal("期望 error: JoinAt=5 > specialOccIdx=3")
-	}
-	_, err = specialCycleCore(map[int32]int32{}, 5, items)
-	if err != nil {
-		t.Fatalf("specialOccIdx=5 >= JoinAt=5 时不应报错: %v", err)
-	}
-}
-
 // TestEngine_SpecialNoCandidate JoinAt（特殊序号门槛）不满足时返回 error，但状态仍推进
 func TestEngine_SpecialNoCandidate(t *testing.T) {
 	// sum(quota)=1，plan 只有 1 个位置，该位置 occIdx 恒为 0，JoinAt=1 > 0 → 永远 no candidate
-	items2 := []SpecialItem{{Quota: 1, JoinAt: 1}}
+	items2 := []weight_cycle.Item{{Quota: 1, JoinAt: 1}}
 	e2, err2 := New(Config{
 		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(42)},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
@@ -433,7 +422,7 @@ func TestEngine_SpecialNoCandidate(t *testing.T) {
 
 // TestEngine_Replay 相同种子产生完全相同的周期计划（plan 位置）
 func TestEngine_Replay(t *testing.T) {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 1, JoinAt: 0},
 		{Quota: 1, JoinAt: 0},
 	}
@@ -497,7 +486,7 @@ func TestStandardLayer_Reset_NoOp(t *testing.T) {
 
 // TestSpecialLayer_GetOccIdx 验证 GetOccIdx 正确返回特殊位置序号
 func TestSpecialLayer_GetOccIdx(t *testing.T) {
-	items := []SpecialItem{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}
+	items := []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}
 	sl := newSpecialLayer(items, 1)
 	state := sl.NewState()
 	// 手动注入计划，隔离随机性
@@ -527,7 +516,7 @@ func TestSpecialLayer_GetOccIdx(t *testing.T) {
 //   - occIdx=0,1: 只有 item[0] 在候选池（item[1].JoinAt=2 未满足）→ 单一候选，结果确定
 //   - occIdx=2: item[0] 配额耗尽，item[1] 进入候选池 → 结果确定为 item[1]
 func TestSpecialLayer_Generate_JoinAt(t *testing.T) {
-	items := []SpecialItem{
+	items := []weight_cycle.Item{
 		{Quota: 2, JoinAt: 0},
 		{Quota: 2, JoinAt: 2},
 	}
@@ -564,7 +553,7 @@ func TestSpecialLayer_Generate_JoinAt(t *testing.T) {
 
 // TestSpecialLayer_Generate_NoCandidate JoinAt 门槛未满足时返回 error
 func TestSpecialLayer_Generate_NoCandidate(t *testing.T) {
-	items := []SpecialItem{{Quota: 1, JoinAt: 3}}
+	items := []weight_cycle.Item{{Quota: 1, JoinAt: 3}}
 	sl := newSpecialLayer(items, 0)
 	state := sl.NewState()
 

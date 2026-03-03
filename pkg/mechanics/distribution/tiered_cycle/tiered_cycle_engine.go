@@ -20,6 +20,8 @@ package tiered_cycle
 import (
 	"fmt"
 	"math/rand/v2"
+	
+	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 type Config struct {
@@ -39,8 +41,8 @@ type ConfigStandard struct {
 }
 
 type ConfigSpecial struct {
-	MinInterval int32         // 两个特殊位置之间的最小间隔（0 表示不限）
-	Items       []SpecialItem // 各特殊结果配置，长度即特殊分布数量
+	MinInterval int32               // 两个特殊位置之间的最小间隔（0 表示不限）
+	Items       []weight_cycle.Item // 各特殊结果配置，长度即特殊分布数量
 }
 
 // State 每个玩家/对象的进度，持有各层的运行时状态
@@ -95,10 +97,10 @@ func New(cfg Config) (*Engine, error) {
 	if cfg.CycleLen <= 0 {
 		return nil, fmt.Errorf("CycleLen must be > 0, got %d", cfg.CycleLen)
 	}
-	if totalQuota(cfg.Items) > 0 && cfg.R == nil {
+	if weight_cycle.TotalQuota(cfg.Items) > 0 && cfg.R == nil {
 		return nil, fmt.Errorf("R must not be nil when Items is non-empty")
 	}
-	n := totalQuota(cfg.Items)
+	n := weight_cycle.TotalQuota(cfg.Items)
 	if n > cfg.CycleLen {
 		return nil, fmt.Errorf("sum(Quota)=%d > CycleLen=%d", n, cfg.CycleLen)
 	}

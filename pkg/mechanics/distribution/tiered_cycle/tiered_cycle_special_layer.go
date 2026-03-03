@@ -18,43 +18,37 @@
 package tiered_cycle
 
 import (
-	"fmt"
 	"math/rand/v2"
 	
-	pd "github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/sampling"
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
-
-// SpecialItem 每个特殊结果的配置，下标即 Result.Index
-type SpecialItem struct {
-	Quota  int32 // 此特殊结果在一个周期内可出现的最大次数
-	JoinAt int32 // 第几次特殊抽（0-based 特殊出现序号）时该奖励才开始进入候选池
-}
 
 // SpecialLayerState 特殊层的运行时状态（仅属于特殊层）
 type SpecialLayerState struct {
-	plan     []int32                   // 本周期特殊位置计划（有序）
-	dw       *pd.DynamicWeights[int32] // 动态权重机
-	unlocked map[int]bool              // 已加入动态权重机的权重 key
+	plan []int32 // 本周期特殊位置计划（有序）
+	*weight_cycle.State
 }
 
 // SpecialLayer 特殊层：封装特殊保底分布的规则与算法
 type SpecialLayer struct {
-	items       []SpecialItem
 	minInterval int32
+	*weight_cycle.Layer
 }
 
-func newSpecialLayer(items []SpecialItem, minInterval int32) SpecialLayer {
-	return SpecialLayer{items: items, minInterval: minInterval}
+func newSpecialLayer(items []weight_cycle.Item, minInterval int32) SpecialLayer {
+	layer := SpecialLayer{minInterval: minInterval}
+	layer.Layer = weight_cycle.NewWeightCycleLayer(items)
+	return layer
 }
 
 func (l *SpecialLayer) NewState() SpecialLayerState {
-	return SpecialLayerState{
-		plan:     make([]int32, 0),
-		dw:       newEmptyDW(),
-		unlocked: make(map[int]bool),
+	state := SpecialLayerState{
+		plan: make([]int32, 0),
 	}
+	state.State = weight_cycle.NewState()
+	return state
 }
 
 // GetOccIdx 返回 posInCycle 在特殊计划中的序号（0-based），-1 表示不是特殊位置
@@ -64,12 +58,12 @@ func (l *SpecialLayer) GetOccIdx(state *SpecialLayerState, posInCycle int32) int
 
 // Generate 执行特殊层抽取（算法在此，可独立替换）
 func (l *SpecialLayer) Generate(state *SpecialLayerState, occIdx int32) (int, error) {
-	return specialCycleCoreV2(state.unlocked, occIdx, l.items, state.dw)
+	return l.Layer.Generate(state.State, occIdx)
 }
 
 // Reset 重置特殊层状态，并生成新的周期计划
 func (l *SpecialLayer) Reset(state *SpecialLayerState, r *rand.Rand, cycleLen int32) {
-	n := totalQuota(l.items)
+	n := l.TotalQuota
 	if n == 0 {
 		if state.plan == nil {
 			state.plan = make([]int32, 0)
@@ -79,12 +73,7 @@ func (l *SpecialLayer) Reset(state *SpecialLayerState, r *rand.Rand, cycleLen in
 	} else {
 		state.plan = buildSpecialPlan(r, cycleLen, l.minInterval, n)
 	}
-	state.dw = newEmptyDW()
-	state.unlocked = make(map[int]bool)
-}
-
-func newEmptyDW() *pd.DynamicWeights[int32] {
-	return pd.NewDynamicWeightsProgressive[int32]()
+	state.State = weight_cycle.NewState()
 }
 
 // buildSpecialPlan 初始化特殊抽取的周期分布计划
@@ -95,74 +84,6 @@ func buildSpecialPlan(r *rand.Rand, pondCycle int32, pondMinInterval int32, coun
 	
 	// 从 [0, pondCycle-1] 选 count 个位置，最小间隔 pondMinInterval
 	return sampling.SampleWithMinGap(0, pondCycle-1, int(count), int(pondMinInterval), r)
-}
-
-// totalQuota 返回所有 SpecialItem 的 Quota 之和，即一个周期内特殊位置总数
-func totalQuota(items []SpecialItem) int32 {
-	var n int32
-	for _, item := range items {
-		n += item.Quota
-	}
-	return n
-}
-
-func checkSpecialCycleCoreParams(used map[int32]int32, specialOccIdx int32, items []SpecialItem) error {
-	if used == nil {
-		return fmt.Errorf("invalid used map(nil)")
-	}
-	if specialOccIdx < 0 {
-		return fmt.Errorf("invalid specialOccIdx:%d", specialOccIdx)
-	}
-	if len(items) == 0 {
-		return fmt.Errorf("invalid items: empty")
-	}
-	return nil
-}
-
-// specialCycleCore 执行特殊抽取选择（V1 实现，保留用于对比测试）。
-// specialOccIdx 为当前特殊出现序号（0-based），即本次特殊抽是周期内第几次特殊抽。
-// items[i].JoinAt 表示第几次特殊抽（0-based）时该奖励才开始进入候选池。
-// 例如：JoinAt=0 从第0次特殊抽起即可出现；JoinAt=3 从第4次特殊抽起才能出现。
-func specialCycleCore(used map[int32]int32, specialOccIdx int32, items []SpecialItem) (selectedIndex int, err error) {
-	err = checkSpecialCycleCoreParams(used, specialOccIdx, items)
-	if err != nil {
-		return -1, err
-	}
-	weightMap := make(map[int]int32)
-	var totalWeight int32
-	
-	for i, item := range items {
-		// 检查：
-		// 1. 当前特殊序号已达到加入门槛，且 2. 该奖励还有出现次数配额
-		diff := item.Quota - used[int32(i)]
-		if specialOccIdx >= item.JoinAt && diff > 0 {
-			weightMap[i] = diff
-			totalWeight += diff
-		}
-	}
-	
-	if len(weightMap) == 0 || totalWeight == 0 {
-		return -1, fmt.Errorf("no candidate")
-	}
-	selectedIndex = pd.CalcKeyByWeight(weightMap, totalWeight)
-	return selectedIndex, nil
-}
-
-// specialCycleCoreV2 执行特殊抽取选择（V2 实现，使用动态权重机）。
-// specialOccIdx 为当前特殊出现序号（0-based），即本次特殊抽是周期内第几次特殊抽。
-// items[i].JoinAt 表示第几次特殊抽（0-based）时该奖励才开始进入候选池。
-func specialCycleCoreV2(unlocked map[int]bool, specialOccIdx int32, items []SpecialItem, dw *pd.DynamicWeights[int32]) (selectedIndex int, err error) {
-	for i, item := range items {
-		if specialOccIdx >= item.JoinAt && !unlocked[i] {
-			unlocked[i] = true
-			dw.Weights[i] = item.Quota
-			dw.TtlWght += item.Quota
-		}
-	}
-	if !dw.CanGenerate() {
-		return -1, fmt.Errorf("no candidate: specialOccIdx=%d", specialOccIdx)
-	}
-	return dw.Generate().(int), nil
 }
 
 // getSpecialCycleIndex 判断当前位置是否是特殊循环位置
