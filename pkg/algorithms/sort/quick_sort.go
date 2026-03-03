@@ -54,7 +54,7 @@ func quickSortTraversal[T base.Integer](arr []T, start, end int) {
 			insertionSort(arr, tmp.Start, tmp.End)
 			continue
 		}
-
+		
 		pivot := partition(arr, tmp.Start, tmp.End)
 		s.Push(&StackData{Start: pivot + 1, End: tmp.End})
 		s.Push(&StackData{Start: tmp.Start, End: pivot})
@@ -72,14 +72,14 @@ func quickSort[T base.Integer](arr []T, start, end int) {
 		return
 	}
 	pivot := partition(arr, start, end)
-	quickSort(arr, start, pivot)
-	quickSort(arr, pivot+1, end)
+	quickSort[T](arr, start, pivot)
+	quickSort[T](arr, pivot+1, end)
 }
 
 func partition[T base.Integer](arr []T, start, end int) int {
 	r := random.RandInt(start, end-1)
 	arr[r], arr[end-1] = arr[end-1], arr[r]
-
+	
 	i := start
 	j := end - 1
 	for ; i < j; i++ {
@@ -125,7 +125,7 @@ func quickSortDescTraversal[T base.Integer](arr []T, start, end int) {
 			insertionSortDesc(arr, tmp.Start, tmp.End)
 			continue
 		}
-
+		
 		pivot := partitionDesc(arr, tmp.Start, tmp.End)
 		s.Push(&StackData{Start: pivot + 1, End: tmp.End})
 		s.Push(&StackData{Start: tmp.Start, End: pivot})
@@ -140,14 +140,14 @@ func quickSortDesc[T base.Integer](arr []T, start, end int) {
 		return
 	}
 	pivot := partitionDesc(arr, start, end)
-	quickSortDesc(arr, start, pivot)
-	quickSortDesc(arr, pivot+1, end)
+	quickSortDesc[T](arr, start, pivot)
+	quickSortDesc[T](arr, pivot+1, end)
 }
 
 func partitionDesc[T base.Integer](arr []T, start, end int) int {
 	r := random.RandInt(start, end-1)
 	arr[r], arr[end-1] = arr[end-1], arr[r]
-
+	
 	i := start
 	j := end - 1
 	for ; i < j; i++ {
