@@ -25,8 +25,6 @@ import (
 	"strings"
 )
 
-//var isAssertOpen = true
-
 func SetAssert(open bool) {
 	isAssertOpen = open
 }
@@ -39,14 +37,14 @@ func IsAssertOpen() bool {
 func getPrefix() string {
 	// 获取调用栈信息
 	_, file, line, _ := runtime.Caller(2)
-
+	
 	// 这里使用strings.Builder手动拼接字符串效率更高
 	prefixBuilder := strings.Builder{}
 	prefixBuilder.WriteString("assertion failed at ")
 	prefixBuilder.WriteString(file)
 	prefixBuilder.WriteRune(':')
 	prefixBuilder.WriteString(strconv.Itoa(line))
-
+	
 	prefix := prefixBuilder.String()
 	return prefix
 }
