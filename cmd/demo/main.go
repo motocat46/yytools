@@ -99,7 +99,6 @@ func main() {
 
 	// 逐一注册各 bench 子命令
 	for _, bc := range benchCmds {
-		bc := bc // 捕获循环变量
 		rootCmd.AddCommand(&cobra.Command{
 			Use:   bc.use + " <iterations>",
 			Short: bc.short,

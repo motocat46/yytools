@@ -18,180 +18,216 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	syssort "sort"
+	"time"
+
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
+	probdist "github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
 	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
 	sort2 "github.com/stormYuanYang/yytools/pkg/algorithms/sort"
-	"net/http"
-	syssort "sort"
-	"time"
 )
 
-// generate random data for line chart
-func generateLineItems() []opts.LineData {
-	items := make([]opts.LineData, 0)
-	for i := 0; i < 12; i++ {
-		items = append(items, opts.LineData{Value: random.RandInt[int32](1, 30)})
-	}
-	return items
-}
+// ---- 通用辅助 ----
 
 func generateLineData(data []int64) []opts.LineData {
-	items := make([]opts.LineData, 0)
-	for i := 0; i < len(data); i++ {
-		items = append(items, opts.LineData{Value: data[i]})
+	items := make([]opts.LineData, 0, len(data))
+	for _, v := range data {
+		items = append(items, opts.LineData{Value: v})
 	}
 	return items
-}
-
-type SortInfo struct {
-	Name   string
-	CostMs []int64
 }
 
 type CompareArr struct {
 	Arr []int32
 }
 
-func (this *CompareArr) Len() int {
-	return len(this.Arr)
+func (c *CompareArr) Len() int           { return len(c.Arr) }
+func (c *CompareArr) Less(i, j int) bool { return c.Arr[i] < c.Arr[j] }
+func (c *CompareArr) Swap(i, j int)      { c.Arr[i], c.Arr[j] = c.Arr[j], c.Arr[i] }
+
+// measureSort 复制数组后执行 sortFn，返回耗时毫秒数
+func measureSort(arr []int32, sortFn func([]int32)) int64 {
+	aux := make([]int32, len(arr))
+	copy(aux, arr)
+	start := time.Now().UnixNano()
+	sortFn(aux)
+	return (time.Now().UnixNano() - start) / 1e6
 }
 
-func (this *CompareArr) Less(i, j int) bool {
-	return this.Arr[i] < this.Arr[j]
+// measureGoSort 使用 Go 标准库 sort.Sort 排序，返回耗时毫秒数
+func measureGoSort(arr []int32) int64 {
+	aux := make([]int32, len(arr))
+	copy(aux, arr)
+	start := time.Now().UnixNano()
+	syssort.Sort(&CompareArr{Arr: aux})
+	return (time.Now().UnixNano() - start) / 1e6
 }
 
-func (this *CompareArr) Swap(i, j int) {
-	this.Arr[i], this.Arr[j] = this.Arr[j], this.Arr[i]
-}
-
-func createLine() *charts.Line {
-	insertionSortInfo := &SortInfo{
-		Name:   "insertion sort",
-		CostMs: []int64{},
-	}
-	quickSortInfo := &SortInfo{
-		Name:   "quick sort",
-		CostMs: []int64{},
-	}
-	// quickSortTraversalInfo := &SortInfo{
-	// 	Name:   "quick sort traversal",
-	// 	CostMs: []int64{},
-	// }
-	systemQuickSortInfo := &SortInfo{
-		Name:   "golang quick sort",
-		CostMs: []int64{},
-	}
-	coutingSortInfo := &SortInfo{
-		Name:   "Counting sort",
-		CostMs: make([]int64, 0),
-	}
-	for i := 0; i < 10; i++ {
-		limit := 1e5 * (i + 1)
-		arr := make([]int32, limit, limit)
-		for j := 0; j < int(limit); j++ {
-			r := random.RandInt[int32](1, 100000)
-			arr[j] = r
-		}
-
-		auxArr := make([]int32, limit, limit)
-		// copy(auxArr, arr)
-		start := time.Now().UnixNano()
-		// sort.InsertionSort(auxArr)
-		end := time.Now().UnixNano()
-		duration := (end - start) / 1e6
-		insertionSortInfo.CostMs = append(insertionSortInfo.CostMs, duration)
-
-		copy(auxArr, arr)
-		start = time.Now().UnixNano()
-		sort2.QuickSort(auxArr)
-		end = time.Now().UnixNano()
-		duration = (end - start) / 1e6
-		quickSortInfo.CostMs = append(quickSortInfo.CostMs, duration)
-
-		copy(auxArr, arr)
-		start = time.Now().UnixNano()
-		sort2.CountingSort(auxArr)
-		end = time.Now().UnixNano()
-		duration = (end - start) / 1e6
-		coutingSortInfo.CostMs = append(coutingSortInfo.CostMs, duration)
-
-		// copy(auxArr, arr)
-		// start = timeutils.Now().UnixNano()
-		// sort.QuickSortTraversal(auxArr)
-		// end = timeutils.Now().UnixNano()
-		// duration = (end - start) / 1e6
-		// quickSortTraversalInfo.CostMs = append(quickSortTraversalInfo.CostMs, duration)
-
-		copy(auxArr, arr)
-		start = time.Now().UnixNano()
-		syssort.Sort(&CompareArr{Arr: auxArr})
-		end = time.Now().UnixNano()
-		duration = (end - start) / 1e6
-		systemQuickSortInfo.CostMs = append(systemQuickSortInfo.CostMs, duration)
-	}
-
-	// create a new line instance
+func newSortLine(title string) *charts.Line {
 	line := charts.NewLine()
-	// set some global options like Title/Legend/ToolTip or anything else
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeShine}),
-		charts.WithTitleOpts(opts.Title{
-			Title: "排序",
-		}),
-		charts.WithYAxisOpts(opts.YAxis{
-			Name: "Cost timeutils(ms)",
-			SplitLine: &opts.SplitLine{
-				Show: opts.Bool(true),
-			},
-		}),
-		charts.WithXAxisOpts(opts.XAxis{
-			Name: "Elements",
-		}),
+		charts.WithTitleOpts(opts.Title{Title: title}),
+		charts.WithYAxisOpts(opts.YAxis{Name: "耗时(ms)", SplitLine: &opts.SplitLine{Show: opts.Bool(true)}}),
+		charts.WithXAxisOpts(opts.XAxis{Name: "元素数量"}),
+		charts.WithLegendOpts(opts.Legend{Show: opts.Bool(true)}),
 	)
-
-	// Put data into instance
-	line.SetXAxis([]string{"10万", "20万", "30万", "40万", "50万", "60万", "70万", "80万", "90万", "100万"})
-
-	// line.AddSeries(insertionSortInfo.Name, generateLineData(insertionSortInfo.CostMs),
-	// 	charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "bottom"}))
-	line.AddSeries(quickSortInfo.Name, generateLineData(quickSortInfo.CostMs),
-		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
-	line.AddSeries(coutingSortInfo.Name, generateLineData(coutingSortInfo.CostMs),
-		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
-	// line.AddSeries(quickSortTraversalInfo.Name, generateLineData(quickSortTraversalInfo.CostMs),
-	// 	charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
-	line.AddSeries(systemQuickSortInfo.Name, generateLineData(systemQuickSortInfo.CostMs),
-		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
-
-	line.SetSeriesOptions(
-		// charts.WithMarkLineNameTypeItemOpts(opts.MarkLineNameTypeItem{
-		//     Name: "Average",
-		//     Type: "average",
-		// }),
-		charts.WithLineChartOpts(opts.LineChart{
-			Smooth: opts.Bool(true),
-		}),
-		charts.WithMarkPointStyleOpts(opts.MarkPointStyle{
-			Label: &opts.Label{
-				Show:      opts.Bool(true),
-				Formatter: "{a}: {b}",
-			},
-		}),
-	)
+	line.SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(true)}))
 	return line
 }
 
+// ---- 排序图表 ----
+
+// createEfficientSortLine 高效排序对比（10万~100万）
+// 包含：QuickSort、QuickSortTraversal、CountingSort、RadixSort、Go stdlib sort
+func createEfficientSortLine() *charts.Line {
+	type entry struct {
+		name   string
+		costs  []int64
+		sortFn func([]int32) // nil 表示使用 Go stdlib
+	}
+	series := []*entry{
+		{name: "Quick Sort", sortFn: sort2.QuickSort[int32]},
+		{name: "Quick Sort (Traversal)", sortFn: sort2.QuickSortTraversal[int32]},
+		{name: "Counting Sort", sortFn: sort2.CountingSort[int32]},
+		{name: "Radix Sort", sortFn: sort2.RadixSort[int32]},
+		{name: "Go stdlib sort", sortFn: nil},
+	}
+
+	xLabels := make([]string, 10)
+	for i := range xLabels {
+		xLabels[i] = fmt.Sprintf("%d万", (i+1)*10)
+		n := int(1e5) * (i + 1)
+		arr := make([]int32, n)
+		for j := range arr {
+			arr[j] = random.RandInt[int32](1, 100000)
+		}
+		for _, s := range series {
+			var ms int64
+			if s.sortFn == nil {
+				ms = measureGoSort(arr)
+			} else {
+				ms = measureSort(arr, s.sortFn)
+			}
+			s.costs = append(s.costs, ms)
+		}
+	}
+
+	line := newSortLine("高效排序对比（10万~100万元素）")
+	line.SetXAxis(xLabels)
+	for _, s := range series {
+		line.AddSeries(s.name, generateLineData(s.costs),
+			charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+	}
+	return line
+}
+
+// createSimpleSortLine 简单排序对比（2千~2万）
+// 包含：Bubble Sort、Insertion Sort，以及 Quick Sort 作为性能参照
+func createSimpleSortLine() *charts.Line {
+	type entry struct {
+		name   string
+		costs  []int64
+		sortFn func([]int32)
+	}
+	series := []*entry{
+		{name: "Bubble Sort", sortFn: sort2.BubbleSort[int32]},
+		{name: "Insertion Sort", sortFn: sort2.InsertionSort[int32]},
+		{name: "Quick Sort (参照)", sortFn: sort2.QuickSort[int32]},
+	}
+
+	xLabels := make([]string, 10)
+	for i := range xLabels {
+		n := 2000 * (i + 1)
+		xLabels[i] = fmt.Sprintf("%d", n)
+		arr := make([]int32, n)
+		for j := range arr {
+			arr[j] = random.RandInt[int32](1, 100000)
+		}
+		for _, s := range series {
+			s.costs = append(s.costs, measureSort(arr, s.sortFn))
+		}
+	}
+
+	line := newSortLine("简单排序对比（2千~2万元素）")
+	line.SetXAxis(xLabels)
+	for _, s := range series {
+		line.AddSeries(s.name, generateLineData(s.costs),
+			charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+	}
+	return line
+}
+
+// ---- 概率分布图表 ----
+
+// createProbDistBar 概率分布直方图
+// 固定权重 [10, 20, 30, 40]，采样 100 万次，对比 NormalMethod 和 VoseAliasMethod 的实际命中分布
+func createProbDistBar() *charts.Bar {
+	weights := []int32{10, 20, 30, 40}
+	total := int32(0)
+	for _, w := range weights {
+		total += w
+	}
+
+	const iterations = 1_000_000
+	n := len(weights)
+	normalCounts := make([]int, n)
+	voseCounts := make([]int, n)
+
+	nm := probdist.NewNormalMethod(weights)
+	vm := probdist.NewVoseAliasMethod(weights)
+	for range iterations {
+		normalCounts[nm.Generate()]++
+		voseCounts[vm.Generate()]++
+	}
+
+	xLabels := make([]string, n)
+	for i, w := range weights {
+		xLabels[i] = fmt.Sprintf("index%d\n期望%.1f%%", i, float64(w)/float64(total)*100)
+	}
+
+	toBarData := func(counts []int) []opts.BarData {
+		data := make([]opts.BarData, len(counts))
+		for i, v := range counts {
+			data[i] = opts.BarData{Value: v}
+		}
+		return data
+	}
+
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeShine}),
+		charts.WithTitleOpts(opts.Title{
+			Title:    "概率分布对比（100万次采样）",
+			Subtitle: fmt.Sprintf("权重: %v  总权重: %d", weights, total),
+		}),
+		charts.WithYAxisOpts(opts.YAxis{Name: "命中次数", SplitLine: &opts.SplitLine{Show: opts.Bool(true)}}),
+		charts.WithXAxisOpts(opts.XAxis{Name: "元素（期望概率）"}),
+		charts.WithLegendOpts(opts.Legend{Show: opts.Bool(true)}),
+	)
+	bar.SetXAxis(xLabels)
+	bar.AddSeries("NormalMethod (二分)", toBarData(normalCounts),
+		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+	bar.AddSeries("VoseAliasMethod", toBarData(voseCounts),
+		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+	return bar
+}
+
+// ---- HTTP 入口 ----
+
 func graphHttpServer(w http.ResponseWriter, _ *http.Request) {
 	page := components.NewPage()
-
 	page.AddCharts(
-		createLine(),
+		createEfficientSortLine(),
+		createSimpleSortLine(),
+		createProbDistBar(),
 	)
-	err := page.Render(w)
-	if err != nil {
+	if err := page.Render(w); err != nil {
 		panic(err)
 	}
 }
