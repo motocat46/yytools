@@ -20,7 +20,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	syssort "sort"
+	"slices"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -42,14 +42,6 @@ func generateLineData(data []int64) []opts.LineData {
 	return items
 }
 
-type CompareArr struct {
-	Arr []int32
-}
-
-func (c *CompareArr) Len() int           { return len(c.Arr) }
-func (c *CompareArr) Less(i, j int) bool { return c.Arr[i] < c.Arr[j] }
-func (c *CompareArr) Swap(i, j int)      { c.Arr[i], c.Arr[j] = c.Arr[j], c.Arr[i] }
-
 // measureSort 复制数组后执行 sortFn，返回耗时毫秒数
 func measureSort(arr []int32, sortFn func([]int32)) int64 {
 	aux := make([]int32, len(arr))
@@ -59,12 +51,12 @@ func measureSort(arr []int32, sortFn func([]int32)) int64 {
 	return (time.Now().UnixNano() - start) / 1e6
 }
 
-// measureGoSort 使用 Go 标准库 sort.Sort 排序，返回耗时毫秒数
+// measureGoSort 使用 slices.Sort（泛型，无接口开销）排序，返回耗时毫秒数
 func measureGoSort(arr []int32) int64 {
 	aux := make([]int32, len(arr))
 	copy(aux, arr)
 	start := time.Now().UnixNano()
-	syssort.Sort(&CompareArr{Arr: aux})
+	slices.Sort(aux)
 	return (time.Now().UnixNano() - start) / 1e6
 }
 
@@ -76,6 +68,7 @@ func newSortLine(title string) *charts.Line {
 		charts.WithYAxisOpts(opts.YAxis{Name: "耗时(ms)", SplitLine: &opts.SplitLine{Show: opts.Bool(true)}}),
 		charts.WithXAxisOpts(opts.XAxis{Name: "元素数量"}),
 		charts.WithLegendOpts(opts.Legend{Show: opts.Bool(true)}),
+		charts.WithTooltipOpts(opts.Tooltip{Show: opts.Bool(true), Trigger: "axis"}),
 	)
 	line.SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(true)}))
 	return line
@@ -84,7 +77,7 @@ func newSortLine(title string) *charts.Line {
 // ---- 排序图表 ----
 
 // createEfficientSortLine 高效排序对比（10万~100万）
-// 包含：QuickSort、QuickSortTraversal、CountingSort、RadixSort、Go stdlib sort
+// 包含：QuickSort、QuickSortTraversal、CountingSort、RadixSort、Go slices.Sort
 func createEfficientSortLine() *charts.Line {
 	type entry struct {
 		name   string
@@ -96,7 +89,7 @@ func createEfficientSortLine() *charts.Line {
 		{name: "Quick Sort (Traversal)", sortFn: sort2.QuickSortTraversal[int32]},
 		{name: "Counting Sort", sortFn: sort2.CountingSort[int32]},
 		{name: "Radix Sort", sortFn: sort2.RadixSort[int32]},
-		{name: "Go stdlib sort", sortFn: nil},
+		{name: "Go slices.Sort", sortFn: nil},
 	}
 
 	xLabels := make([]string, 10)
@@ -121,8 +114,7 @@ func createEfficientSortLine() *charts.Line {
 	line := newSortLine("高效排序对比（10万~100万元素）")
 	line.SetXAxis(xLabels)
 	for _, s := range series {
-		line.AddSeries(s.name, generateLineData(s.costs),
-			charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+		line.AddSeries(s.name, generateLineData(s.costs))
 	}
 	return line
 }
@@ -157,8 +149,7 @@ func createSimpleSortLine() *charts.Line {
 	line := newSortLine("简单排序对比（2千~2万元素）")
 	line.SetXAxis(xLabels)
 	for _, s := range series {
-		line.AddSeries(s.name, generateLineData(s.costs),
-			charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+		line.AddSeries(s.name, generateLineData(s.costs))
 	}
 	return line
 }
@@ -188,15 +179,7 @@ func createProbDistBar() *charts.Bar {
 
 	xLabels := make([]string, n)
 	for i, w := range weights {
-		xLabels[i] = fmt.Sprintf("index%d\n期望%.1f%%", i, float64(w)/float64(total)*100)
-	}
-
-	toBarData := func(counts []int) []opts.BarData {
-		data := make([]opts.BarData, len(counts))
-		for i, v := range counts {
-			data[i] = opts.BarData{Value: v}
-		}
-		return data
+		xLabels[i] = fmt.Sprintf("idx%d (%.1f%%)", i, float64(w)/float64(total)*100)
 	}
 
 	bar := charts.NewBar()
@@ -209,25 +192,90 @@ func createProbDistBar() *charts.Bar {
 		charts.WithYAxisOpts(opts.YAxis{Name: "命中次数", SplitLine: &opts.SplitLine{Show: opts.Bool(true)}}),
 		charts.WithXAxisOpts(opts.XAxis{Name: "元素（期望概率）"}),
 		charts.WithLegendOpts(opts.Legend{Show: opts.Bool(true)}),
+		charts.WithTooltipOpts(opts.Tooltip{Show: opts.Bool(true), Trigger: "axis"}),
 	)
 	bar.SetXAxis(xLabels)
-	bar.AddSeries("NormalMethod (二分)", toBarData(normalCounts),
-		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
-	bar.AddSeries("VoseAliasMethod", toBarData(voseCounts),
-		charts.WithLabelOpts(opts.Label{Show: opts.Bool(true), Position: "top"}))
+	bar.AddSeries("NormalMethod (二分)", intsToBarData(normalCounts))
+	bar.AddSeries("VoseAliasMethod", intsToBarData(voseCounts))
 	return bar
 }
 
 // ---- HTTP 入口 ----
 
-func graphHttpServer(w http.ResponseWriter, _ *http.Request) {
+const indexHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>yytools 可视化</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; }
+    h1   { font-size: 1.4em; margin-bottom: 0.4em; }
+    h2   { font-size: 1em; color: #555; margin: 1.6em 0 0.4em; }
+    ul   { list-style: none; padding: 0; }
+    li   { margin: 10px 0; }
+    a    { font-size: 1.05em; text-decoration: none; color: #1a73e8; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>yytools 可视化示例</h1>
+
+  <h2>排序算法</h2>
+  <ul>
+    <li><a href="/sort/efficient">高效排序对比（QuickSort / CountingSort / RadixSort / Go stdlib）</a></li>
+    <li><a href="/sort/simple">简单排序对比（BubbleSort / InsertionSort）</a></li>
+    <li><a href="/sort/compare">快排 vs pdqsort — 不同输入场景对比（随机 / 近乎有序 / 有序 / 逆序 / 大量重复）</a></li>
+  </ul>
+
+  <h2>概率分布</h2>
+  <ul>
+    <li><a href="/prob">概率分布对比（NormalMethod / VoseAliasMethod）</a></li>
+  </ul>
+
+  <h2>分布机制</h2>
+  <ul>
+    <li><a href="/dist/tiered">分层周期引擎（奖励分布 + 特殊位置散布）</a></li>
+    <li><a href="/dist/pwc">渐进权重周期（奖励分布实际 vs 期望）</a></li>
+  </ul>
+</body>
+</html>`
+
+func renderCharts(w http.ResponseWriter, chartFns ...func() components.Charter) {
 	page := components.NewPage()
-	page.AddCharts(
-		createEfficientSortLine(),
-		createSimpleSortLine(),
-		createProbDistBar(),
-	)
+	for _, fn := range chartFns {
+		page.AddCharts(fn())
+	}
 	if err := page.Render(w); err != nil {
 		panic(err)
+	}
+}
+
+func graphHttpServer(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/sort/efficient":
+		renderCharts(w, func() components.Charter { return createEfficientSortLine() })
+	case "/sort/simple":
+		renderCharts(w, func() components.Charter { return createSimpleSortLine() })
+	case "/prob":
+		renderCharts(w, func() components.Charter { return createProbDistBar() })
+	case "/dist/tiered":
+		sim := runTieredCycleSim()
+		renderCharts(w,
+			func() components.Charter { return createTieredRewardBar(sim) },
+			func() components.Charter { return createTieredSpecialPosBar(sim) },
+		)
+	case "/dist/pwc":
+		renderCharts(w, func() components.Charter { return createPWCRewardBar() })
+	case "/sort/compare":
+		page := components.NewPage()
+		for _, c := range createSortCompareCharts() {
+			page.AddCharts(c)
+		}
+		if err := page.Render(w); err != nil {
+			panic(err)
+		}
+	default:
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, indexHTML)
 	}
 }
