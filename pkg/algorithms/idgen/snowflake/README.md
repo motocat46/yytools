@@ -44,7 +44,7 @@ id := g.NewID()
 ### 日常开发 / CI（推荐，~7 秒）
 
 ```bash
-go test ./pkg/algorithms/snowflake/... -v -race -short
+go test ./pkg/algorithms/idgen/snowflake/... -v -race -short
 ```
 
 - `-race`：开启竞态检测，验证并发安全
@@ -53,7 +53,7 @@ go test ./pkg/algorithms/snowflake/... -v -race -short
 ### 上线前完整压测（~45 秒）
 
 ```bash
-go test ./pkg/algorithms/snowflake/... -v -timeout 120s
+go test ./pkg/algorithms/idgen/snowflake/... -v -timeout 120s
 ```
 
 不加 `-short`，运行全部测试，包括：
@@ -91,18 +91,18 @@ go test（不加 -bench）  → 只跑 Test*，不跑 Benchmark*
 
 ```bash
 # 标准写法：-run=^$ 匹配空字符串，跳过所有 Test*
-go test ./pkg/algorithms/snowflake/... -bench=. -run=^$ -benchmem
+go test ./pkg/algorithms/idgen/snowflake/... -bench=. -run=^$ -benchmem
 ```
 
 ```bash
 # 加 -benchtime 延长采样时间，结果更稳定
-go test ./pkg/algorithms/snowflake/... -bench=. -run=^$ -benchmem -benchtime=3s
+go test ./pkg/algorithms/idgen/snowflake/... -bench=. -run=^$ -benchmem -benchtime=3s
 
 # 加 -count 多轮运行，消除偶发抖动
-go test ./pkg/algorithms/snowflake/... -bench=. -run=^$ -benchmem -benchtime=3s -count=3
+go test ./pkg/algorithms/idgen/snowflake/... -bench=. -run=^$ -benchmem -benchtime=3s -count=3
 
 # 只跑指定 Benchmark
-go test ./pkg/algorithms/snowflake/... -bench=BenchmarkGenerator_NewID -run=^$
+go test ./pkg/algorithms/idgen/snowflake/... -bench=BenchmarkGenerator_NewID -run=^$
 ```
 
 ### 输出解读
@@ -133,11 +133,11 @@ BenchmarkGenerator_NewID-10    14760691    244.1 ns/op    0 B/op    0 allocs/op
 
 ```bash
 # 日常开发
-go test ./pkg/algorithms/snowflake/... -v -race -short
+go test ./pkg/algorithms/idgen/snowflake/... -v -race -short
 
 # 上线前
-go test ./pkg/algorithms/snowflake/... -v -timeout 120s
+go test ./pkg/algorithms/idgen/snowflake/... -v -timeout 120s
 
 # 只跑 Benchmark
-go test ./pkg/algorithms/snowflake/... -bench=. -run=^$ -benchmem
+go test ./pkg/algorithms/idgen/snowflake/... -bench=. -run=^$ -benchmem
 ```

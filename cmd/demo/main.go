@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
+	"github.com/spf13/cobra"
 	benchheap "github.com/stormYuanYang/yytools/internal/bench/heap"
 	benchmathx "github.com/stormYuanYang/yytools/internal/bench/mathx"
 	benchprobdist "github.com/stormYuanYang/yytools/internal/bench/probability_distribution"
@@ -34,126 +34,83 @@ import (
 	"github.com/stormYuanYang/yytools/pkg/common/assert"
 )
 
-var commandsMap = map[string]int{}
-
-type Command struct {
-	Key     string
-	Note    string
-	Handler func(int)
+// benchCmd 描述一个 bench 子命令
+type benchCmd struct {
+	use     string
+	short   string
+	handler func(int)
 }
 
-var commands []*Command
-
-func init() {
-	commands = append(commands, &Command{
-		Key:     "http",
-		Note:    "可视化",
-		Handler: nil,
-	})
-	commands = append(commands, &Command{
-		Key:     "heap",
-		Note:    "最小堆",
-		Handler: benchheap.HeapTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "mathcommon",
-		Note:    "公共数学方法（比如gcd）",
-		Handler: benchmathx.MathCommonTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "maxheap",
-		Note:    "最大堆",
-		Handler: benchheap.MaxHeapTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "prob",
-		Note:    "概率分布",
-		Handler: benchprobdist.ProbabilityDistributionTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "pq",
-		Note:    "优先级队列",
-		Handler: benchheap.PriorityQueueTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "queue",
-		Note:    "队列",
-		Handler: benchqueue.QueueTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "sort",
-		Note:    "排序",
-		Handler: benchsort.SortTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "sortedset",
-		Note:    "有序集合",
-		Handler: benchsortedset.SortedSetTest,
-	})
-	commands = append(commands, &Command{
-		Key:     "stack",
-		Note:    "栈",
-		Handler: benchstack.StackTest,
-	})
-
-	for i, c := range commands {
-		commandsMap[c.Key] = i
-	}
+var benchCmds = []benchCmd{
+	{"heap", "最小堆", benchheap.HeapTest},
+	{"maxheap", "最大堆", benchheap.MaxHeapTest},
+	{"mathcommon", "公共数学方法（比如gcd）", benchmathx.MathCommonTest},
+	{"prob", "概率分布", benchprobdist.ProbabilityDistributionTest},
+	{"pq", "优先级队列", benchheap.PriorityQueueTest},
+	{"queue", "队列", benchqueue.QueueTest},
+	{"sort", "排序", benchsort.SortTest},
+	{"sortedset", "有序集合", benchsortedset.SortedSetTest},
+	{"stack", "栈", benchstack.StackTest},
 }
 
-func testAll(num int) {
-	for i := 0; i < len(commands); i++ {
-		handler := commands[i].Handler
-		handler(num)
+func parseNum(args []string) int {
+	num, err := strconv.Atoi(args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "iterations 必须是整数: %v\n", err)
+		os.Exit(1)
 	}
-	println("\n所有测试完毕...")
+	return num
 }
 
 func main() {
 	assert.SetAssert(true)
 
-	// 第一个参数是可执行文件本身的路径
-	// 后续的参数是通过控制台传递的参数
-	args := os.Args[1:]
-	if len(args) == 0 {
-		println("需要传入参数,如需要帮助, 请使用: yytools help")
-		return
-	}
-	command := strings.ToLower(args[0])
-	if command == "help" {
-		println("使用参考：yytools sorted_set 5\n表示执行5轮sorted_set相关测试代码\n yytools all 5\n表示对所有测试进行5轮测试\n")
-		println("已支持的命令:")
-		fmt.Printf("%-20s\t说明:执行所有命令\n", "all")
-		for i := 0; i < len(commands); i++ {
-			fmt.Printf("%-20s\t说明:%s\n", commands[i].Key, commands[i].Note)
-		}
-		return
+	rootCmd := &cobra.Command{
+		Use:   "yytools",
+		Short: "yytools demo — 算法与数据结构演示",
 	}
 
-	if command == "http" {
-		http.HandleFunc("/", graphHttpServer)
-		err := http.ListenAndServe(":8081", nil)
-		if err != nil {
-			panic(err)
-		}
-		return
+	// http 子命令：启动可视化服务
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "http",
+		Short: "启动可视化 HTTP 服务（:8081）",
+		Args:  cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			http.HandleFunc("/", graphHttpServer)
+			if err := http.ListenAndServe(":8081", nil); err != nil {
+				panic(err)
+			}
+		},
+	})
+
+	// all 子命令：运行全部 bench
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "all <iterations>",
+		Short: "运行所有 bench 命令",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			num := parseNum(args)
+			for _, bc := range benchCmds {
+				bc.handler(num)
+			}
+			println("\n所有测试完毕...")
+		},
+	})
+
+	// 逐一注册各 bench 子命令
+	for _, bc := range benchCmds {
+		bc := bc // 捕获循环变量
+		rootCmd.AddCommand(&cobra.Command{
+			Use:   bc.use + " <iterations>",
+			Short: bc.short,
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				bc.handler(parseNum(args))
+			},
+		})
 	}
 
-	num, err := strconv.Atoi(args[1])
-	if err != nil {
-		fmt.Printf("Command: %s Error: %+v\n", command, err)
-		return
-	}
-
-	if command == "all" {
-		testAll(num)
-	} else {
-		index, ok := commandsMap[command]
-		if !ok {
-			println("不支持的命令")
-			return
-		}
-		handler := commands[index].Handler
-		handler(num)
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
 	}
 }

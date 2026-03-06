@@ -22,6 +22,8 @@ yytools/
 ├── pkg/                       # 核心功能模块
 │   ├── algorithms/
 │   │   ├── binary_search/     # 二分查找
+│   │   ├── idgen/
+│   │   │   └── snowflake/     # 雪花算法唯一 ID 生成器（无锁、零分配）
 │   │   ├── mathx/             # 数学工具（GCD、Fibonacci等）
 │   │   │   ├── bits/          # 位运算工具
 │   │   │   ├── overflow/      # 数值溢出检查
@@ -75,7 +77,8 @@ cd cmd/demo && go run . http
 ```bash
 cd cmd/demo
 
-go run . help          # 查看所有命令
+go run . --help        # 查看所有命令
+go run . sort --help   # 查看指定命令说明
 go run . sort 5        # 排序算法压测，执行 5 轮
 go run . heap 3        # 堆操作压测，执行 3 轮
 go run . sortedset 2   # 有序集合压测，执行 2 轮
@@ -94,6 +97,21 @@ go run . http          # 启动排序性能可视化服务
 - `overflow`：加减乘除溢出检查
 - `probability_distribution`：三种概率分布实现（遍历法、Vose 别名法、动态权重）
 - `random`：随机整数生成
+
+### `pkg/algorithms/idgen/snowflake`
+
+无锁线程安全的雪花算法唯一 ID 生成器，专为游戏服务器设计：
+- 63 位整型：41 位毫秒时间戳 + 10 位 nodeID + 12 位 sequence
+- 自定义纪元 2025-01-01，有效期约 69 年（到 2094 年）
+- CAS 无锁设计，每节点 ~410 万 ID/秒，零内存分配
+- 支持时钟回拨（沿用 lastMs 保证唯一性）
+
+```go
+snowflake.Init(nodeID)  // 启动时调用一次
+id := snowflake.NewID() // 任意位置生成唯一 ID
+```
+
+详见 [pkg/algorithms/idgen/snowflake/README.md](pkg/algorithms/idgen/snowflake/README.md)。
 
 ### `pkg/algorithms/sort`
 
