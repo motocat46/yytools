@@ -67,7 +67,7 @@ go test ./pkg/ds/sorted_set/
 go test ./pkg/algorithms/sort/
 
 # 启动性能可视化 HTTP 服务（浏览器访问 http://localhost:8081）
-cd cmd/demo && go run . http
+go run ./cmd/demo http
 ```
 
 ## 演示程序
@@ -75,15 +75,13 @@ cd cmd/demo && go run . http
 `cmd/demo` 提供命令行入口，可对各模块运行压测：
 
 ```bash
-cd cmd/demo
-
-go run . --help        # 查看所有命令
-go run . sort --help   # 查看指定命令说明
-go run . sort 5        # 排序算法压测，执行 5 轮
-go run . heap 3        # 堆操作压测，执行 3 轮
-go run . sortedset 2   # 有序集合压测，执行 2 轮
-go run . all 1         # 所有模块压测
-go run . http          # 启动排序性能可视化服务
+go run ./cmd/demo --help          # 查看所有命令
+go run ./cmd/demo sort --help     # 查看指定命令说明
+go run ./cmd/demo sort 5          # 排序算法压测，执行 5 轮
+go run ./cmd/demo heap 3          # 堆操作压测，执行 3 轮
+go run ./cmd/demo sortedset 2     # 有序集合压测，执行 2 轮
+go run ./cmd/demo all 1           # 所有模块压测
+go run ./cmd/demo http            # 启动排序性能可视化服务
 ```
 
 ## 模块说明
