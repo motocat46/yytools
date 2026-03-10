@@ -20,9 +20,9 @@ package benchmathx
 import (
 	"fmt"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 func gcdTest(num int) {

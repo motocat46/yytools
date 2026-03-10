@@ -20,7 +20,7 @@ package progressive_weight_cycle
 import (
 	"fmt"
 	
-	pd "github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
+	pd "github.com/motocat46/yytools/pkg/algorithms/mathx/probability_distribution"
 )
 
 // Item 每个特殊结果的配置，下标即 Result.Index

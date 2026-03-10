@@ -1,4 +1,4 @@
-module github.com/stormYuanYang/yytools
+module github.com/motocat46/yytools
 
 go 1.24
 

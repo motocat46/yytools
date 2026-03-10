@@ -18,9 +18,9 @@
 package sort
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
-	"github.com/stormYuanYang/yytools/pkg/ds/stack"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/ds/stack"
 )
 
 const maxInsertion = 12
@@ -54,10 +54,9 @@ func quickSortTraversal[T base.Integer](arr []T, start, end int) {
 			insertionSort(arr, tmp.Start, tmp.End)
 			continue
 		}
-		
-		pivot := partition(arr, tmp.Start, tmp.End)
-		s.Push(&StackData{Start: pivot + 1, End: tmp.End})
-		s.Push(&StackData{Start: tmp.Start, End: pivot})
+		lt, gt := partition3way(arr, tmp.Start, tmp.End)
+		s.Push(&StackData{Start: gt + 1, End: tmp.End})
+		s.Push(&StackData{Start: tmp.Start, End: lt})
 	}
 }
 
@@ -71,34 +70,39 @@ func quickSort[T base.Integer](arr []T, start, end int) {
 		insertionSort(arr, start, end)
 		return
 	}
-	pivot := partition(arr, start, end)
-	quickSort[T](arr, start, pivot)
-	quickSort[T](arr, pivot+1, end)
+	lt, gt := partition3way(arr, start, end)
+	quickSort(arr, start, lt)
+	quickSort(arr, gt+1, end)
 }
 
-func partition[T base.Integer](arr []T, start, end int) int {
+// partition3way 三路划分（荷兰国旗算法）
+// 将 arr[start, end) 划分为三段：
+//   < pivot  | == pivot | > pivot
+//
+// 返回 (lt, gt)，其中 arr[lt, gt] 全部等于 pivot，无需再参与递归。
+// 相比二路划分，大量重复元素时性能从 O(n²) 提升到 O(n)。
+func partition3way[T base.Integer](arr []T, start, end int) (lt, gt int) {
 	r := random.RandInt(start, end-1)
-	arr[r], arr[end-1] = arr[end-1], arr[r]
-	
+	pivot := arr[r]
+
+	lt = start  // [start, lt) < pivot
+	gt = end - 1 // (gt, end) > pivot
 	i := start
-	j := end - 1
-	for ; i < j; i++ {
-		// 从左往右找到第一个大于等于val的元素
-		if arr[i] >= arr[end-1] {
-			// 然后从右往左，找到一个比指定值小的数值
-			for j > i && arr[j] >= arr[end-1] {
-				j--
-			}
-			if j == i {
-				break
-			}
-			// swap
-			arr[i], arr[j] = arr[j], arr[i]
+
+	for i <= gt {
+		if arr[i] < pivot {
+			arr[lt], arr[i] = arr[i], arr[lt]
+			lt++
+			i++
+		} else if arr[i] > pivot {
+			arr[i], arr[gt] = arr[gt], arr[i]
+			gt--
+			// arr[i] 换来的新值尚未检查，i 不递增
+		} else {
+			i++
 		}
 	}
-	// 循环结束后，arr[i]左边的值都小于等于arr[i],arr[i]右边的值都大于等于arr[i]
-	arr[i], arr[end-1] = arr[end-1], arr[i]
-	return i
+	return lt, gt + 1 // 返回 gt+1 使调用方直接用作切片右边界
 }
 
 func QuickSortDesc[T base.Integer](arr []T) {
@@ -125,10 +129,9 @@ func quickSortDescTraversal[T base.Integer](arr []T, start, end int) {
 			insertionSortDesc(arr, tmp.Start, tmp.End)
 			continue
 		}
-		
-		pivot := partitionDesc(arr, tmp.Start, tmp.End)
-		s.Push(&StackData{Start: pivot + 1, End: tmp.End})
-		s.Push(&StackData{Start: tmp.Start, End: pivot})
+		lt, gt := partition3wayDesc(arr, tmp.Start, tmp.End)
+		s.Push(&StackData{Start: gt, End: tmp.End})
+		s.Push(&StackData{Start: tmp.Start, End: lt})
 	}
 }
 
@@ -139,32 +142,34 @@ func quickSortDesc[T base.Integer](arr []T, start, end int) {
 		insertionSortDesc(arr, start, end)
 		return
 	}
-	pivot := partitionDesc(arr, start, end)
-	quickSortDesc[T](arr, start, pivot)
-	quickSortDesc[T](arr, pivot+1, end)
+	lt, gt := partition3wayDesc(arr, start, end)
+	quickSortDesc(arr, start, lt)
+	quickSortDesc(arr, gt, end)
 }
 
-func partitionDesc[T base.Integer](arr []T, start, end int) int {
+// partition3wayDesc 降序三路划分
+// 将 arr[start, end) 划分为三段：
+//
+//	> pivot | == pivot | < pivot
+func partition3wayDesc[T base.Integer](arr []T, start, end int) (lt, gt int) {
 	r := random.RandInt(start, end-1)
-	arr[r], arr[end-1] = arr[end-1], arr[r]
-	
+	pivot := arr[r]
+
+	lt = start
+	gt = end - 1
 	i := start
-	j := end - 1
-	for ; i < j; i++ {
-		// 从左往右找到第一个小于等于val的元素
-		if arr[i] <= arr[end-1] {
-			// 然后从右往左，找到一个比指定值大的数值
-			for j > i && arr[j] <= arr[end-1] {
-				j--
-			}
-			if j == i {
-				break
-			}
-			// swap
-			arr[i], arr[j] = arr[j], arr[i]
+
+	for i <= gt {
+		if arr[i] > pivot {
+			arr[lt], arr[i] = arr[i], arr[lt]
+			lt++
+			i++
+		} else if arr[i] < pivot {
+			arr[i], arr[gt] = arr[gt], arr[i]
+			gt--
+		} else {
+			i++
 		}
 	}
-	// 循环结束后，arr[i]左边的值都小于等于arr[i],arr[i]右边的值都大于等于arr[i]
-	arr[i], arr[end-1] = arr[end-1], arr[i]
-	return i
+	return lt, gt + 1
 }

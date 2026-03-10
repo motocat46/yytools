@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/sort"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/algorithms/sort"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 func BubbleSortTest(cnt int) {

@@ -20,7 +20,7 @@ package progressive_weight_cycle_test
 import (
 	"fmt"
 
-	pwc "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
+	pwc "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // ExampleLayer_rewardBox 演示副本通关宝箱的渐进式奖励分配。

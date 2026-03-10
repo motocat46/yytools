@@ -20,9 +20,9 @@ package benchheap
 import (
 	"fmt"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/ds/heap"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/ds/heap"
 )
 
 var uniq = 1

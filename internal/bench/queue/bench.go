@@ -20,9 +20,9 @@ package benchqueue
 import (
 	"fmt"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/ds/queue"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/ds/queue"
 )
 
 // 用单调递增的变量来表示元素的顺序

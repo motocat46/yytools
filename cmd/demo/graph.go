@@ -27,9 +27,9 @@ import (
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
-	probdist "github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	sort2 "github.com/stormYuanYang/yytools/pkg/algorithms/sort"
+	probdist "github.com/motocat46/yytools/pkg/algorithms/mathx/probability_distribution"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	sort2 "github.com/motocat46/yytools/pkg/algorithms/sort"
 )
 
 // ---- 通用辅助 ----

@@ -21,7 +21,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
+	weight_cycle "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // newTestRand 用固定种子创建随机源，保证计划生成可重放

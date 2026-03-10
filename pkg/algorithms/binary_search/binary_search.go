@@ -20,8 +20,8 @@
 package binary_search
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 正确执行的条件: 数组是有序的(允许重复的元素出现)

@@ -18,10 +18,10 @@
 package probability_distribution
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	. "github.com/stormYuanYang/yytools/pkg/common/base"
-	"github.com/stormYuanYang/yytools/pkg/ds/stack"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	. "github.com/motocat46/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/ds/stack"
 )
 
 /**

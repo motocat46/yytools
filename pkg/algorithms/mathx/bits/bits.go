@@ -18,7 +18,7 @@
 package bits
 
 import (
-    "github.com/stormYuanYang/yytools/pkg/common/base"
+    "github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 检测两个整数是否具有相反的符号

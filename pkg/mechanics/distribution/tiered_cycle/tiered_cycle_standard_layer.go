@@ -17,7 +17,7 @@
 // 创建日期:2026/3/2
 package tiered_cycle
 
-import pd "github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
+import pd "github.com/motocat46/yytools/pkg/algorithms/mathx/probability_distribution"
 
 type Weight struct {
 	weightMap   map[int]int32

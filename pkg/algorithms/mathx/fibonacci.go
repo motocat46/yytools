@@ -20,8 +20,8 @@ package mathx
 import (
 	"slices"
 
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 type Fibonacci[T base.Integer] struct {

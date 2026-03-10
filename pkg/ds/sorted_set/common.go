@@ -20,7 +20,7 @@ package sorted_set
 import (
 	"math/rand"
 
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 func randInt31() int32 {

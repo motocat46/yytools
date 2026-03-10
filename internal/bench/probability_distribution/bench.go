@@ -20,8 +20,8 @@ package benchprobdist
 import (
 	"fmt"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/probability_distribution"
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/random"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/probability_distribution"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
 )
 
 func calcIndexWithWeightTest(x []int) {

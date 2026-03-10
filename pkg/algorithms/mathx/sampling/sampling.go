@@ -23,8 +23,8 @@ import (
 	"math/rand/v2"
 	"slices"
 
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 // SampleKDistinctFloyd 从 [lo..hi]（含端点）中均匀采样 k 个不重复的值。

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 
-	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
+	weight_cycle "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // Example_gachaSystem 演示游戏抽卡保底系统。

@@ -22,7 +22,7 @@ package sorted_set
 import (
 	"math"
 
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 type SkipList[T comparable] struct {

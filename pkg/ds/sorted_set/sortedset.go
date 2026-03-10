@@ -20,7 +20,7 @@
 package sorted_set
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 // NodeData 节点数据

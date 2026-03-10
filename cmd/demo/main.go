@@ -24,14 +24,14 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
-	benchheap "github.com/stormYuanYang/yytools/internal/bench/heap"
-	benchmathx "github.com/stormYuanYang/yytools/internal/bench/mathx"
-	benchprobdist "github.com/stormYuanYang/yytools/internal/bench/probability_distribution"
-	benchqueue "github.com/stormYuanYang/yytools/internal/bench/queue"
-	benchsort "github.com/stormYuanYang/yytools/internal/bench/sort"
-	benchsortedset "github.com/stormYuanYang/yytools/internal/bench/sorted_set"
-	benchstack "github.com/stormYuanYang/yytools/internal/bench/stack"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
+	benchheap "github.com/motocat46/yytools/internal/bench/heap"
+	benchmathx "github.com/motocat46/yytools/internal/bench/mathx"
+	benchprobdist "github.com/motocat46/yytools/internal/bench/probability_distribution"
+	benchqueue "github.com/motocat46/yytools/internal/bench/queue"
+	benchsort "github.com/motocat46/yytools/internal/bench/sort"
+	benchsortedset "github.com/motocat46/yytools/internal/bench/sorted_set"
+	benchstack "github.com/motocat46/yytools/internal/bench/stack"
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 // benchCmd 描述一个 bench 子命令

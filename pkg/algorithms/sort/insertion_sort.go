@@ -18,7 +18,7 @@
 package sort
 
 import (
-    "github.com/stormYuanYang/yytools/pkg/common/base"
+    "github.com/motocat46/yytools/pkg/common/base"
 )
 
 func InsertionSort[T base.Integer](arr []T) {

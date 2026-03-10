@@ -20,9 +20,9 @@ package tiered_cycle
 import (
 	"math/rand/v2"
 	
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/sampling"
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	weight_cycle "github.com/stormYuanYang/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/sampling"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	weight_cycle "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
 // SpecialLayerState 特殊层的运行时状态（仅属于特殊层）

@@ -18,7 +18,7 @@
 package queue
 
 import (
-    "github.com/stormYuanYang/yytools/pkg/common/assert"
+    "github.com/motocat46/yytools/pkg/common/assert"
 )
 
 type IQueue[T any] interface {

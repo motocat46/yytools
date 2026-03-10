@@ -18,8 +18,8 @@
 package slicex
 
 import (
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 与 slices.Min 不同，本函数额外返回最小值的下标

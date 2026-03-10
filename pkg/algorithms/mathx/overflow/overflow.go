@@ -22,8 +22,8 @@ package overflow
 import (
 	"unsafe"
 
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 计算a*b，并判断是否越界

@@ -58,8 +58,8 @@ package mathx
 import (
 	"unsafe"
 	
-	"github.com/stormYuanYang/yytools/pkg/common/assert"
-	"github.com/stormYuanYang/yytools/pkg/common/base"
+	"github.com/motocat46/yytools/pkg/common/assert"
+	"github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 各整数类型的斐波那契静态查找表（F(0)=0, F(1)=1, F(2)=1, ...）

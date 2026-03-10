@@ -18,7 +18,7 @@
 package sort
 
 import (
-    "github.com/stormYuanYang/yytools/pkg/common/base"
+    "github.com/motocat46/yytools/pkg/common/base"
 )
 
 // 计数排序 时间复杂度O(n+k)

@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stormYuanYang/yytools/pkg/algorithms/mathx/overflow"
+	"github.com/motocat46/yytools/pkg/algorithms/mathx/overflow"
 )
 
 // 在标准库基础上，支持更大的日期单位——d（日）

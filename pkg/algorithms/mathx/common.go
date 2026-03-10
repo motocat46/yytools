@@ -17,7 +17,7 @@
 // 创建日期:2022/12/7
 package mathx
 
-import "github.com/stormYuanYang/yytools/pkg/common/base"
+import "github.com/motocat46/yytools/pkg/common/base"
 
 // 计算整数绝对值(abs)
 // 注意一种情况：当a是最小的整数时，-a仍然等于a
