@@ -8,3 +8,4 @@ coverage.out
 demo
 pkg/mechanics/distribution/.DS_Store
 pkg/mechanics/.DS_Store
+pkg/infra/concurrency/.DS_Store

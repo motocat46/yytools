@@ -1,5 +1,3 @@
-//go:build ignore
-
 // 版权所有(Copyright)[yangyuan]
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,52 +11,100 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// 作者:  yangyuan
-// 创建日期:2025/5/19
-
-package unbounded_channel
+package unbounded_channel_test
 
 import (
 	"fmt"
 	"sync"
-	"time"
+
+	uc "github.com/motocat46/yytools/pkg/infra/concurrency/unbounded_channel"
 )
 
-// Example 展示无界通道的基本用法
-func Example() {
-	// 创建无界通道
-	uc := NewUnboundedChannel()
-	defer uc.Close()
+// ExampleUnboundedChannel_basic 展示基本的生产者-消费者用法。
+func ExampleUnboundedChannel_basic() {
+	ch := uc.NewUnboundedChannel[int](16, 10000)
+	defer ch.Close()
 
-	// 启动消费者
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	// 消费者
 	go func() {
 		defer wg.Done()
-		for msg := range uc.Channel {
-			fmt.Printf("处理消息: ID=%d, 数据=%s\n", msg.ID, string(msg.Data))
-			// 模拟处理时间
-			time.Sleep(1 * time.Millisecond)
+		for range 5 {
+			val, ok := ch.Receive()
+			if !ok {
+				return
+			}
+			fmt.Println(val)
 		}
 	}()
 
-	// 发送消息
-	fmt.Println("开始发送消息...")
-	for i := int64(0); i < 10; i++ {
-		msg := &Msg{
-			ID:   i,
-			Data: []byte(fmt.Sprintf("消息内容_%d", i)),
-		}
-
-		if err := uc.SendMsg(msg); err != nil {
-			fmt.Printf("发送消息失败: %v\n", err)
-			continue
-		}
-		fmt.Printf("发送消息: ID=%d\n", i)
+	// 生产者
+	for i := 1; i <= 5; i++ {
+		ch.Send(i)
 	}
 
-	// 等待一段时间让消息被处理
-	time.Sleep(100 * time.Millisecond)
+	wg.Wait()
+	// Output:
+	// 1
+	// 2
+	// 3
+	// 4
+	// 5
+}
 
-	fmt.Println("示例完成")
+// ExampleUnboundedChannel_select 展示通过 Out() 在 select 中使用无界通道。
+func ExampleUnboundedChannel_select() {
+	ch := uc.NewUnboundedChannel[string](16, 10000)
+	defer ch.Close()
+
+	ch.Send("hello")
+	ch.Send("world")
+
+	for range 2 {
+		msg, ok := <-ch.Out()
+		if ok {
+			fmt.Println(msg)
+		}
+	}
+	// Output:
+	// hello
+	// world
+}
+
+// ExampleUnboundedChannel_backpressure 展示背压：buffer 超过 limit 时生产者阻塞，
+// 消费者消费后生产者自动继续。
+func ExampleUnboundedChannel_backpressure() {
+	// chanSize=2, limit=3：buffer 超过 3 条时生产者阻塞
+	ch := uc.NewUnboundedChannel[int](2, 3)
+	defer ch.Close()
+
+	done := make(chan struct{})
+
+	// 慢速消费者
+	go func() {
+		defer close(done)
+		for range 6 {
+			val, ok := ch.Receive()
+			if !ok {
+				return
+			}
+			fmt.Println(val)
+		}
+	}()
+
+	// 生产者：第 4 条起会因背压短暂阻塞，消费者消费后继续
+	for i := range 6 {
+		ch.Send(i + 1)
+	}
+
+	<-done
+	// Output:
+	// 1
+	// 2
+	// 3
+	// 4
+	// 5
+	// 6
 }
