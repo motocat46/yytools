@@ -394,6 +394,84 @@ func TestSortedSet_WithStruct(t *testing.T) {
 	}
 }
 
+func TestSortedSet_DeleteRangeByRank(t *testing.T) {
+	ss := NewSortedSet[int]()
+	for i := 1; i <= 10; i++ {
+		ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+	}
+
+	// 删除排名 3~6
+	deleted := ss.DeleteRangeByRank(3, 6)
+	if len(deleted) != 4 {
+		t.Errorf("期望删除 4 个，实际 %d", len(deleted))
+	}
+	if ss.Length() != 6 {
+		t.Errorf("删除后长度期望 6，实际 %d", ss.Length())
+	}
+	// 验证被删元素不再可查
+	for _, d := range deleted {
+		if ss.Get(d.Key) != nil {
+			t.Errorf("已删除的 key=%d 不应再存在", d.Key)
+		}
+	}
+
+	// start > end 自动交换
+	ss2 := NewSortedSet[int]()
+	for i := 1; i <= 5; i++ {
+		ss2.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+	}
+	deleted2 := ss2.DeleteRangeByRank(4, 2) // 等同于 (2,4)
+	if len(deleted2) != 3 {
+		t.Errorf("start>end 自动交换：期望删除 3 个，实际 %d", len(deleted2))
+	}
+}
+
+func TestSortedSet_GetRangeByScore_Exclusive(t *testing.T) {
+	ss := NewSortedSet[int]()
+	for i := 1; i <= 10; i++ {
+		ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+	}
+
+	// 含左含右 [3, 7]
+	result := ss.GetRangeByScore(3.0, false, 7.0, false)
+	if len(result) != 5 {
+		t.Errorf("[3,7] 期望 5 个，实际 %d", len(result))
+	}
+
+	// 不含左 (3, 7]
+	result = ss.GetRangeByScore(3.0, true, 7.0, false)
+	if len(result) != 4 {
+		t.Errorf("(3,7] 期望 4 个，实际 %d", len(result))
+	}
+
+	// 不含右 [3, 7)
+	result = ss.GetRangeByScore(3.0, false, 7.0, true)
+	if len(result) != 4 {
+		t.Errorf("[3,7) 期望 4 个，实际 %d", len(result))
+	}
+
+	// 两端均不含 (3, 7)
+	result = ss.GetRangeByScore(3.0, true, 7.0, true)
+	if len(result) != 3 {
+		t.Errorf("(3,7) 期望 3 个，实际 %d", len(result))
+	}
+}
+
+func TestSortedSet_SameScore_StableOrder(t *testing.T) {
+	ss := NewSortedSet[int]()
+	// 插入相同分数，验证按插入顺序稳定排列
+	for _, key := range []int{10, 20, 30, 40, 50} {
+		ss.Insert(&NodeData[int]{Key: key, Score: 1.0, Val: key})
+	}
+	result := ss.GetRangeByRank(1, 5)
+	for i := 0; i < len(result)-1; i++ {
+		if result[i].seq >= result[i+1].seq {
+			t.Errorf("相同分数应按插入顺序稳定排序，但 seq[%d]=%d >= seq[%d]=%d",
+				i, result[i].seq, i+1, result[i+1].seq)
+		}
+	}
+}
+
 func BenchmarkSortedSet_Insert(b *testing.B) {
 	sortedSet := NewSortedSet[int]()
 	b.ResetTimer()

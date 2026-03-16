@@ -287,6 +287,127 @@ func TestSortWithLargeNumbers(t *testing.T) {
 	}
 }
 
+func TestQuickSortDesc(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{"正常数组", []int{64, 34, 25, 12, 22, 11, 90}, []int{90, 64, 34, 25, 22, 12, 11}},
+		{"已排序", []int{1, 2, 3, 4, 5}, []int{5, 4, 3, 2, 1}},
+		{"逆序数组", []int{5, 4, 3, 2, 1}, []int{5, 4, 3, 2, 1}},
+		{"空数组", []int{}, []int{}},
+		{"单元素", []int{42}, []int{42}},
+		{"重复元素", []int{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5}, []int{9, 6, 5, 5, 5, 4, 3, 3, 2, 1, 1}},
+		{"含负数", []int{-5, 3, -1, 0, 2}, []int{3, 2, 0, -1, -5}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := append([]int{}, tt.input...)
+			QuickSortDesc(input)
+			if !reflect.DeepEqual(input, tt.expected) {
+				t.Errorf("期望 %v，实际 %v", tt.expected, input)
+			}
+		})
+	}
+}
+
+func TestQuickSortTraversal(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{"正常数组", []int{64, 34, 25, 12, 22, 11, 90}, []int{11, 12, 22, 25, 34, 64, 90}},
+		{"已排序", []int{1, 2, 3, 4, 5}, []int{1, 2, 3, 4, 5}},
+		{"逆序", []int{5, 4, 3, 2, 1}, []int{1, 2, 3, 4, 5}},
+		{"空数组", []int{}, []int{}},
+		{"单元素", []int{42}, []int{42}},
+		{"重复元素", []int{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5}, []int{1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 9}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := append([]int{}, tt.input...)
+			QuickSortTraversal(input)
+			if !reflect.DeepEqual(input, tt.expected) {
+				t.Errorf("期望 %v，实际 %v", tt.expected, input)
+			}
+		})
+	}
+}
+
+func TestQuickSortDescTraversal(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{"正常数组", []int{64, 34, 25, 12, 22, 11, 90}, []int{90, 64, 34, 25, 22, 12, 11}},
+		{"已排序", []int{1, 2, 3, 4, 5}, []int{5, 4, 3, 2, 1}},
+		{"空数组", []int{}, []int{}},
+		{"单元素", []int{42}, []int{42}},
+		{"重复元素", []int{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5}, []int{9, 6, 5, 5, 5, 4, 3, 3, 2, 1, 1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := append([]int{}, tt.input...)
+			QuickSortDescTraversal(input)
+			if !reflect.DeepEqual(input, tt.expected) {
+				t.Errorf("期望 %v，实际 %v", tt.expected, input)
+			}
+		})
+	}
+}
+
+func TestCountingSort_Negative(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{"纯负数", []int{-3, -1, -4, -1, -5}, []int{-5, -4, -3, -1, -1}},
+		{"混合正负", []int{-5, 3, -1, 0, 2, -10, 7}, []int{-10, -5, -1, 0, 2, 3, 7}},
+		{"全相同", []int{5, 5, 5}, []int{5, 5, 5}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := append([]int{}, tt.input...)
+			CountingSort(input)
+			if !reflect.DeepEqual(input, tt.expected) {
+				t.Errorf("期望 %v，实际 %v", tt.expected, input)
+			}
+		})
+	}
+}
+
+// TestSortConsistency 验证所有排序算法对同一输入输出一致
+func TestSortConsistency(t *testing.T) {
+	input := []int{5, 3, 8, 1, 9, 2, 4, 7, 6, 0}
+	expected := append([]int{}, input...)
+	sort.Ints(expected)
+
+	algorithms := []struct {
+		name string
+		fn   func([]int)
+	}{
+		{"BubbleSort", func(a []int) { BubbleSort(a) }},
+		{"InsertionSort", func(a []int) { InsertionSort(a) }},
+		{"QuickSort", func(a []int) { QuickSort(a) }},
+		{"QuickSortTraversal", func(a []int) { QuickSortTraversal(a) }},
+		{"CountingSort", func(a []int) { CountingSort(a) }},
+		{"RadixSort", func(a []int) { RadixSort(a) }},
+	}
+	for _, alg := range algorithms {
+		t.Run(alg.name, func(t *testing.T) {
+			arr := append([]int{}, input...)
+			alg.fn(arr)
+			if !reflect.DeepEqual(arr, expected) {
+				t.Errorf("%s: 期望 %v，实际 %v", alg.name, expected, arr)
+			}
+		})
+	}
+}
+
 func BenchmarkBubbleSort(b *testing.B) {
 	input := make([]int, 1000)
 	for i := range input {
