@@ -21,18 +21,18 @@ type TimeUnit = int64
 
 // 数量级常量
 const (
-	Thousand        = int64(1_000)          // 千
-	TenThousand     = int64(10_000)         // 万
-	HundredThousand = int64(100_000)        // 十万
-	Million         = int64(1_000_000)      // 百万
-	TenMillion      = int64(10_000_000)     // 千万
-	HundredMillion  = int64(100_000_000)    // 亿
-	Billion         = int64(1_000_000_000)  // 十亿
+	Thousand        = 1_000          // 千
+	TenThousand     = 10_000         // 万
+	HundredThousand = 100_000        // 十万
+	Million         = 1_000_000      // 百万
+	TenMillion      = 10_000_000     // 千万
+	HundredMillion  = 100_000_000    // 亿
+	Billion         = 1_000_000_000  // 十亿
 )
 
 // 存储单位常量（1024 进制）
 const (
-	KB = int64(1024)
+	KB = 1024
 	MB = 1024 * KB
 	GB = 1024 * MB
 	TB = 1024 * GB
