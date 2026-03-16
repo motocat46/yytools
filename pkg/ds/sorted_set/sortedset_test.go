@@ -273,22 +273,29 @@ func TestSortedSet_GetByRank(t *testing.T) {
 
 func TestSortedSet_GetRangeByRank(t *testing.T) {
 	sortedSet := NewSortedSet[int]()
-
-	// 插入一些数据
 	for i := 1; i <= 10; i++ {
 		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
 	}
 
-	// 测试获取排名范围
+	// 正常范围
 	result := sortedSet.GetRangeByRank(2, 5)
 	if len(result) != 4 {
 		t.Errorf("期望获取 4 个元素，实际获取 %d 个", len(result))
 	}
-
-	// 验证结果是有序的
 	for i := 0; i < len(result)-1; i++ {
 		if result[i].Score > result[i+1].Score {
-			t.Errorf("结果应该按分数排序，但 %f > %f", result[i].Score, result[i+1].Score)
+			t.Errorf("结果应按分数升序，但 %f > %f", result[i].Score, result[i+1].Score)
+		}
+	}
+
+	// start > end 自动交换，结果应与 (2,5) 相同
+	result2 := sortedSet.GetRangeByRank(5, 2)
+	if len(result2) != 4 {
+		t.Errorf("start>end 自动交换：期望 4 个元素，实际 %d", len(result2))
+	}
+	for i, item := range result2 {
+		if item.Key != result[i].Key {
+			t.Errorf("start>end 结果与正常顺序不一致，位置 %d: %d != %d", i, item.Key, result[i].Key)
 		}
 	}
 }
@@ -296,23 +303,24 @@ func TestSortedSet_GetRangeByRank(t *testing.T) {
 func TestSortedSet_UpdateScore(t *testing.T) {
 	sortedSet := NewSortedSet[int]()
 
-	// 插入数据
-	item := &NodeData[int]{Key: 1, Score: 1.0, Val: 1}
-	sortedSet.Insert(item)
+	// 插入多个元素，验证更新分数后排名真正发生变化
+	sortedSet.Insert(&NodeData[int]{Key: 1, Score: 1.0, Val: 1}) // 初始 rank=1
+	sortedSet.Insert(&NodeData[int]{Key: 2, Score: 2.0, Val: 2}) // 初始 rank=2
+	sortedSet.Insert(&NodeData[int]{Key: 3, Score: 3.0, Val: 3}) // 初始 rank=3
 
-	// 更新分数
-	updated, success := sortedSet.UpdateScore(1, 5.0)
+	// 将 key=1 的分数更新到最大，应排到末尾
+	updated, success := sortedSet.UpdateScore(1, 10.0)
 	if !success {
 		t.Error("更新存在的键应该成功")
 	}
-	if updated.Score != 5.0 {
-		t.Errorf("期望分数 5.0，实际是 %f", updated.Score)
+	if updated.Score != 10.0 {
+		t.Errorf("期望分数 10.0，实际是 %f", updated.Score)
 	}
-
-	// 验证排名变化
-	rank := sortedSet.GetRank(1)
-	if rank != 1 {
-		t.Errorf("更新后排名应该是 1，实际是 %d", rank)
+	if rank := sortedSet.GetRank(1); rank != 3 {
+		t.Errorf("更新到最大分数后应排名第 3，实际是 %d", rank)
+	}
+	if rank := sortedSet.GetRank(2); rank != 1 {
+		t.Errorf("key=2 应升为排名第 1，实际是 %d", rank)
 	}
 
 	// 测试更新不存在的键
@@ -345,23 +353,43 @@ func TestSortedSet_GetRangeByScore(t *testing.T) {
 }
 
 func TestSortedSet_DeleteRangeByScore(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
-
-	// 插入一些数据
-	for i := 1; i <= 10; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+	newSet := func() *SortedSet[int] {
+		ss := NewSortedSet[int]()
+		for i := 1; i <= 10; i++ {
+			ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		}
+		return ss
 	}
 
-	initialLength := sortedSet.Length()
-
-	// 测试删除分数范围
-	deleted := sortedSet.DeleteRangeByScore(3.0, false, 7.0, false)
+	// [3, 7] 含两端：score=3,4,5,6,7 共 5 个
+	ss := newSet()
+	deleted := ss.DeleteRangeByScore(3.0, false, 7.0, false)
 	if len(deleted) != 5 {
-		t.Errorf("期望删除 5 个元素，实际删除 %d 个", len(deleted))
+		t.Errorf("[3,7] 期望删除 5 个，实际 %d", len(deleted))
+	}
+	if ss.Length() != 5 {
+		t.Errorf("[3,7] 删除后长度期望 5，实际 %d", ss.Length())
 	}
 
-	if sortedSet.Length() != initialLength-5 {
-		t.Errorf("删除后长度应该是 %d，实际是 %d", initialLength-5, sortedSet.Length())
+	// (3, 7] 不含左端：score=4,5,6,7 共 4 个
+	ss = newSet()
+	deleted = ss.DeleteRangeByScore(3.0, true, 7.0, false)
+	if len(deleted) != 4 {
+		t.Errorf("(3,7] 期望删除 4 个，实际 %d", len(deleted))
+	}
+
+	// [3, 7) 不含右端：score=3,4,5,6 共 4 个
+	ss = newSet()
+	deleted = ss.DeleteRangeByScore(3.0, false, 7.0, true)
+	if len(deleted) != 4 {
+		t.Errorf("[3,7) 期望删除 4 个，实际 %d", len(deleted))
+	}
+
+	// 验证已删元素确实从集合中移除
+	for _, d := range deleted {
+		if ss.Get(d.Key) != nil {
+			t.Errorf("已删除的 key=%d 不应再存在", d.Key)
+		}
 	}
 }
 
