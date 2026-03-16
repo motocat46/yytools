@@ -43,12 +43,10 @@ mathx.Max(3.14, 2.71) // 3.14
 
 ## 子模块
 
-| 子模块 | 包路径 | 功能 |
-|--------|--------|------|
-| `bits` | `mathx/bits` | 位运算工具：符号检测、2 的幂判断、统计 1 的位数 |
-| `overflow` | `mathx/overflow` | 有符号整数四则运算溢出检测（加减乘除）|
-| `probability_distribution` | `mathx/probability_distribution` | 静态/动态概率分布采样 |
-| `random` | `mathx/random` | 随机整数生成 |
-| `sampling` | `mathx/sampling` | 水塘抽样（从流式数据中等概率采样）|
-
-各子模块有独立的 USAGE.md，请参阅对应目录。
+| 子模块 | 功能 |
+|--------|------|
+| [bits](bits/README.md) | 位运算工具：符号检测、2 的幂判断、统计 1 的位数 |
+| [overflow](overflow/README.md) | 有符号整数四则运算溢出检测（加减乘除）|
+| [probability_distribution](probability_distribution/) | 静态/动态概率分布采样 |
+| [random](random/) | 随机整数生成 |
+| [sampling](sampling/README.md) | Floyd 算法不重复采样、带最小间隔采样 |
