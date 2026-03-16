@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewSortedSet(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 	if sortedSet == nil {
 		t.Fatal("NewSortedSet() 返回了 nil")
 	}
@@ -34,85 +34,10 @@ func TestNewNodeData(t *testing.T) {
 	}
 }
 
-func TestNodeData_LessThan(t *testing.T) {
-	tests := []struct {
-		name     string
-		data1    *NodeData[int]
-		data2    *NodeData[int]
-		expected bool
-	}{
-		{
-			name:     "分数不同",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 2.0, Val: 2},
-			expected: true,
-		},
-		{
-			name:     "分数相同，值不同",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 1.0, Val: 2},
-			expected: false, // LessThan 仅以 Score 为准，分数相同则不满足 less-than 关系
-		},
-		{
-			name:     "分数相同，值相同",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 1.0, Val: 1},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.data1.LessThan(tt.data2)
-			if result != tt.expected {
-				t.Errorf("期望 %t，实际是 %t", tt.expected, result)
-			}
-		})
-	}
-}
-
-func TestNodeData_EqualTo(t *testing.T) {
-	tests := []struct {
-		name     string
-		data1    *NodeData[int]
-		data2    *NodeData[int]
-		expected bool
-	}{
-		{
-			name:     "完全相等",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 1.0, Val: 1},
-			expected: true,
-		},
-		{
-			name:     "分数不同",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 2.0, Val: 1},
-			expected: false,
-		},
-		{
-			name:     "值不同",
-			data1:    &NodeData[int]{Key: 1, Score: 1.0, Val: 1},
-			data2:    &NodeData[int]{Key: 2, Score: 1.0, Val: 2},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.data1.EqualTo(tt.data2)
-			if result != tt.expected {
-				t.Errorf("期望 %t，实际是 %t", tt.expected, result)
-			}
-		})
-	}
-}
-
 func TestSortedSet_Insert(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 
-	// 测试基本插入操作
-	items := []*NodeData[int]{
+	items := []*NodeData[int, int]{
 		{Key: 1, Score: 3.0, Val: 1},
 		{Key: 2, Score: 1.0, Val: 2},
 		{Key: 3, Score: 2.0, Val: 3},
@@ -128,8 +53,8 @@ func TestSortedSet_Insert(t *testing.T) {
 		}
 	}
 
-	// 测试重复插入
-	duplicateItem := &NodeData[int]{Key: 1, Score: 4.0, Val: 1}
+	// 重复插入应该失败
+	duplicateItem := &NodeData[int, int]{Key: 1, Score: 4.0, Val: 1}
 	success := sortedSet.Insert(duplicateItem)
 	if success {
 		t.Error("重复插入应该失败")
@@ -137,10 +62,9 @@ func TestSortedSet_Insert(t *testing.T) {
 }
 
 func TestSortedSet_Get(t *testing.T) {
-	sortedSet := NewSortedSet[string]()
+	sortedSet := NewSortedSet[string, string]()
 
-	// 插入一些数据
-	items := []*NodeData[string]{
+	items := []*NodeData[string, string]{
 		{Key: "key1", Score: 1.0, Val: "val1"},
 		{Key: "key2", Score: 2.0, Val: "val2"},
 		{Key: "key3", Score: 3.0, Val: "val3"},
@@ -150,7 +74,6 @@ func TestSortedSet_Get(t *testing.T) {
 		sortedSet.Insert(item)
 	}
 
-	// 测试获取存在的键
 	for _, item := range items {
 		retrieved := sortedSet.Get(item.Key)
 		if retrieved == nil {
@@ -161,7 +84,6 @@ func TestSortedSet_Get(t *testing.T) {
 		}
 	}
 
-	// 测试获取不存在的键
 	notFound := sortedSet.Get("nonexistent")
 	if notFound != nil {
 		t.Error("不存在的键应该返回 nil")
@@ -169,10 +91,9 @@ func TestSortedSet_Get(t *testing.T) {
 }
 
 func TestSortedSet_Delete(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 
-	// 插入一些数据
-	items := []*NodeData[int]{
+	items := []*NodeData[int, int]{
 		{Key: 1, Score: 1.0, Val: 1},
 		{Key: 2, Score: 2.0, Val: 2},
 		{Key: 3, Score: 3.0, Val: 3},
@@ -182,7 +103,6 @@ func TestSortedSet_Delete(t *testing.T) {
 		sortedSet.Insert(item)
 	}
 
-	// 测试删除存在的键
 	deleted, success := sortedSet.Delete(2)
 	if !success {
 		t.Error("删除存在的键应该成功")
@@ -194,7 +114,6 @@ func TestSortedSet_Delete(t *testing.T) {
 		t.Errorf("删除后长度应该是 2，实际是 %d", sortedSet.Length())
 	}
 
-	// 测试删除不存在的键
 	_, success = sortedSet.Delete(999)
 	if success {
 		t.Error("删除不存在的键应该失败")
@@ -202,10 +121,9 @@ func TestSortedSet_Delete(t *testing.T) {
 }
 
 func TestSortedSet_GetRank(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 
-	// 插入一些数据（按分数排序）
-	items := []*NodeData[int]{
+	items := []*NodeData[int, int]{
 		{Key: 1, Score: 3.0, Val: 1}, // 排名 3
 		{Key: 2, Score: 1.0, Val: 2}, // 排名 1
 		{Key: 3, Score: 2.0, Val: 3}, // 排名 2
@@ -215,11 +133,10 @@ func TestSortedSet_GetRank(t *testing.T) {
 		sortedSet.Insert(item)
 	}
 
-	// 测试获取排名
 	expectedRanks := map[int]int{
-		1: 3, // 分数最高，排名最后
-		2: 1, // 分数最低，排名第一
-		3: 2, // 分数中等，排名第二
+		1: 3,
+		2: 1,
+		3: 2,
 	}
 
 	for key, expectedRank := range expectedRanks {
@@ -229,7 +146,6 @@ func TestSortedSet_GetRank(t *testing.T) {
 		}
 	}
 
-	// 测试获取不存在的键的排名
 	rank := sortedSet.GetRank(999)
 	if rank != 0 {
 		t.Errorf("不存在的键应该返回排名 0，实际返回 %d", rank)
@@ -237,10 +153,9 @@ func TestSortedSet_GetRank(t *testing.T) {
 }
 
 func TestSortedSet_GetByRank(t *testing.T) {
-	sortedSet := NewSortedSet[string]()
+	sortedSet := NewSortedSet[string, string]()
 
-	// 插入一些数据
-	items := []*NodeData[string]{
+	items := []*NodeData[string, string]{
 		{Key: "key1", Score: 3.0, Val: "val1"},
 		{Key: "key2", Score: 1.0, Val: "val2"},
 		{Key: "key3", Score: 2.0, Val: "val3"},
@@ -250,8 +165,7 @@ func TestSortedSet_GetByRank(t *testing.T) {
 		sortedSet.Insert(item)
 	}
 
-	// 测试按排名获取
-	expectedKeys := []string{"key2", "key3", "key1"} // 按分数排序
+	expectedKeys := []string{"key2", "key3", "key1"}
 
 	for i, expectedKey := range expectedKeys {
 		rank := i + 1
@@ -264,7 +178,6 @@ func TestSortedSet_GetByRank(t *testing.T) {
 		}
 	}
 
-	// 测试获取超出范围的排名
 	nodeData := sortedSet.GetByRank(999)
 	if nodeData != nil {
 		t.Error("超出范围的排名应该返回 nil")
@@ -272,9 +185,9 @@ func TestSortedSet_GetByRank(t *testing.T) {
 }
 
 func TestSortedSet_GetRangeByRank(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 	for i := 1; i <= 10; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		sortedSet.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
 	// 正常范围
@@ -301,12 +214,11 @@ func TestSortedSet_GetRangeByRank(t *testing.T) {
 }
 
 func TestSortedSet_UpdateScore(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 
-	// 插入多个元素，验证更新分数后排名真正发生变化
-	sortedSet.Insert(&NodeData[int]{Key: 1, Score: 1.0, Val: 1}) // 初始 rank=1
-	sortedSet.Insert(&NodeData[int]{Key: 2, Score: 2.0, Val: 2}) // 初始 rank=2
-	sortedSet.Insert(&NodeData[int]{Key: 3, Score: 3.0, Val: 3}) // 初始 rank=3
+	sortedSet.Insert(&NodeData[int, int]{Key: 1, Score: 1.0, Val: 1}) // 初始 rank=1
+	sortedSet.Insert(&NodeData[int, int]{Key: 2, Score: 2.0, Val: 2}) // 初始 rank=2
+	sortedSet.Insert(&NodeData[int, int]{Key: 3, Score: 3.0, Val: 3}) // 初始 rank=3
 
 	// 将 key=1 的分数更新到最大，应排到末尾
 	updated, success := sortedSet.UpdateScore(1, 10.0)
@@ -323,7 +235,6 @@ func TestSortedSet_UpdateScore(t *testing.T) {
 		t.Errorf("key=2 应升为排名第 1，实际是 %d", rank)
 	}
 
-	// 测试更新不存在的键
 	_, success = sortedSet.UpdateScore(999, 10.0)
 	if success {
 		t.Error("更新不存在的键应该失败")
@@ -331,20 +242,16 @@ func TestSortedSet_UpdateScore(t *testing.T) {
 }
 
 func TestSortedSet_GetRangeByScore(t *testing.T) {
-	sortedSet := NewSortedSet[int]()
-
-	// 插入一些数据
+	sortedSet := NewSortedSet[int, int]()
 	for i := 1; i <= 10; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		sortedSet.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
-	// 测试获取分数范围
 	result := sortedSet.GetRangeByScore(3.0, false, 7.0, false)
 	if len(result) != 5 {
 		t.Errorf("期望获取 5 个元素，实际获取 %d 个", len(result))
 	}
 
-	// 验证结果都在指定范围内
 	for _, item := range result {
 		if item.Score < 3.0 || item.Score > 7.0 {
 			t.Errorf("元素分数 %f 不在范围 [3.0, 7.0] 内", item.Score)
@@ -353,10 +260,10 @@ func TestSortedSet_GetRangeByScore(t *testing.T) {
 }
 
 func TestSortedSet_DeleteRangeByScore(t *testing.T) {
-	newSet := func() *SortedSet[int] {
-		ss := NewSortedSet[int]()
+	newSet := func() *SortedSet[int, int] {
+		ss := NewSortedSet[int, int]()
 		for i := 1; i <= 10; i++ {
-			ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+			ss.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 		}
 		return ss
 	}
@@ -399,20 +306,19 @@ func TestSortedSet_WithStruct(t *testing.T) {
 		Age  int
 	}
 
-	sortedSet := NewSortedSet[Person]()
+	// Key 和 Val 使用不同类型：Key=Person（查找用），Val=string（业务数据）
+	sortedSet := NewSortedSet[Person, string]()
 
-	persons := []*NodeData[Person]{
-		{Key: Person{"Alice", 25}, Score: 3.0, Val: Person{"Alice", 25}},
-		{Key: Person{"Bob", 30}, Score: 1.0, Val: Person{"Bob", 30}},
-		{Key: Person{"Charlie", 35}, Score: 2.0, Val: Person{"Charlie", 35}},
+	persons := []*NodeData[Person, string]{
+		{Key: Person{"Alice", 25}, Score: 3.0, Val: "alice_data"},
+		{Key: Person{"Bob", 30}, Score: 1.0, Val: "bob_data"},
+		{Key: Person{"Charlie", 35}, Score: 2.0, Val: "charlie_data"},
 	}
 
-	// 插入结构体
 	for _, person := range persons {
 		sortedSet.Insert(person)
 	}
 
-	// 测试获取
 	retrieved := sortedSet.Get(Person{"Bob", 30})
 	if retrieved == nil {
 		t.Error("应该能找到 Bob")
@@ -420,12 +326,15 @@ func TestSortedSet_WithStruct(t *testing.T) {
 	if retrieved.Key.Name != "Bob" {
 		t.Errorf("期望找到 Bob，实际找到 %s", retrieved.Key.Name)
 	}
+	if retrieved.Val != "bob_data" {
+		t.Errorf("期望 Val=bob_data，实际是 %s", retrieved.Val)
+	}
 }
 
 func TestSortedSet_DeleteRangeByRank(t *testing.T) {
-	ss := NewSortedSet[int]()
+	ss := NewSortedSet[int, int]()
 	for i := 1; i <= 10; i++ {
-		ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		ss.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
 	// 删除排名 3~6
@@ -436,7 +345,6 @@ func TestSortedSet_DeleteRangeByRank(t *testing.T) {
 	if ss.Length() != 6 {
 		t.Errorf("删除后长度期望 6，实际 %d", ss.Length())
 	}
-	// 验证被删元素不再可查
 	for _, d := range deleted {
 		if ss.Get(d.Key) != nil {
 			t.Errorf("已删除的 key=%d 不应再存在", d.Key)
@@ -444,20 +352,20 @@ func TestSortedSet_DeleteRangeByRank(t *testing.T) {
 	}
 
 	// start > end 自动交换
-	ss2 := NewSortedSet[int]()
+	ss2 := NewSortedSet[int, int]()
 	for i := 1; i <= 5; i++ {
-		ss2.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		ss2.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
-	deleted2 := ss2.DeleteRangeByRank(4, 2) // 等同于 (2,4)
+	deleted2 := ss2.DeleteRangeByRank(4, 2)
 	if len(deleted2) != 3 {
 		t.Errorf("start>end 自动交换：期望删除 3 个，实际 %d", len(deleted2))
 	}
 }
 
 func TestSortedSet_GetRangeByScore_Exclusive(t *testing.T) {
-	ss := NewSortedSet[int]()
+	ss := NewSortedSet[int, int]()
 	for i := 1; i <= 10; i++ {
-		ss.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		ss.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
 	// 含左含右 [3, 7]
@@ -486,10 +394,9 @@ func TestSortedSet_GetRangeByScore_Exclusive(t *testing.T) {
 }
 
 func TestSortedSet_SameScore_StableOrder(t *testing.T) {
-	ss := NewSortedSet[int]()
-	// 插入相同分数，验证按插入顺序稳定排列
+	ss := NewSortedSet[int, int]()
 	for _, key := range []int{10, 20, 30, 40, 50} {
-		ss.Insert(&NodeData[int]{Key: key, Score: 1.0, Val: key})
+		ss.Insert(&NodeData[int, int]{Key: key, Score: 1.0, Val: key})
 	}
 	result := ss.GetRangeByRank(1, 5)
 	for i := 0; i < len(result)-1; i++ {
@@ -501,18 +408,18 @@ func TestSortedSet_SameScore_StableOrder(t *testing.T) {
 }
 
 func BenchmarkSortedSet_Insert(b *testing.B) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		sortedSet.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 }
 
 func BenchmarkSortedSet_Get(b *testing.B) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 	for i := 0; i < 1000; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		sortedSet.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
 	b.ResetTimer()
@@ -522,9 +429,9 @@ func BenchmarkSortedSet_Get(b *testing.B) {
 }
 
 func BenchmarkSortedSet_Delete(b *testing.B) {
-	sortedSet := NewSortedSet[int]()
+	sortedSet := NewSortedSet[int, int]()
 	for i := 0; i < b.N; i++ {
-		sortedSet.Insert(&NodeData[int]{Key: i, Score: float64(i), Val: i})
+		sortedSet.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
 	}
 
 	b.ResetTimer()

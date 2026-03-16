@@ -17,6 +17,6 @@
 package sorted_set
 
 // RunBenchCheck 供 internal/bench 调用，校验有序集合内部一致性
-func RunBenchCheck(ss *SortedSet[int]) {
+func RunBenchCheck(ss *SortedSet[int, int]) {
 	sortedSetMustLegal(ss)
 }

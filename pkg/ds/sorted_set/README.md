@@ -12,16 +12,16 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `Key` | `T` | 唯一标识，用于哈希表快速查找（comparable 约束） |
+| `Key` | `K comparable` | 唯一标识，用于哈希表快速查找 |
 | `Score` | `float64` | 排序依据，分数越小排名越靠前（rank=1 为最小值） |
-| `Val` | `T` | 业务数据 |
+| `Val` | `V any` | 业务数据，类型独立于 Key，可为任意类型 |
 
 ## API
 
 | 方法 | 说明 |
 |------|------|
-| `NewSortedSet[T comparable]()` | 创建有序集合 |
-| `NewNodeData(key T, score float64, val T)` | 创建节点数据 |
+| `NewSortedSet[K comparable, V any]()` | 创建有序集合 |
+| `NewNodeData(key K, score float64, val V)` | 创建节点数据 |
 | `Insert(data *NodeData[T]) bool` | 插入元素，Key 重复返回 false |
 | `Delete(key T) (*NodeData[T], bool)` | 按 Key 删除，不存在返回 (nil, false) |
 | `Get(key T) *NodeData[T]` | 按 Key 查找，不存在返回 nil |
@@ -39,7 +39,7 @@
 ```go
 import "github.com/motocat46/yytools/pkg/ds/sorted_set"
 
-ss := sorted_set.NewSortedSet[string]()
+ss := sorted_set.NewSortedSet[string, string]()
 
 // 插入玩家分数
 ss.Insert(sorted_set.NewNodeData("alice", 1500.0, "alice"))

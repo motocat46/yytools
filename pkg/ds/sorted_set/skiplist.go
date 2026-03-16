@@ -25,23 +25,23 @@ import (
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
-type SkipList[T comparable] struct {
-	Head        *Node[T]
-	Tail        *Node[T]
+type SkipList[K comparable, V any] struct {
+	Head        *Node[K, V]
+	Tail        *Node[K, V]
 	Length      int
 	Level       int
 	LevelUpProb float32
 }
 
-type SkipListLevel[T comparable] struct {
-	Forward *Node[T]
+type SkipListLevel[K comparable, V any] struct {
+	Forward *Node[K, V]
 	Span    int
 }
 
-type Node[T comparable] struct {
-	Levels   []*SkipListLevel[T]
-	Backward *Node[T]
-	Data     *NodeData[T]
+type Node[K comparable, V any] struct {
+	Levels   []*SkipListLevel[K, V]
+	Backward *Node[K, V]
+	Data     *NodeData[K, V]
 }
 
 type RangeSpecifiedBase struct {
@@ -55,31 +55,33 @@ type RangeSpecified struct {
 	Max float64
 }
 
-func CreateNode[T comparable](level int, data *NodeData[T]) *Node[T] {
-	levelArr := make([]*SkipListLevel[T], level)
+func CreateNode[K comparable, V any](level int, data *NodeData[K, V]) *Node[K, V] {
+	levelArr := make([]*SkipListLevel[K, V], level)
 	for i := 0; i < level; i++ {
-		levelArr[i] = &SkipListLevel[T]{Forward: nil, Span: 0}
+		levelArr[i] = &SkipListLevel[K, V]{Forward: nil, Span: 0}
 	}
-	return &Node[T]{Levels: levelArr, Backward: nil, Data: data}
+	return &Node[K, V]{Levels: levelArr, Backward: nil, Data: data}
 }
 
-func (this *Node[T]) High() int {
+func (this *Node[K, V]) High() int {
 	return len(this.Levels)
 }
 
-func NewSkipList[T comparable]() *SkipList[T] {
-	return NewSkipListByParams[T](DEFAULT_LEVELUP_PROBABILITY)
+func NewSkipList[K comparable, V any]() *SkipList[K, V] {
+	return NewSkipListByParams[K, V](DEFAULT_LEVELUP_PROBABILITY)
 }
 
-func NewSkipListByParams[T comparable](nodeLevelUpProb float32) *SkipList[T] {
+func NewSkipListByParams[K comparable, V any](nodeLevelUpProb float32) *SkipList[K, V] {
 	assert.Assert(nodeLevelUpProb >= 0 && nodeLevelUpProb < 1,
 		"提升节点高度概率不正确:", nodeLevelUpProb, "正常范围:[0.0,1)")
 
-	var zero T
-	skipList := &SkipList[T]{
-		Head: CreateNode[T](SKIPLIST_MAXLEVEL, &NodeData[T]{
+	var zeroK K
+	var zeroV V
+	skipList := &SkipList[K, V]{
+		Head: CreateNode[K, V](SKIPLIST_MAXLEVEL, &NodeData[K, V]{
 			Score: 0,
-			Val:   zero,
+			Key:   zeroK,
+			Val:   zeroV,
 		}),
 		Tail:        nil,
 		Length:      0,
@@ -89,7 +91,7 @@ func NewSkipListByParams[T comparable](nodeLevelUpProb float32) *SkipList[T] {
 	return skipList
 }
 
-func (this *SkipList[T]) Get(score float64, data *NodeData[T]) (*Node[T], bool) {
+func (this *SkipList[K, V]) Get(score float64, data *NodeData[K, V]) (*Node[K, V], bool) {
 	assert.Assert(!math.IsNaN(score), "score is not a number:", score)
 	assert.Assert(data != nil, "data must not be nil, score:", score)
 
@@ -107,11 +109,11 @@ func (this *SkipList[T]) Get(score float64, data *NodeData[T]) (*Node[T], bool) 
 	return nil, false
 }
 
-func (this *SkipList[T]) Insert(data *NodeData[T]) (*Node[T], bool) {
+func (this *SkipList[K, V]) Insert(data *NodeData[K, V]) (*Node[K, V], bool) {
 	assert.Assert(data != nil, "data must not be nil")
 	assert.Assert(!math.IsNaN(data.Score), "score is not a number:", data.Score)
 
-	prevNodes := [SKIPLIST_MAXLEVEL]*Node[T]{}
+	prevNodes := [SKIPLIST_MAXLEVEL]*Node[K, V]{}
 	rank := [SKIPLIST_MAXLEVEL]int{}
 
 	prev := this.Head
@@ -140,7 +142,7 @@ func (this *SkipList[T]) Insert(data *NodeData[T]) (*Node[T], bool) {
 		this.Level = level
 	}
 
-	newNode := CreateNode[T](level, data)
+	newNode := CreateNode[K, V](level, data)
 	for i := 0; i < level; i++ {
 		newNode.Levels[i].Forward = prevNodes[i].Levels[i].Forward
 		prevNodes[i].Levels[i].Forward = newNode
@@ -169,7 +171,7 @@ func (this *SkipList[T]) Insert(data *NodeData[T]) (*Node[T], bool) {
 	return newNode, true
 }
 
-func (this *SkipList[T]) findNode(data *NodeData[T], prevNodes *[SKIPLIST_MAXLEVEL]*Node[T]) (*Node[T], bool) {
+func (this *SkipList[K, V]) findNode(data *NodeData[K, V], prevNodes *[SKIPLIST_MAXLEVEL]*Node[K, V]) (*Node[K, V], bool) {
 	prev := this.Head
 	for i := this.Level - 1; i >= 0; i-- {
 		current := prev.Levels[i].Forward
@@ -186,7 +188,7 @@ func (this *SkipList[T]) findNode(data *NodeData[T], prevNodes *[SKIPLIST_MAXLEV
 	return nil, false
 }
 
-func (this *SkipList[T]) deleteNode(current *Node[T], prevNodes *[SKIPLIST_MAXLEVEL]*Node[T]) *Node[T] {
+func (this *SkipList[K, V]) deleteNode(current *Node[K, V], prevNodes *[SKIPLIST_MAXLEVEL]*Node[K, V]) *Node[K, V] {
 	for i := 0; i < this.Level; i++ {
 		if prevNodes[i].Levels[i].Forward == current {
 			prevNodes[i].Levels[i].Span += current.Levels[i].Span - 1
@@ -208,11 +210,11 @@ func (this *SkipList[T]) deleteNode(current *Node[T], prevNodes *[SKIPLIST_MAXLE
 	return current
 }
 
-func (this *SkipList[T]) Delete(data *NodeData[T]) (*Node[T], bool) {
+func (this *SkipList[K, V]) Delete(data *NodeData[K, V]) (*Node[K, V], bool) {
 	assert.Assert(data != nil, "val must not be nil")
 	assert.Assert(!math.IsNaN(data.Score), "score is not a number:", data.Score)
 
-	prevNodes := [SKIPLIST_MAXLEVEL]*Node[T]{}
+	prevNodes := [SKIPLIST_MAXLEVEL]*Node[K, V]{}
 	current, ok := this.findNode(data, &prevNodes)
 	if !ok {
 		return current, ok
@@ -220,7 +222,7 @@ func (this *SkipList[T]) Delete(data *NodeData[T]) (*Node[T], bool) {
 	return this.deleteNode(current, &prevNodes), true
 }
 
-func (this *SkipList[T]) GetRank(data *NodeData[T]) int {
+func (this *SkipList[K, V]) GetRank(data *NodeData[K, V]) int {
 	assert.Assert(data != nil, "val must not be nil")
 	assert.Assert(!math.IsNaN(data.Score), "score is not a number:", data.Score)
 
@@ -240,7 +242,7 @@ func (this *SkipList[T]) GetRank(data *NodeData[T]) int {
 	return 0
 }
 
-func (this *SkipList[T]) GetNodeByRank(rank int) *Node[T] {
+func (this *SkipList[K, V]) GetNodeByRank(rank int) *Node[K, V] {
 	assert.Assert(rank > 0, "rank must >= 1, rank:", rank)
 
 	traversed := 0
@@ -259,12 +261,12 @@ func (this *SkipList[T]) GetNodeByRank(rank int) *Node[T] {
 	return nil
 }
 
-func (this *SkipList[T]) GetRangeByRank(start int, end int) []*NodeData[T] {
+func (this *SkipList[K, V]) GetRangeByRank(start int, end int) []*NodeData[K, V] {
 	assert.Assert(start > 0 && end > 0 && start <= end, "rank范围不合法, start:", start, " end:", end)
 
 	current := this.GetNodeByRank(start)
 	traversed := start
-	datas := make([]*NodeData[T], 0, 4)
+	datas := make([]*NodeData[K, V], 0, 4)
 	for current != nil && traversed <= end {
 		next := current.Levels[0].Forward
 		datas = append(datas, current.Data)
@@ -274,13 +276,13 @@ func (this *SkipList[T]) GetRangeByRank(start int, end int) []*NodeData[T] {
 	return datas
 }
 
-func (this *SkipList[T]) DeleteRangeByRank(start int, end int) []*NodeData[T] {
+func (this *SkipList[K, V]) DeleteRangeByRank(start int, end int) []*NodeData[K, V] {
 	assert.Assert(start > 0 && end > 0 && start <= end, "rank范围不合法, start:", start, " end:", end)
 
-	prevNodes := [SKIPLIST_MAXLEVEL]*Node[T]{}
+	prevNodes := [SKIPLIST_MAXLEVEL]*Node[K, V]{}
 	traversed := 0
 	prev := this.Head
-	var current *Node[T] = nil
+	var current *Node[K, V] = nil
 	for i := this.Level - 1; i >= 0; i-- {
 		current = prev.Levels[i].Forward
 		for current != nil && (traversed+prev.Levels[i].Span) < start {
@@ -292,7 +294,7 @@ func (this *SkipList[T]) DeleteRangeByRank(start int, end int) []*NodeData[T] {
 	}
 	traversed++
 
-	deleted := make([]*NodeData[T], 0, 4)
+	deleted := make([]*NodeData[K, V], 0, 4)
 	for current != nil && traversed <= end {
 		next := current.Levels[0].Forward
 		this.deleteNode(current, &prevNodes)
@@ -303,12 +305,12 @@ func (this *SkipList[T]) DeleteRangeByRank(start int, end int) []*NodeData[T] {
 	return deleted
 }
 
-func (this *SkipList[T]) UpdateScore(data *NodeData[T], newScore float64) (*Node[T], bool) {
+func (this *SkipList[K, V]) UpdateScore(data *NodeData[K, V], newScore float64) (*Node[K, V], bool) {
 	assert.Assert(data != nil, "data must not be nil")
 	assert.Assert(!math.IsNaN(data.Score), "oldScore is not a number:", data.Score)
 	assert.Assert(!math.IsNaN(newScore), "newScore is not a number:", newScore)
 
-	prevNodes := [SKIPLIST_MAXLEVEL]*Node[T]{}
+	prevNodes := [SKIPLIST_MAXLEVEL]*Node[K, V]{}
 	current, ok := this.findNode(data, &prevNodes)
 	if !ok {
 		return current, ok
@@ -341,7 +343,7 @@ func scoreLessThanMax(score float64, r *RangeSpecified) bool {
 	return score <= r.Max
 }
 
-func (this *SkipList[T]) isInRange(r *RangeSpecified) bool {
+func (this *SkipList[K, V]) isInRange(r *RangeSpecified) bool {
 	if r.Min > r.Max || (r.Min == r.Max && (r.MinExclusive || r.MaxExclusive)) {
 		return false
 	}
@@ -356,14 +358,14 @@ func (this *SkipList[T]) isInRange(r *RangeSpecified) bool {
 	return true
 }
 
-func (this *SkipList[T]) FirstInRange(r *RangeSpecified) *Node[T] {
+func (this *SkipList[K, V]) FirstInRange(r *RangeSpecified) *Node[K, V] {
 	assert.Assert(r != nil, "r range cannot be nil")
 	if !this.isInRange(r) {
 		return nil
 	}
 
 	prev := this.Head
-	var current *Node[T] = nil
+	var current *Node[K, V] = nil
 	for i := this.Level - 1; i >= 0; i-- {
 		current = prev.Levels[i].Forward
 		for current != nil && !scoreGreaterThanMin(current.Data.Score, r) {
@@ -378,9 +380,9 @@ func (this *SkipList[T]) FirstInRange(r *RangeSpecified) *Node[T] {
 	return current
 }
 
-func (this *SkipList[T]) GetRangeByScore(r *RangeSpecified) []*NodeData[T] {
+func (this *SkipList[K, V]) GetRangeByScore(r *RangeSpecified) []*NodeData[K, V] {
 	current := this.FirstInRange(r)
-	datas := make([]*NodeData[T], 0, 4)
+	datas := make([]*NodeData[K, V], 0, 4)
 	for current != nil && scoreLessThanMax(current.Data.Score, r) {
 		next := current.Levels[0].Forward
 		datas = append(datas, current.Data)
@@ -389,10 +391,10 @@ func (this *SkipList[T]) GetRangeByScore(r *RangeSpecified) []*NodeData[T] {
 	return datas
 }
 
-func (this *SkipList[T]) DeleteRangeByScore(r *RangeSpecified) []*NodeData[T] {
-	prevNodes := [SKIPLIST_MAXLEVEL]*Node[T]{}
+func (this *SkipList[K, V]) DeleteRangeByScore(r *RangeSpecified) []*NodeData[K, V] {
+	prevNodes := [SKIPLIST_MAXLEVEL]*Node[K, V]{}
 	prev := this.Head
-	var current *Node[T] = nil
+	var current *Node[K, V] = nil
 	for i := this.Level - 1; i >= 0; i-- {
 		current = prev.Levels[i].Forward
 		for current != nil && !scoreGreaterThanMin(current.Data.Score, r) {
@@ -402,7 +404,7 @@ func (this *SkipList[T]) DeleteRangeByScore(r *RangeSpecified) []*NodeData[T] {
 		prevNodes[i] = prev
 	}
 
-	deleted := make([]*NodeData[T], 0, 4)
+	deleted := make([]*NodeData[K, V], 0, 4)
 	for current != nil && scoreLessThanMax(current.Data.Score, r) {
 		next := current.Levels[0].Forward
 		this.deleteNode(current, &prevNodes)

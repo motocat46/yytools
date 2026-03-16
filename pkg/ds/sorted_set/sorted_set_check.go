@@ -20,7 +20,7 @@ import (
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
-func sortedSetMustLegal(ss *SortedSet[int]) {
+func sortedSetMustLegal(ss *SortedSet[int, int]) {
 	ss.lengthMustEqual()
 
 	current := ss.sl.Head.Levels[0].Forward

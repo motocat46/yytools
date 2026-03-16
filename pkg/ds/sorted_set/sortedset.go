@@ -24,57 +24,47 @@ import (
 )
 
 // NodeData 节点数据
-type NodeData[T comparable] struct {
-	Key   T       // 键（用于哈希表查找）
+type NodeData[K comparable, V any] struct {
+	Key   K       // 键（用于哈希表查找）
 	Score float64 // 分数（跳跃表根据该数值对节点有序排列）
-	Val   T       // 卫星数据
+	Val   V       // 卫星数据
 	seq   uint64  // 内部插入序列号，用于相同分数时的稳定排序（不对外暴露）
 }
 
-func NewNodeData[T comparable](key T, score float64, val T) *NodeData[T] {
-	return &NodeData[T]{Key: key, Score: score, Val: val}
-}
-
-// LessThan 公开比较：以分数为准（分数越小越靠前）
-func (this *NodeData[T]) LessThan(other *NodeData[T]) bool {
-	return this.Score < other.Score
-}
-
-// EqualTo 公开比较：分数相同且值相同视为相等
-func (this *NodeData[T]) EqualTo(other *NodeData[T]) bool {
-	return this.Score == other.Score && this.Val == other.Val
+func NewNodeData[K comparable, V any](key K, score float64, val V) *NodeData[K, V] {
+	return &NodeData[K, V]{Key: key, Score: score, Val: val}
 }
 
 // lessOrder 内部跳表排序：使用 seq 实现分数相同时的稳定全序
-func (this *NodeData[T]) lessOrder(other *NodeData[T]) bool {
+func (this *NodeData[K, V]) lessOrder(other *NodeData[K, V]) bool {
 	return this.Score < other.Score ||
 		this.Score == other.Score && this.seq < other.seq
 }
 
 // equalOrder 内部跳表查找：seq 唯一确定同一个节点
-func (this *NodeData[T]) equalOrder(other *NodeData[T]) bool {
+func (this *NodeData[K, V]) equalOrder(other *NodeData[K, V]) bool {
 	return this.seq == other.seq
 }
 
 // SortedSet 有序集合（基于跳跃表实现）
-type SortedSet[T comparable] struct {
-	sl   *SkipList[T]
-	hash map[T]*NodeData[T]
+type SortedSet[K comparable, V any] struct {
+	sl   *SkipList[K, V]
+	hash map[K]*NodeData[K, V]
 	seq  uint64 // 自增序列号
 }
 
-func NewSortedSet[T comparable]() *SortedSet[T] {
-	return &SortedSet[T]{
-		sl:   NewSkipList[T](),
-		hash: make(map[T]*NodeData[T]),
+func NewSortedSet[K comparable, V any]() *SortedSet[K, V] {
+	return &SortedSet[K, V]{
+		sl:   NewSkipList[K, V](),
+		hash: make(map[K]*NodeData[K, V]),
 	}
 }
 
-func (this *SortedSet[T]) Get(key T) *NodeData[T] {
+func (this *SortedSet[K, V]) Get(key K) *NodeData[K, V] {
 	return this.hash[key]
 }
 
-func (this *SortedSet[T]) Insert(data *NodeData[T]) bool {
+func (this *SortedSet[K, V]) Insert(data *NodeData[K, V]) bool {
 	assert.Assert(data != nil, "data == nil")
 
 	if _, has := this.hash[data.Key]; has {
@@ -92,7 +82,7 @@ func (this *SortedSet[T]) Insert(data *NodeData[T]) bool {
 	return ok
 }
 
-func (this *SortedSet[T]) Delete(key T) (*NodeData[T], bool) {
+func (this *SortedSet[K, V]) Delete(key K) (*NodeData[K, V], bool) {
 	data, exist := this.hash[key]
 	if !exist {
 		return nil, false
@@ -106,16 +96,16 @@ func (this *SortedSet[T]) Delete(key T) (*NodeData[T], bool) {
 	return nil, false
 }
 
-func (this *SortedSet[T]) Length() int {
+func (this *SortedSet[K, V]) Length() int {
 	return this.sl.Length
 }
 
-func (this *SortedSet[T]) lengthMustEqual() {
+func (this *SortedSet[K, V]) lengthMustEqual() {
 	assert.Assert(this.sl.Length == len(this.hash),
 		"长度不一致 skiplist length:", this.sl.Length, " hash length:", len(this.hash))
 }
 
-func (this *SortedSet[T]) GetRank(key T) int {
+func (this *SortedSet[K, V]) GetRank(key K) int {
 	data, exist := this.hash[key]
 	if !exist {
 		return 0
@@ -125,7 +115,7 @@ func (this *SortedSet[T]) GetRank(key T) int {
 	return rank
 }
 
-func (this *SortedSet[T]) GetByRank(rank int) *NodeData[T] {
+func (this *SortedSet[K, V]) GetByRank(rank int) *NodeData[K, V] {
 	assert.Assert(rank > 0, "rank must be positive number")
 	node := this.sl.GetNodeByRank(rank)
 	if node == nil {
@@ -134,14 +124,14 @@ func (this *SortedSet[T]) GetByRank(rank int) *NodeData[T] {
 	return node.Data
 }
 
-func (this *SortedSet[T]) GetRangeByRank(start int, end int) []*NodeData[T] {
+func (this *SortedSet[K, V]) GetRangeByRank(start int, end int) []*NodeData[K, V] {
 	if start > end {
 		start, end = end, start
 	}
 	return this.sl.GetRangeByRank(start, end)
 }
 
-func (this *SortedSet[T]) DeleteRangeByRank(start int, end int) []*NodeData[T] {
+func (this *SortedSet[K, V]) DeleteRangeByRank(start int, end int) []*NodeData[K, V] {
 	if start > end {
 		start, end = end, start
 	}
@@ -153,7 +143,7 @@ func (this *SortedSet[T]) DeleteRangeByRank(start int, end int) []*NodeData[T] {
 	return deleted
 }
 
-func (this *SortedSet[T]) UpdateScore(key T, newScore float64) (*NodeData[T], bool) {
+func (this *SortedSet[K, V]) UpdateScore(key K, newScore float64) (*NodeData[K, V], bool) {
 	data, exist := this.hash[key]
 	if !exist {
 		return nil, false
@@ -166,7 +156,7 @@ func (this *SortedSet[T]) UpdateScore(key T, newScore float64) (*NodeData[T], bo
 	return node.Data, ok
 }
 
-func (this *SortedSet[T]) GetRangeByScore(min float64, minEx bool, max float64, maxEx bool) []*NodeData[T] {
+func (this *SortedSet[K, V]) GetRangeByScore(min float64, minEx bool, max float64, maxEx bool) []*NodeData[K, V] {
 	r := &RangeSpecified{
 		RangeSpecifiedBase: RangeSpecifiedBase{MinExclusive: minEx, MaxExclusive: maxEx},
 		Min:                min,
@@ -175,7 +165,7 @@ func (this *SortedSet[T]) GetRangeByScore(min float64, minEx bool, max float64, 
 	return this.sl.GetRangeByScore(r)
 }
 
-func (this *SortedSet[T]) DeleteRangeByScore(min float64, minEx bool, max float64, maxEx bool) []*NodeData[T] {
+func (this *SortedSet[K, V]) DeleteRangeByScore(min float64, minEx bool, max float64, maxEx bool) []*NodeData[K, V] {
 	r := &RangeSpecified{
 		RangeSpecifiedBase: RangeSpecifiedBase{MinExclusive: minEx, MaxExclusive: maxEx},
 		Min:                min,

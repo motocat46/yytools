@@ -37,7 +37,7 @@ func nextKey() int {
 	return globalKey
 }
 
-func sortedSetOpInsert(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpInsert(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		key := nextKey()
 		score := float64(random.RandInt(testScoreMin, testScoreMax))
@@ -46,7 +46,7 @@ func sortedSetOpInsert(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-func sortedSetOpDelete(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpDelete(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		if ss.Length() > 0 {
 			rank := random.RandInt(1, ss.Length())
@@ -57,7 +57,7 @@ func sortedSetOpDelete(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-func sortedSetOpUpdateScore(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpUpdateScore(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		if ss.Length() > 0 {
 			rank := random.RandInt(1, ss.Length())
@@ -70,7 +70,7 @@ func sortedSetOpUpdateScore(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-func sortedSetOpGetRank(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpGetRank(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		if ss.Length() > 0 {
 			randRank := random.RandInt(1, ss.Length())
@@ -82,7 +82,7 @@ func sortedSetOpGetRank(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-func sortedSetOpGetRangeByScore(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpGetRangeByScore(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		if ss.Length() == 0 {
 			return
@@ -101,7 +101,7 @@ func sortedSetOpGetRangeByScore(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-func sortedSetOpDeleteRangeByScore(ss *sorted_set.SortedSet[int], num int) {
+func sortedSetOpDeleteRangeByScore(ss *sorted_set.SortedSet[int, int], num int) {
 	for i := 0; i < num; i++ {
 		if ss.Length() == 0 {
 			return
@@ -115,14 +115,14 @@ func sortedSetOpDeleteRangeByScore(ss *sorted_set.SortedSet[int], num int) {
 	}
 }
 
-var basicOps = []func(ss *sorted_set.SortedSet[int], num int){
+var basicOps = []func(ss *sorted_set.SortedSet[int, int], num int){
 	sortedSetOpInsert,
 	sortedSetOpDelete,
 	sortedSetOpUpdateScore,
 	sortedSetOpGetRank,
 }
 
-var rangeOps = []func(ss *sorted_set.SortedSet[int], num int){
+var rangeOps = []func(ss *sorted_set.SortedSet[int, int], num int){
 	sortedSetOpGetRangeByScore,
 	sortedSetOpDeleteRangeByScore,
 }
@@ -134,7 +134,7 @@ func SortedSetTest(total int) {
 		fmt.Printf("-------第%d轮测试开始-------\n", a)
 		globalKey = 0
 		for k, n := range nums {
-			ss := sorted_set.NewSortedSet[int]()
+			ss := sorted_set.NewSortedSet[int, int]()
 			sortedSetOpInsert(ss, n)
 
 			opCnt := 50000
