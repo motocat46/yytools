@@ -237,9 +237,9 @@ ch.Close()
 ch.Send(1) // 返回 false，消息被丢弃，不会 panic
 ```
 
-### ❌ 混用 Receive() 和 Out()
+### ⚠️ 混用 Receive() 和 Out()
 
-`Receive()` 和 `Out()` 读取的是同一个底层 channel，混用会导致消息被随机分流到两个消费路径，破坏业务逻辑。选其一即可。
+`Receive()` 和 `Out()` 读取的是同一个底层 channel。混用时消息会被随机分流到两个消费路径，除非业务上明确允许，否则建议选其一使用。
 
 ### ❌ chanSize 设为 0
 
