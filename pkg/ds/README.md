@@ -1,0 +1,10 @@
+# pkg/ds
+
+泛型数据结构集合。
+
+| 子模块 | 功能 |
+|--------|------|
+| [heap](heap/README.md) | 最小堆、最大堆、优先级队列（支持 UpdatePriority） |
+| [queue](queue/README.md) | 环形队列，自动扩缩容 |
+| [stack](stack/README.md) | LIFO 栈，自动缩容 |
+| [sorted_set](sorted_set/README.md) | 有序集合（跳表实现），类 Redis ZADD/ZRANK/ZRANGE |

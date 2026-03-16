@@ -84,72 +84,16 @@ go run ./cmd/demo all 1           # 所有模块压测
 go run ./cmd/demo http            # 启动排序性能可视化服务
 ```
 
-## 模块说明
+## 模块索引
 
-### `pkg/algorithms/mathx`
-
-数学工具，包括最大公约数（GcdR/GcdI/Gcd）、绝对值（Abs）、Fibonacci 数列（带记忆化）。
-
-子包：
-- `bits`：位运算工具
-- `overflow`：加减乘除溢出检查
-- `probability_distribution`：三种概率分布实现（遍历法、Vose 别名法、动态权重）
-- `random`：随机整数生成
-
-### `pkg/algorithms/idgen/snowflake`
-
-无锁线程安全的雪花算法唯一 ID 生成器，专为游戏服务器设计：
-- 63 位整型：41 位毫秒时间戳 + 10 位 nodeID + 12 位 sequence
-- 自定义纪元 2025-01-01，有效期约 69 年（到 2094 年）
-- CAS 无锁设计，每节点 ~410 万 ID/秒，零内存分配
-- 支持时钟回拨（沿用 lastMs 保证唯一性）
-
-```go
-snowflake.Init(nodeID)  // 启动时调用一次
-id := snowflake.NewID() // 任意位置生成唯一 ID
-```
-
-详见 [pkg/algorithms/idgen/snowflake/README.md](pkg/algorithms/idgen/snowflake/README.md)。
-
-### `pkg/algorithms/sort`
-
-多种排序算法实现：
-- `BubbleSort` / `BubbleSortDesc`
-- `InsertionSort` / `InsertionSortDesc`
-- `QuickSort` / `QuickSortDesc`（随机 pivot + 小数组切换插入排序）
-- `QuickSortTraversal` / `QuickSortDescTraversal`（栈辅助迭代版快排）
-- `CountingSort`（计数排序）
-- `RadixSort`（LSD 基数排序，适用于非负整数）
-
-### `pkg/ds`
-
-泛型数据结构：
-- **heap**：最小堆（`Heap[T]`）、最大堆（`MaxHeap[T]`）、优先级队列（`PriorityQueue[T]`）
-- **queue**：环形队列（`Queue[T]`），自动扩容（翻倍）和缩容（缩半）
-- **stack**：栈（`Stack[T]`）
-- **sorted_set**：有序集合（`SortedSet[T]`），基于跳表实现，支持 Insert / Delete / UpdateScore / GetRank / GetByRank / GetRangeByScore 等操作
-
-### `pkg/infra`
-
-基础设施工具：
-- **safeexec**：`Safe`、`SafeCall`、`SafeExecWithError` 等 panic 安全执行包装
-- **timeutil**：时间工具函数
-- **os**：OS 相关工具封装
-- **concurrency/unbounded_channel**：无大小限制的 Channel，多种实现变体
-
-### `pkg/common`
-
-极简公共依赖：
-- **assert**：运行时断言框架，通过 `assert.SetAssert(true)` 启用，`assert.Assert(cond, msg...)` 使用
-- **base**：泛型类型约束定义
-
-### `pkg/slicex`
-
-切片工具函数：`MinInSlice`、`MaxInSlice`、`MinBy`、`MaxBy` 等。
-
-### `pkg/numconst`
-
-常用数字常量（千/万/亿）和时间单位常量。
+| 模块 | 功能简介 |
+|------|---------|
+| [pkg/algorithms](pkg/algorithms/README.md) | 排序、二分查找、数学工具、唯一 ID 生成 |
+| [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合 |
+| [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、OS 封装、无界 Channel |
+| [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架 |
+| [pkg/slicex](pkg/slicex/README.md) | 切片工具函数（MinBy、MaxBy 等） |
+| [pkg/numconst](pkg/numconst/README.md) | 常用数字常量（千/万/亿）和时间单位常量 |
 
 ## 开发规范
 
