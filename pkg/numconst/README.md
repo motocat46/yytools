@@ -16,7 +16,7 @@ Billion         = 1_000_000_000  // 十亿
 
 ```go
 if score > 1*numconst.HundredMillion { ... }
-maxGold := int64(500) * numconst.TenThousand
+var maxGold int64 = 500 * numconst.TenThousand
 ```
 
 ## 存储单位常量（1024 进制）
