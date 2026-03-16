@@ -118,17 +118,36 @@ go test -bench=. -count=3 ./pkg/ds/sorted_set/
 
 ## Benchmark
 
-各操作均按集合规模分组（n=100 / 1000 / 10000），便于观察 O(log n) 特性。
+各基准均按集合规模分组（n=100 / 1000 / 10000），便于观察 O(log n) 特性。
+
+### 单操作基准（稳定集合规模）
+
+所有单操作基准在**预填充的稳定规模集合**上运行，每次迭代只测一次目标操作，确保代价反映的是"规模为 n 时的成本"。
+
+| 函数 | 复杂度 | 说明 |
+|------|--------|------|
+| `BenchmarkSortedSet_Get` | O(1) | 哈希表查找 |
+| `BenchmarkSortedSet_GetRank` | O(log n) | 排名查询 |
+| `BenchmarkSortedSet_UpdateScore` | O(log n) | 分数更新（使用随机新值触发真实重排序路径） |
+| `BenchmarkSortedSet_Insert` | O(log n) | 插入（每次同步删除 rank=1 元素以维持集合规模） |
+| `BenchmarkSortedSet_GetRangeByRank` | O(log n + k) | 排名范围查询（k = n/2） |
+| `BenchmarkSortedSet_GetRangeByScore` | O(log n + k) | 分数范围查询（k ≈ n/2） |
+
+### 混合负载基准
 
 | 函数 | 说明 |
 |------|------|
-| `BenchmarkSortedSet_Insert` | 批量插入（每轮重建集合） |
-| `BenchmarkSortedSet_Get` | 按 Key 查找（O(1) 哈希表）|
-| `BenchmarkSortedSet_GetRank` | 按 Key 查询排名（O(log n)）|
-| `BenchmarkSortedSet_UpdateScore` | 更新分数触发重排（O(log n)）|
-| `BenchmarkSortedSet_GetRangeByRank` | 查询前半范围（O(log n + k)）|
-| `BenchmarkSortedSet_GetRangeByScore` | 按分数范围查询（O(log n + k)）|
-| `BenchmarkSortedSet_Delete` | 全量删除（每轮重建集合）|
+| `BenchmarkSortedSet_Mixed` | 模拟排行榜场景的混合负载，反映整体吞吐量 |
+
+`BenchmarkSortedSet_Mixed` 的操作比例：
+
+| 操作 | 比例 | 说明 |
+|------|------|------|
+| UpdateScore | 50% | 玩家分数更新（最高频） |
+| GetRank | 25% | 查询自己排名 |
+| GetRangeByRank(1,10) | 15% | 查看排行榜前 10 |
+| GetRangeByScore | 5% | 按积分段查询 |
+| Insert+Delete | 5% | 玩家进出场（维持集合规模） |
 
 ## 注意事项
 
