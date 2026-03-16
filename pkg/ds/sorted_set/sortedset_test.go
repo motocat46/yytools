@@ -2,6 +2,7 @@ package sorted_set
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"testing"
 )
 
@@ -503,6 +504,246 @@ func TestSortedSet_KeyValDifferentTypes(t *testing.T) {
 	}
 	if ss.GetRank("bob") != 1 {
 		t.Errorf("score=1200 应 rank=1，实际 %d", ss.GetRank("bob"))
+	}
+}
+
+// ---- 随机混合操作压力测试 ----
+
+// refModel 是 SortedSet 的参考实现，使用 map + 有序切片，语义与 SortedSet 完全一致。
+// 用于与 SortedSet 的返回值做逐步对比，发现偏差。
+type refModel struct {
+	scores map[int]float64 // key -> score
+}
+
+func newRefModel() *refModel {
+	return &refModel{scores: make(map[int]float64)}
+}
+
+func (r *refModel) insert(key int, score float64) bool {
+	if _, exists := r.scores[key]; exists {
+		return false
+	}
+	r.scores[key] = score
+	return true
+}
+
+func (r *refModel) delete(key int) bool {
+	if _, exists := r.scores[key]; !exists {
+		return false
+	}
+	delete(r.scores, key)
+	return true
+}
+
+func (r *refModel) updateScore(key int, score float64) bool {
+	if _, exists := r.scores[key]; !exists {
+		return false
+	}
+	r.scores[key] = score
+	return true
+}
+
+func (r *refModel) keys() []int {
+	keys := make([]int, 0, len(r.scores))
+	for k := range r.scores {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// checkInvariants 在每次操作后验证 SortedSet 的全量不变量。
+// 不变量：
+//  1. Length == ref 中的元素数量
+//  2. ref 中每个 key 都可通过 Get 找到，且 score 与 ref 一致
+//  3. GetByRank 遍历结果单调不降（score 升序）
+//  4. GetRank(GetByRank(r).Key) == r（排名双向一致）
+//  5. GetByRank 覆盖的 key 集合 == ref 中的 key 集合（无多无少）
+func checkInvariants(t *testing.T, ss *SortedSet[int, int], ref *refModel) {
+	t.Helper()
+	n := ss.Length()
+
+	// 1. 长度一致
+	if n != len(ref.scores) {
+		t.Errorf("Length 不一致: ss=%d ref=%d", n, len(ref.scores))
+	}
+
+	// 2. ref 中每个 key 在 ss 中都可查到，score 正确
+	for key, wantScore := range ref.scores {
+		node := ss.Get(key)
+		if node == nil {
+			t.Errorf("Get(%d) 返回 nil，但 ref 中存在 score=%f", key, wantScore)
+			continue
+		}
+		if node.Score != wantScore {
+			t.Errorf("Get(%d).Score=%f，ref 期望 %f", key, node.Score, wantScore)
+		}
+	}
+
+	if n == 0 {
+		return
+	}
+
+	// 3. GetByRank 遍历：score 单调不降
+	prev := ss.GetByRank(1)
+	if prev == nil {
+		t.Errorf("Length=%d 但 GetByRank(1) 返回 nil", n)
+		return
+	}
+	for r := 2; r <= n; r++ {
+		cur := ss.GetByRank(r)
+		if cur == nil {
+			t.Errorf("Length=%d 但 GetByRank(%d) 返回 nil", n, r)
+			break
+		}
+		if cur.Score < prev.Score {
+			t.Errorf("排序破坏：rank=%d score=%f < rank=%d score=%f", r, cur.Score, r-1, prev.Score)
+		}
+		prev = cur
+	}
+
+	// 4. GetRank 与 GetByRank 双向一致
+	for r := 1; r <= n; r++ {
+		node := ss.GetByRank(r)
+		if node == nil {
+			continue
+		}
+		if gotRank := ss.GetRank(node.Key); gotRank != r {
+			t.Errorf("GetRank(GetByRank(%d).Key) = %d，期望 %d", r, gotRank, r)
+		}
+	}
+
+	// 5. GetByRank 遍历的 key 集合 == ref key 集合
+	ssKeys := make(map[int]struct{}, n)
+	for r := 1; r <= n; r++ {
+		node := ss.GetByRank(r)
+		if node != nil {
+			ssKeys[node.Key] = struct{}{}
+		}
+	}
+	for key := range ref.scores {
+		if _, ok := ssKeys[key]; !ok {
+			t.Errorf("ref key=%d 无法通过 GetByRank 遍历到", key)
+		}
+	}
+	for key := range ssKeys {
+		if _, ok := ref.scores[key]; !ok {
+			t.Errorf("ss 中存在 key=%d，但 ref 中没有", key)
+		}
+	}
+}
+
+// TestSortedSet_RandomOps 通过随机混合操作序列验证 SortedSet 的整体正确性。
+//
+// 策略：
+//   - 维护与 SortedSet 语义完全相同的参考模型（ref），每次操作后对比结果
+//   - 每批操作后调用 checkInvariants 验证全量不变量
+//   - 固定随机种子保证可复现
+func TestSortedSet_RandomOps(t *testing.T) {
+	const (
+		rounds      = 20   // 轮数
+		opsPerRound = 500  // 每轮操作数
+		scoreRange  = 1000 // score 范围 [-500, 500)
+		maxKeys     = 200  // key 池大小，控制 insert/delete/update 比例
+	)
+
+	rng := rand.New(rand.NewPCG(42, 0))
+	ss := NewSortedSet[int, int]()
+	ref := newRefModel()
+	nextKey := 1
+
+	randScore := func() float64 {
+		return float64(rng.IntN(scoreRange)) - float64(scoreRange/2)
+	}
+
+	for round := 0; round < rounds; round++ {
+		for i := 0; i < opsPerRound; i++ {
+			existingKeys := ref.keys()
+			hasElements := len(existingKeys) > 0
+
+			// 操作权重：insert=40% delete=30% update=30%
+			// 元素数量不足时优先 insert
+			var op int
+			if !hasElements || len(existingKeys) < maxKeys/4 {
+				op = 0 // 强制 insert
+			} else if len(existingKeys) >= maxKeys {
+				op = 1 + rng.IntN(2) // 只 delete / update
+			} else {
+				op = rng.IntN(10)
+			}
+
+			switch {
+			case op <= 3: // insert
+				key := nextKey
+				nextKey++
+				score := randScore()
+				ssOk := ss.Insert(&NodeData[int, int]{Key: key, Score: score, Val: key})
+				refOk := ref.insert(key, score)
+				if ssOk != refOk {
+					t.Fatalf("round=%d Insert(key=%d) ss=%v ref=%v 不一致", round, key, ssOk, refOk)
+				}
+
+			case op <= 6: // delete
+				if !hasElements {
+					continue
+				}
+				key := existingKeys[rng.IntN(len(existingKeys))]
+				_, ssOk := ss.Delete(key)
+				refOk := ref.delete(key)
+				if ssOk != refOk {
+					t.Fatalf("round=%d Delete(key=%d) ss=%v ref=%v 不一致", round, key, ssOk, refOk)
+				}
+				if ss.Get(key) != nil {
+					t.Errorf("round=%d Delete(key=%d) 后 Get 应返回 nil", round, key)
+				}
+
+			default: // update
+				if !hasElements {
+					continue
+				}
+				key := existingKeys[rng.IntN(len(existingKeys))]
+				newScore := randScore()
+				_, ssOk := ss.UpdateScore(key, newScore)
+				refOk := ref.updateScore(key, newScore)
+				if ssOk != refOk {
+					t.Fatalf("round=%d UpdateScore(key=%d) ss=%v ref=%v 不一致", round, key, ssOk, refOk)
+				}
+			}
+		}
+
+		// 每轮结束验证全量不变量
+		checkInvariants(t, ss, ref)
+		if t.Failed() {
+			t.Fatalf("round=%d 不变量检查失败，终止", round)
+		}
+
+		// 额外验证：GetRangeByScore 结果有序且范围正确
+		if ss.Length() > 0 {
+			lo, hi := randScore(), randScore()
+			if lo > hi {
+				lo, hi = hi, lo
+			}
+			result := ss.GetRangeByScore(lo, false, hi, false)
+			for j, node := range result {
+				if node.Score < lo || node.Score > hi {
+					t.Errorf("round=%d GetRangeByScore[%f,%f] 第%d个元素 score=%f 超出范围",
+						round, lo, hi, j, node.Score)
+				}
+				if j > 0 && result[j-1].Score > node.Score {
+					t.Errorf("round=%d GetRangeByScore 结果未升序，位置 %d", round, j)
+				}
+			}
+			// 验证结果数量与 ref 一致
+			refCount := 0
+			for _, score := range ref.scores {
+				if score >= lo && score <= hi {
+					refCount++
+				}
+			}
+			if len(result) != refCount {
+				t.Errorf("round=%d GetRangeByScore[%f,%f] ss返回%d个，ref期望%d个",
+					round, lo, hi, len(result), refCount)
+			}
+		}
 	}
 }
 

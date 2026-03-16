@@ -97,6 +97,25 @@ go test -bench=. -count=3 ./pkg/ds/sorted_set/
 | `TestSortedSet_SameScore_StableOrder` | 相同分数按插入顺序（seq 升序）稳定排列 |
 | `TestSortedSet_KeyValDifferentTypes` | Key 和 Val 使用不同类型（string/struct） |
 
+### 随机混合操作压力测试
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_RandomOps` | 见下文 |
+
+`TestSortedSet_RandomOps` 通过随机混合操作序列验证整体正确性，弥补单方法测试无法覆盖的**跨操作状态一致性**：
+
+- 维护与 SortedSet 语义完全一致的参考模型（`refModel`，基于 map）
+- 随机执行 Insert / Delete / UpdateScore 混合序列（20 轮 × 500 次操作）
+- 每轮结束后验证全量不变量：
+  1. `Length` == ref 元素数
+  2. ref 中每个 key 通过 `Get` 可查到，且 score 与 ref 一致
+  3. `GetByRank` 遍历结果 score 单调不降
+  4. `GetRank(GetByRank(r).Key) == r`（排名双向一致）
+  5. `GetByRank` 覆盖的 key 集合 == ref key 集合（无多无少）
+- 额外验证每轮随机 `GetRangeByScore` 的结果数量、范围正确性、有序性
+- 固定随机种子（PCG 42）保证失败可复现
+
 ## Benchmark
 
 各操作均按集合规模分组（n=100 / 1000 / 10000），便于观察 O(log n) 特性。
