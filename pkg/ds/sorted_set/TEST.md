@@ -12,47 +12,106 @@
 # 运行所有单元测试
 go test ./pkg/ds/sorted_set/
 
-# 详细输出
+# 详细输出（查看每个用例）
 go test -v ./pkg/ds/sorted_set/
 
-# 运行 Benchmark
-go test -bench=. ./pkg/ds/sorted_set/
-
-# 开启竞态检测
+# 竞态检测
 go test -race ./pkg/ds/sorted_set/
+
+# 运行所有 Benchmark（每项默认 1 秒）
+go test -bench=. -benchmem ./pkg/ds/sorted_set/
+
+# 指定运行时长（每项跑 3 秒，结果更稳定）
+go test -bench=. -benchtime=3s ./pkg/ds/sorted_set/
+
+# 只跑特定操作的特定规模
+go test -bench=BenchmarkSortedSet_Get/n=10000 ./pkg/ds/sorted_set/
+
+# 重复多次取均值
+go test -bench=. -count=3 ./pkg/ds/sorted_set/
 ```
 
-## 测试用例覆盖
+## 正确性测试用例
+
+### 构造
 
 | 测试函数 | 覆盖场景 |
 |----------|---------|
 | `TestNewSortedSet` | 初始化，长度为 0 |
-| `TestNewNodeData` | 构造函数字段正确性 |
-| `TestNodeData_LessThan` | 分数不同 / 相同的比较结果 |
-| `TestNodeData_EqualTo` | 分数+值均等 / 任一不同的结果 |
-| `TestSortedSet_Insert` | 正常插入、重复 Key 拒绝 |
-| `TestSortedSet_Get` | 存在的 Key / 不存在的 Key |
-| `TestSortedSet_Delete` | 存在 Key 删除成功、不存在 Key 返回 false |
+| `TestNewNodeData` | Key/Score/Val 字段赋值正确 |
+
+### Insert
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_Insert` | 正常插入、长度递增、重复 Key 返回 false 且不覆盖原值 |
+| `TestSortedSet_ReinsertAfterDelete` | 删除后同 Key 应能重新插入，新 score 生效 |
+
+### Delete
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_Delete` | 存在 Key 删除成功、不存在返回 false、删后 Get 返回 nil |
+| `TestSortedSet_DeleteAll` | 逐一删光所有元素后 Length=0，再插入正常工作 |
+
+### Get / GetRank / GetByRank
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_Get` | 存在 / 不存在 Key |
 | `TestSortedSet_GetRank` | 多元素排名正确性、不存在 Key 返回 0 |
 | `TestSortedSet_GetByRank` | 按排名取值、超出范围返回 nil |
-| `TestSortedSet_GetRangeByRank` | 正常范围、start>end 自动交换 |
-| `TestSortedSet_UpdateScore` | 多元素场景下更新分数后排名真正重排 |
-| `TestSortedSet_GetRangeByScore` | 全包含区间 [min, max] |
+
+### GetRangeByRank / DeleteRangeByRank
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_GetRangeByRank` | 正常范围（升序）、start>end 自动交换 |
+| `TestSortedSet_GetRangeByRank_BeyondLength` | end 超出总长度时截断返回，不 panic |
+| `TestSortedSet_DeleteRangeByRank` | 正常删除、start>end 自动交换、删后不可查 |
+
+### UpdateScore
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_UpdateScore` | 更新后排名真正重排（多元素验证）、不存在 Key 返回 false |
+| `TestSortedSet_UpdateScore_SameValue` | 更新为相同分数，排名不变、长度不变 |
+| `TestSortedSet_UpdateScore_EqualNeighbor` | 新分数等于前驱/后继，触发删除重插路径，seq 稳定排序仍正确 |
+
+### GetRangeByScore / DeleteRangeByScore
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_GetRangeByScore` | 全包含 [min, max]，结果在范围内 |
 | `TestSortedSet_GetRangeByScore_Exclusive` | 全包含 / 左排他 / 右排他 / 两端排他 四种组合 |
-| `TestSortedSet_DeleteRangeByScore` | 全包含 / 左排他 / 右排他，验证删除后元素不可查 |
-| `TestSortedSet_DeleteRangeByRank` | 正常删除、start>end 自动交换 |
+| `TestSortedSet_GetRangeByScore_EmptyResult` | 范围内无元素，返回空切片不 panic |
+| `TestSortedSet_GetRangeByScore_SinglePoint` | [x,x] 返回 1 个；(x,x) / [x,x) 返回空 |
+| `TestSortedSet_DeleteRangeByScore` | 三种排他组合，验证删后元素不可查 |
+
+### 特殊场景
+
+| 测试函数 | 覆盖场景 |
+|----------|---------|
+| `TestSortedSet_NegativeScore` | 负数分数排在最前，rank=1 为最小值 |
+| `TestSortedSet_EmptySet_Operations` | 空集合上所有操作返回空/零值，无 panic |
 | `TestSortedSet_SameScore_StableOrder` | 相同分数按插入顺序（seq 升序）稳定排列 |
-| `TestSortedSet_WithStruct` | struct 类型作为 Key/Val |
+| `TestSortedSet_KeyValDifferentTypes` | Key 和 Val 使用不同类型（string/struct） |
 
 ## Benchmark
 
+各操作均按集合规模分组（n=100 / 1000 / 10000），便于观察 O(log n) 特性。
+
 | 函数 | 说明 |
 |------|------|
-| `BenchmarkSortedSet_Insert` | 持续插入性能（O(log n)） |
-| `BenchmarkSortedSet_Get` | 1000 元素下按 Key 查找（O(1)） |
-| `BenchmarkSortedSet_Delete` | 持续删除性能（O(log n)） |
+| `BenchmarkSortedSet_Insert` | 批量插入（每轮重建集合） |
+| `BenchmarkSortedSet_Get` | 按 Key 查找（O(1) 哈希表）|
+| `BenchmarkSortedSet_GetRank` | 按 Key 查询排名（O(log n)）|
+| `BenchmarkSortedSet_UpdateScore` | 更新分数触发重排（O(log n)）|
+| `BenchmarkSortedSet_GetRangeByRank` | 查询前半范围（O(log n + k)）|
+| `BenchmarkSortedSet_GetRangeByScore` | 按分数范围查询（O(log n + k)）|
+| `BenchmarkSortedSet_Delete` | 全量删除（每轮重建集合）|
 
 ## 注意事项
 
-- `assert` 断言默认关闭，测试中如需验证 panic 行为需先调用 `assert.SetAssert(true)`
+- `assert` 断言默认关闭，如需验证 panic 路径需先调用 `assert.SetAssert(true)`
 - 并发安全性不在单元测试范围内，如需验证请使用 `-race` 标志
