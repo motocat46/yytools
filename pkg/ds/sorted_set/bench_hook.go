@@ -16,7 +16,24 @@
 // 作者:  yangyuan
 package sorted_set
 
-// RunBenchCheck 供 internal/bench 调用，校验有序集合内部一致性
+import "github.com/motocat46/yytools/pkg/common/assert"
+
+// RunBenchCheck 供 internal/bench 调用，校验有序集合内部一致性：
+// 验证底层跳表 level-0 链表严格有序，以及 GetByRank 与链表位置一致。
 func RunBenchCheck(ss *SortedSet[int, int]) {
-	sortedSetMustLegal(ss)
+	ss.lengthMustEqual()
+
+	current := ss.sl.Head.Levels[0].Forward
+	rank := 1
+	for current != nil {
+		if current.Levels[0].Forward != nil {
+			assert.Assert(current.Data.lessOrder(current.Levels[0].Forward.Data),
+				"跳跃表必须是有序的")
+		}
+		data := ss.GetByRank(rank)
+		assert.Assert(data != nil, "rank 实现有问题:", rank)
+		assert.Assert(data.equalOrder(current.Data), "rank 实现有问题:", rank)
+		rank++
+		current = current.Levels[0].Forward
+	}
 }

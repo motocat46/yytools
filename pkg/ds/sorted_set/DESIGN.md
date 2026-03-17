@@ -64,7 +64,7 @@ if (prev.Score < newScore) && (next.Score > newScore) {
 ### 4. `SKIPLIST_MAXLEVEL = 32`，`LevelUpProb = 0.25`
 
 沿用 Redis 参数：
-- 最大层数 32 可支持约 4^32 ≈ 18 亿个节点，远超实际使用上限。
+- 最大层数 32 可支持约 4^32 ≈ 1.8 × 10^19 个节点，远超实际使用上限。
 - 晋升概率 0.25（而非常见的 0.5）在时间复杂度和空间占用之间取得更好的平衡：平均节点高度为 1/(1-0.25) ≈ 1.33 层。
 
 ### 5. 双泛型参数 `[K comparable, V any]`
@@ -85,6 +85,55 @@ if (prev.Score < newScore) && (next.Score > newScore) {
 
 ---
 
+### 7. 逆序排名接口（GetRankDesc / GetByRankDesc / GetRangeByRankDesc）
+
+初始实现只有正序（score 升序）接口，排行榜场景（高分靠前）需要传负分数，反直觉。
+
+后续补充了三个逆序接口，全部在 `SortedSet` 层做坐标转换（`descRank = Length - ascRank + 1`），skiplist 不需要改动。
+
+`GetRangeByRankDesc` 内部调用 `GetRangeByRank` 后反转切片，O(k) 额外开销（k 为返回元素数），可接受。
+
+---
+
+### 8. API 分组与数量管理
+
+随着方法增多（当前 18 个），采用**按语义分组 + 独立接口文件**的策略，而非拆包：
+
+| 接口 | 方法 |
+|------|------|
+| `BasicOps` | `Insert` / `Delete` / `Get` / `Length` / `UpdateScore` / `GetMin` / `GetMax` |
+| `AscRankOps` | `GetRank` / `GetByRank` / `GetRangeByRank` / `DeleteRangeByRank` |
+| `DescRankOps` | `GetRankDesc` / `GetByRankDesc` / `GetRangeByRankDesc` / `DeleteRangeByRankDesc` |
+| `ScoreOps` | `GetRangeByScore` / `DeleteRangeByScore` / `CountByScore` |
+| `SortedSetOps` | 以上全部（供整体 mock 用） |
+
+**不拆包的理由**：`SortedSet` 是内聚概念，拆包后调用方不知道"查排名用哪个类"。分组接口文件解决的是使用侧的依赖范围问题，而非实现侧的拆分。
+
+**编译期保障**：`interfaces.go` 末尾有 `var _ SortedSetOps[int, int] = (*SortedSet[int, int])(nil)`。新增公开方法时若未加入任何子接口，编译即报错，防止接口与实现悄悄脱节。
+
+### 9. `GetMin` / `GetMax`
+
+语义比数字 rank 更直观，避免调用方写 `GetByRankDesc(1)` 时需要心算"最高分就是降序第 1"。
+
+实现直接利用跳表已有的结构指针，**O(1)**：
+
+- `GetMin`：`Head.Levels[0].Forward`，底层链表 level-0 的第一个真实节点，始终是全局最小
+- `GetMax`：`Tail`，跳表在每次插入/删除时同步维护的尾指针，始终是全局最大
+
+两者均只读一个指针，无需遍历任何索引层。基准数据（Apple M4）：GetMin ~0.6 ns/op，GetMax ~0.4 ns/op，0 allocs，与集合规模无关。
+
+**维护注意**：修改跳表插入/删除逻辑时，必须同时保证 `Head.Levels[0].Forward` 和 `Tail` 的正确性，否则 GetMin/GetMax 会静默返回错误结果。
+
+### 10. `CountByScore`
+
+在 skiplist 层实现，只遍历节点、不构建切片。
+
+`GetRangeByScore` 每次调用会分配结果切片（n=100 时 6 allocs/1016 B，随 n 增长）；`CountByScore` 只有 1 次结构体分配（24 B，固定），节省的是结果切片部分。适合只需要数量、不需要元素列表的高频计数场景。
+
+---
+
 ## 已知限制
 
 - 非并发安全，调用方需自行加锁。
+- Score 不支持 NaN。NaN 的比较语义（`NaN != NaN`、`NaN < NaN == false`）会破坏跳表依赖的全序关系，`Insert`、`UpdateScore`、`GetRangeByScore`、`DeleteRangeByScore` 均对 NaN 触发 assert panic。`±Inf` 是合法值。
+- seq 使用 `uint64` 单调递增，每次 `Insert` 消耗一个值。理论上限 2^64 ≈ 1.8×10¹⁹ 次插入，远超任何实际场景，不需要处理溢出。
