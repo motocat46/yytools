@@ -77,6 +77,11 @@ func currentMillis() int64 {
 		// 此处必须无条件 panic，不允许静默产生非法 ID。
 		panic(fmt.Sprintf("snowflake: system clock is before epoch 2025-01-01 (ms=%d)", ms))
 	}
+	if ms > MaxTimestamp {
+		// 时间戳超过 41 位上限（2094 年后），左移后会污染 nodeID 位并置位符号位，导致 ID 为负。
+		// 与下界检测对称，不允许静默产生非法 ID。
+		panic(fmt.Sprintf("snowflake: timestamp overflow, system clock is beyond 2094 (ms=%d, max=%d)", ms, MaxTimestamp))
+	}
 	return ms
 }
 
@@ -129,7 +134,10 @@ func (g *Generator) NewID() int64 {
 				continue
 			}
 		} else {
-			// 正常情况：进入新的毫秒，重置序号
+			// 进入新的毫秒：重置序号为 0。
+			// 多个 goroutine 可能同时计算出相同的 now，都尝试以 newSeq=0 CAS。
+			// 只有一个成功，其余 CAS 失败后重新读取 state：此时 now <= 新 oldMs，
+			// 进入上方的递增分支，行为正确——这是预期的并发路径，不是 bug。
 			newMs, newSeq = now, 0
 		}
 		
