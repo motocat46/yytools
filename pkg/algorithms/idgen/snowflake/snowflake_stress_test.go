@@ -16,38 +16,38 @@
 
 // 测试
 // # 日常开发 / CI（竞态检测，~7秒）
-// go test ./pkg/algorithms/snowflake/... -v -race -short
+// go test ./pkg/algorithms/idgen/snowflake/... -v -race -short
 //
 // # 完整压测（含 30 秒长跑，~45秒）
 // # 上线前（+千万级 + 500万单线程，无 race）
-// go test ./pkg/algorithms/snowflake/... -v
+// go test ./pkg/algorithms/idgen/snowflake/... -v
 // 或者加上测试超时时间
-// go test ./pkg/algorithms/snowflake/... -v -timeout 120s
+// go test ./pkg/algorithms/idgen/snowflake/... -v -timeout 120s
 //
 // 核心原则：-race 和大数据量尽量不同时用，-race 本身有 5-20x 开销；-short 用于屏蔽耗时测试，让 CI 保持快速。
 
 // 只有基准测试
 // # 只跑 Benchmark
-// go test ./pkg/algorithms/snowflake/... -bench=. -run=^$ -benchmem
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=. -run=^$ -benchmem
 //
 // # 只跑某个 Benchmark
-// go test ./pkg/algorithms/snowflake/... -bench=BenchmarkGenerator_NewID -run=^$
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=BenchmarkGenerator_NewID -run=^$
 
 // 测试+基准测试
 // # 运行所有 Benchmark
-// go test ./pkg/algorithms/snowflake/... -bench=.
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=.
 //
 // # 指定具体 Benchmark
-// go test ./pkg/algorithms/snowflake/... -bench=BenchmarkGenerator_NewID
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=BenchmarkGenerator_NewID
 //
 // # 加 -benchmem 显示内存分配
-// go test ./pkg/algorithms/snowflake/... -bench=. -benchmem
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=. -benchmem
 //
 // # 加 -benchtime 控制运行时长（默认 1s，越长结果越稳定）
-// go test ./pkg/algorithms/snowflake/... -bench=. -benchtime=3s
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=. -benchtime=3s
 //
 // # 加 -count 多次运行取平均（用于统计稳定性）
-// go test ./pkg/algorithms/snowflake/... -bench=. -benchtime=3s -count=3
+// go test ./pkg/algorithms/idgen/snowflake/... -bench=. -benchtime=3s -count=3
 package snowflake
 
 import (
@@ -101,7 +101,7 @@ func TestStress_Concurrent_Uniqueness(t *testing.T) {
 //     竞态已由 TestStress_ConcurrentHighFreq_WithRace 覆盖
 //   - 意义：在不依赖人工设置 state 的条件下，自然触发大量序号耗尽，
 //     证明生产负载下 CAS + 自旋路径的实际稳定性
-//   - 运行方式：go test ./pkg/algorithms/snowflake/... -v -run TestStress_TenMillion
+//   - 运行方式：go test ./pkg/algorithms/idgen/snowflake/... -v -run TestStress_TenMillion
 func TestStress_TenMillion_Uniqueness(t *testing.T) {
 	if testing.Short() {
 		t.Skip("跳过千万级压力测试（-short 模式）")
@@ -409,7 +409,7 @@ func TestStress_ConcurrentHighFreq_WithRace(t *testing.T) {
 // TestStress_LongRunning 持续运行压力测试（-short 模式下跳过）
 //
 // 8 个 goroutine 持续生成 2 秒，统计总量和吞吐量，排序验证全局唯一。
-// 运行方式：go test ./pkg/algorithms/snowflake/... -v -race -run TestStress_LongRunning
+// 运行方式：go test ./pkg/algorithms/idgen/snowflake/... -v -race -run TestStress_LongRunning
 func TestStress_LongRunning(t *testing.T) {
 	if testing.Short() {
 		t.Skip("跳过长时间压力测试（-short 模式）")

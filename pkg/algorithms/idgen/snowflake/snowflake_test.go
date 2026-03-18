@@ -43,10 +43,10 @@ func TestNewGenerator_InvalidNodeID(t *testing.T) {
 func TestGenerator_NewID_Monotonic(t *testing.T) {
 	g, _ := NewGenerator(1)
 	prev := g.NewID()
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		id := g.NewID()
 		if id <= prev {
-			t.Fatalf("ID not monotonic: prev=%d, cur=%d at i=%d", prev, id, i)
+			t.Fatalf("ID not monotonic: prev=%d, cur=%d", prev, id)
 		}
 		prev = id
 	}
@@ -57,7 +57,7 @@ func TestGenerator_NewID_Uniqueness(t *testing.T) {
 	const n = 100000
 	g, _ := NewGenerator(0)
 	seen := make(map[int64]struct{}, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := g.NewID()
 		if _, exists := seen[id]; exists {
 			t.Fatalf("duplicate ID %d at iteration %d", id, i)

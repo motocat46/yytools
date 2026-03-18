@@ -12,7 +12,7 @@
 // limitations under the License.
 
 // 作者:  yangyuan
-// 创建日期:2026/2/10
+// 创建日期:2025/1/10
 
 package snowflake
 
@@ -70,7 +70,14 @@ type Generator struct {
 // ---- 辅助函数 ----
 
 func currentMillis() int64 {
-	return time.Now().UnixMilli() - Epoch
+	ms := time.Now().UnixMilli() - Epoch
+	if ms < 0 {
+		// 系统时钟早于纪元（2025-01-01），负数时间戳左移后会污染符号位，导致 ID 为负。
+		// 不用 assert.Assert：assert 可被 assertion_off build tag 关闭，
+		// 此处必须无条件 panic，不允许静默产生非法 ID。
+		panic(fmt.Sprintf("snowflake: system clock is before epoch 2025-01-01 (ms=%d)", ms))
+	}
+	return ms
 }
 
 func packState(ms, seq int64) int64 {
@@ -84,6 +91,7 @@ func unpackState(state int64) (ms, seq int64) {
 // ---- Generator 构造与核心方法 ----
 
 // NewGenerator 构造一个 Generator。nodeID 必须在 [0, 1023] 范围内，否则返回 error。
+// 警告：同一进程内使用相同 nodeID 创建多个 Generator 实例会产生重复 ID，调用方负责保证 nodeID 全局唯一。
 func NewGenerator(nodeID int32) (*Generator, error) {
 	nid := int64(nodeID)
 	if nid < 0 || nid > MaxNodeID {
@@ -140,7 +148,9 @@ func (g *Generator) NewID() int64 {
 // defaultGen 包级默认生成器，由 Init 初始化
 var defaultGen *Generator
 
-// Init 初始化包级默认生成器。必须在调用 NewID() 前调用一次。
+// Init 初始化包级默认生成器。
+// 必须在任何调用 NewID() 的 goroutine 启动之前调用，且只调用一次。
+// 非并发安全：不能与 NewID() 并发调用。
 // nodeID 超出 [0, 1023] 范围则 panic（启动时编程错误，应尽早暴露）。
 func Init(nodeID int32) {
 	g, err := NewGenerator(nodeID)
@@ -159,6 +169,7 @@ func NewID() int64 {
 // ---- 工具函数 ----
 
 // ParseID 解码雪花 ID 为各字段，用于调试/日志。
+// id 应为 NewID() 生成的正值；传入负数或非雪花格式的值时，各字段含义未定义。
 func ParseID(id int64) IDParts {
 	ms := id >> TimestampShift
 	nid := (id >> NodeIDShift) & MaxNodeID
