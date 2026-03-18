@@ -20,6 +20,8 @@ import "github.com/motocat46/yytools/pkg/common/assert"
 
 // RunBenchCheck 供 internal/bench 调用，校验有序集合内部一致性：
 // 验证底层跳表 level-0 链表严格有序，以及 GetByRank 与链表位置一致。
+// 注意：此函数与 sortedset_test.go 中的 checkSkiplistOrder 逻辑相同。
+// 如修改其中一处，请同步更新另一处。
 func RunBenchCheck(ss *SortedSet[int, int]) {
 	ss.lengthMustEqual()
 

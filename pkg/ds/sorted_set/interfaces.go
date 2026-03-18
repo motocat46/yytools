@@ -57,9 +57,11 @@ type AscRankOps[K comparable, V any] interface {
 	GetByRank(rank int) *NodeData[K, V]
 
 	// GetRangeByRank 返回升序排名范围 [start, end] 内的元素，O(log n + k)。结果升序排列。
+	// start > end 时自动交换；start ≤ 0 截断为 1；end 超出总长度时截断，不 panic。
 	GetRangeByRank(start, end int) []*NodeData[K, V]
 
 	// DeleteRangeByRank 删除升序排名范围 [start, end] 内的元素，O(log n + k)。返回被删除的元素列表（升序）。
+	// start > end 时自动交换；start ≤ 0 截断为 1；end 超出总长度时截断，不 panic。
 	DeleteRangeByRank(start, end int) []*NodeData[K, V]
 }
 
@@ -76,9 +78,11 @@ type DescRankOps[K comparable, V any] interface {
 	GetByRankDesc(rank int) *NodeData[K, V]
 
 	// GetRangeByRankDesc 返回降序排名范围 [start, end] 内的元素，O(log n + k)。结果降序排列。
+	// start > end 时自动交换；end 超出总长度时截断，不 panic。
 	GetRangeByRankDesc(start, end int) []*NodeData[K, V]
 
 	// DeleteRangeByRankDesc 删除降序排名范围 [start, end] 内的元素，O(log n + k)。返回被删除的元素列表（降序）。
+	// start > end 时自动交换；end 超出总长度时截断，不 panic。
 	DeleteRangeByRankDesc(start, end int) []*NodeData[K, V]
 }
 

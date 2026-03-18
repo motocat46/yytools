@@ -18,13 +18,13 @@
 package sorted_set
 
 import (
-	"math/rand"
-	
+	"math/rand/v2"
+
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 // randInt31 是包级变量，默认使用标准库随机数，测试中可替换为确定性实现。
-var randInt31 func() int32 = rand.Int31
+var randInt31 func() int32 = rand.Int32
 
 // randomLevel 随机计算跳跃表中某个结点的高度，范围在闭区间[1, SKIPLIST_MAXLEVEL]内
 func randomLevel(levelUpProbability float32) int {

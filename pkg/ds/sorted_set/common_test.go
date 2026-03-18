@@ -18,7 +18,7 @@
 package sorted_set
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 )
 
@@ -68,10 +68,10 @@ func TestRandomLevel_Range_HighProb(t *testing.T) {
 // TestRandomLevel_Range_NormalProb 使用正常概率（0.25）跑 100 万次，验证值域正确。
 func TestRandomLevel_Range_NormalProb(t *testing.T) {
 	const iterations = 1_000_000
-	rng := rand.New(rand.NewSource(42)) // 固定种子，失败可复现
-	
+	rng := rand.New(rand.NewPCG(42, 0)) // 固定种子，失败可复现
+
 	orig := randInt31
-	randInt31 = func() int32 { return rng.Int31() }
+	randInt31 = func() int32 { return rng.Int32() }
 	defer func() { randInt31 = orig }()
 	
 	for i := range iterations {

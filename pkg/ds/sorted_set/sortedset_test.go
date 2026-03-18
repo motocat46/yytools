@@ -1039,24 +1039,25 @@ func TestSortedSet_RandomOps(t *testing.T) {
 		return float64(rng.IntN(scoreRange)) - float64(scoreRange/2)
 	}
 	
-	for round := 0; round < rounds; round++ {
-		for i := 0; i < opsPerRound; i++ {
+	for round := range rounds {
+		for range opsPerRound {
 			existingKeys := ref.keys()
 			hasElements := len(existingKeys) > 0
-			
-			// 操作权重：insert=40% delete=30% update=30%
-			// 元素数量不足时优先 insert
+
+			// 操作权重（满员时停止 insert）：
+			//   insert=35%  delete=20%  update=20%
+			//   DeleteRangeByScore=15%  DeleteRangeByRank/Desc=10%
 			var op int
 			if !hasElements || len(existingKeys) < maxKeys/4 {
 				op = 0 // 强制 insert
 			} else if len(existingKeys) >= maxKeys {
-				op = 1 + rng.IntN(2) // 只 delete / update
+				op = 1 + rng.IntN(4) // 只删除 / 更新
 			} else {
-				op = rng.IntN(10)
+				op = rng.IntN(20)
 			}
-			
+
 			switch {
-			case op <= 3: // insert
+			case op <= 6: // insert
 				key := nextKey
 				nextKey++
 				score := randScore()
@@ -1065,8 +1066,8 @@ func TestSortedSet_RandomOps(t *testing.T) {
 				if ssOk != refOk {
 					t.Fatalf("round=%d Insert(key=%d) ss=%v ref=%v 不一致", round, key, ssOk, refOk)
 				}
-			
-			case op <= 6: // delete
+
+			case op <= 10: // delete single
 				if !hasElements {
 					continue
 				}
@@ -1079,8 +1080,8 @@ func TestSortedSet_RandomOps(t *testing.T) {
 				if ss.Get(key) != nil {
 					t.Errorf("round=%d Delete(key=%d) 后 Get 应返回 nil", round, key)
 				}
-			
-			default: // update
+
+			case op <= 14: // update
 				if !hasElements {
 					continue
 				}
@@ -1090,6 +1091,39 @@ func TestSortedSet_RandomOps(t *testing.T) {
 				refOk := ref.updateScore(key, newScore)
 				if ssOk != refOk {
 					t.Fatalf("round=%d UpdateScore(key=%d) ss=%v ref=%v 不一致", round, key, ssOk, refOk)
+				}
+
+			case op <= 17: // DeleteRangeByScore
+				if !hasElements {
+					continue
+				}
+				lo, hi := randScore(), randScore()
+				if lo > hi {
+					lo, hi = hi, lo
+				}
+				deleted := ss.DeleteRangeByScore(lo, false, hi, false)
+				// 将 ss 删除的 key 同步到 ref；单元测试已验证删除元素的正确性，
+				// 此处关注的是大量混合操作后内部结构的一致性。
+				for _, d := range deleted {
+					ref.delete(d.Key)
+				}
+
+			default: // DeleteRangeByRank 或 DeleteRangeByRankDesc（各 op 约 5%）
+				if !hasElements {
+					continue
+				}
+				n := ss.Length()
+				// 每次最多删除 5 个，避免集合过快缩小
+				start := rng.IntN(n) + 1
+				end := min(start+rng.IntN(5), n)
+				var deleted []*NodeData[int, int]
+				if rng.IntN(2) == 0 {
+					deleted = ss.DeleteRangeByRank(start, end)
+				} else {
+					deleted = ss.DeleteRangeByRankDesc(start, end)
+				}
+				for _, d := range deleted {
+					ref.delete(d.Key)
 				}
 			}
 		}

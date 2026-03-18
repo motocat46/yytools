@@ -92,6 +92,15 @@ go vet ./...
 
 ## Development Notes
 
+### 数据结构 API 边界规范
+
+`pkg/ds/` 下的数据结构（sorted_set、heap、queue、stack 等）遵循以下越界约定：
+
+- **越界访问**：超出范围的 rank / index / key 查询，返回零值（nil / 0 / false），不 panic
+- 例：`GetByRankDesc(999)` 在只有 3 个元素时返回 nil，不 panic
+
+这与 Go 原生 slice 索引（越界 panic）不同，是有序集合类 API 的惯例（参考 Redis ZADD/ZRANK 语义）。
+
 ### Testing Strategy
 - Unit tests follow `*_test.go` naming convention
 - Custom test functions use `Test*` naming pattern (e.g., `HeapTest`, `SortTest`)

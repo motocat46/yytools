@@ -198,19 +198,25 @@ func (this *SortedSet[K, V]) GetRangeByRankDesc(start int, end int) []*NodeData[
 
 // GetRangeByRank 返回升序排名范围 [start, end] 内的元素，O(log n + k)，k 为返回元素数。
 // 结果按 Score 从小到大排列。
-// start > end 时自动交换；end 超出总长度时截断返回，不 panic。
+// start > end 时自动交换；start ≤ 0 时截断为 1；end 超出总长度时截断返回，不 panic。
 func (this *SortedSet[K, V]) GetRangeByRank(start int, end int) []*NodeData[K, V] {
 	if start > end {
 		start, end = end, start
+	}
+	if start < 1 {
+		start = 1
 	}
 	return this.sl.GetRangeByRank(start, end)
 }
 
 // DeleteRangeByRank 删除升序排名范围 [start, end] 内的所有元素，O(log n + k)，k 为删除元素数。
-// 返回被删除的元素列表。start > end 时自动交换。
+// 返回被删除的元素列表。start > end 时自动交换；start ≤ 0 时截断为 1。
 func (this *SortedSet[K, V]) DeleteRangeByRank(start int, end int) []*NodeData[K, V] {
 	if start > end {
 		start, end = end, start
+	}
+	if start < 1 {
+		start = 1
 	}
 	deleted := this.sl.DeleteRangeByRank(start, end)
 	for _, one := range deleted {
