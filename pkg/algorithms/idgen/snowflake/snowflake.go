@@ -110,8 +110,8 @@ func NewGenerator(nodeID int32) (*Generator, error) {
 
 // NewID 生成一个全局唯一的雪花 ID。线程安全，永不返回错误。
 //
-// 当序号在同一毫秒内耗尽（>4095 per ms, 即>MaxSequence per ms, 因为范围是[0,MaxSequence],对应数量上限是MaxSequence+1）时，
-// 使用 runtime.Gosched() 自旋等待到下一毫秒，
+// 序号范围 [0, MaxSequence]，每毫秒每节点最多 4096 个 ID。
+// 序号耗尽时使用 runtime.Gosched() 自旋等待到下一毫秒，
 // 精度优于 time.Sleep（后者在 1ms 尺度精度仅 1–5ms，会过冲导致恶性循环）。
 func (g *Generator) NewID() int64 {
 	for {

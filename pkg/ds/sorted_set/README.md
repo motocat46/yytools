@@ -295,4 +295,5 @@ count := ss.CountByScore(1000, true, 2000, false)
 - **更新分数用 `UpdateScore`**，不要 `Delete + Insert`（会改变内部序列号，破坏稳定排序）
 - **rank ≤ 0 触发 panic**：`GetByRank`、`GetByRankDesc` 的 rank 参数必须 ≥ 1
 - **Score 不支持 NaN**：`Insert`、`UpdateScore`、`GetRangeByScore`、`DeleteRangeByScore` 对 NaN 触发 assert panic。原因：NaN 的比较语义（`NaN != NaN`、`NaN < NaN == false`）会破坏跳表依赖的全序关系，导致结构静默损坏。`±Inf` 是合法的 Score 值。
+- **关闭 assert 时前置条件仍须满足**：生产环境若使用 `-tags assertion_off` 关闭断言，`rank ≤ 0` 和 NaN Score 等非法输入不会触发 panic，但会产生未定义行为（错误的返回值或静默结构损坏）。调用方负责保证输入合法性。
 - **非并发安全**：多 goroutine 访问时需自行加锁

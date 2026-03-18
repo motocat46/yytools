@@ -262,6 +262,26 @@ func TestSortedSet_GetRangeByRankDesc_BeyondLength(t *testing.T) {
 	}
 }
 
+// TestSortedSet_GetRangeByRankDesc_BothBeyondLength start 和 end 均超出总长度，期望返回空切片
+func TestSortedSet_GetRangeByRankDesc_BothBeyondLength(t *testing.T) {
+	ss := newFilledSet(5)
+
+	// start=10, end=20，两端均超出（n=5）
+	result := ss.GetRangeByRankDesc(10, 20)
+	if len(result) != 0 {
+		t.Errorf("两端均超界应返回空切片，实际 %d 个", len(result))
+	}
+
+	// DeleteRangeByRankDesc 同样场景
+	deleted := ss.DeleteRangeByRankDesc(10, 20)
+	if len(deleted) != 0 {
+		t.Errorf("两端均超界删除应返回空切片，实际 %d 个", len(deleted))
+	}
+	if ss.Length() != 5 {
+		t.Errorf("无效范围删除不应改变集合长度，实际 %d", ss.Length())
+	}
+}
+
 // TestSortedSet_DescAscRankSymmetry 逆序 rank 与正序 rank 之和应等于 Length+1
 func TestSortedSet_DescAscRankSymmetry(t *testing.T) {
 	ss := newFilledSet(10)
@@ -1009,7 +1029,21 @@ func checkInvariants(t *testing.T, ss *SortedSet[int, int], ref *refModel) {
 		}
 	}
 	
-	// 7. 白盒：跳表底层链表全序
+	// 7. GetMin/GetMax 与 GetByRank(1)/GetByRank(n) 一致
+	minNode := ss.GetMin()
+	if minNode == nil {
+		t.Errorf("Length=%d 但 GetMin() 返回 nil", n)
+	} else if minNode.Key != ss.GetByRank(1).Key {
+		t.Errorf("GetMin().Key=%d，期望与 GetByRank(1).Key=%d 一致", minNode.Key, ss.GetByRank(1).Key)
+	}
+	maxNode := ss.GetMax()
+	if maxNode == nil {
+		t.Errorf("Length=%d 但 GetMax() 返回 nil", n)
+	} else if maxNode.Key != ss.GetByRank(n).Key {
+		t.Errorf("GetMax().Key=%d，期望与 GetByRank(%d).Key=%d 一致", maxNode.Key, n, ss.GetByRank(n).Key)
+	}
+
+	// 8. 白盒：跳表底层链表全序
 	checkSkiplistOrder(t, ss)
 }
 
