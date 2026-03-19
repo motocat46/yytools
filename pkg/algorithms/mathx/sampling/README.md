@@ -50,3 +50,4 @@ nums = sampling.SampleWithMinGap(1, 50, 4, 3, r)
 - `k > hi-lo+1` 时触发断言 panic（采样数量超过范围）
 - `SampleWithMinGap` 的间隔约束不满足时触发断言 panic，调用前需自行验证可行性
 - `r *rand.Rand` 传入调用方管理的随机源，便于测试复现和多 goroutine 隔离
+- **平台限制**：`int(hi) - int(lo)` 使用 `int` 中间类型，在 64 位平台（`int` = 64 位）范围跨度最大为 `math.MaxInt64`；**32 位平台不支持跨度超过 `math.MaxInt32` 的范围**

@@ -16,6 +16,9 @@
 package binary_search
 
 import (
+	"fmt"
+	"math/rand/v2"
+	"sort"
 	"testing"
 )
 
@@ -162,6 +165,106 @@ func TestSearchBoundOpt(t *testing.T) {
 			gotLeft, gotRight := SearchBoundOpt(tc.nums, tc.target)
 			if gotLeft != tc.wantLeft || gotRight != tc.wantRight {
 				t.Errorf("期望 (%d, %d)，实际 (%d, %d)", tc.wantLeft, tc.wantRight, gotLeft, gotRight)
+			}
+		})
+	}
+}
+
+// TestBinarySearch_RandomLarge 随机大规模一致性测试（10 万次查询，与 sort.SearchInts 对比）
+func TestBinarySearch_RandomLarge(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过大规模测试")
+	}
+	const n = 100_000
+	rng := rand.New(rand.NewPCG(42, 0))
+
+	// 构造有序数组（允许重复）
+	nums := make([]int, n)
+	for i := range nums {
+		nums[i] = rng.IntN(n * 2)
+	}
+	sort.Ints(nums)
+
+	// 随机查询 10 万次，与标准库对比
+	for range n {
+		target := rng.IntN(n * 2)
+
+		// BinarySearch：找到时验证值正确，找不到时 stdlib 也应找不到
+		got := BinarySearch(nums, target)
+		stdIdx := sort.SearchInts(nums, target)
+		if got == -1 {
+			if stdIdx < len(nums) && nums[stdIdx] == target {
+				t.Fatalf("BinarySearch 未找到 target=%d，但 stdlib 在 %d 找到", target, stdIdx)
+			}
+		} else {
+			if nums[got] != target {
+				t.Fatalf("BinarySearch 返回下标 %d，但 nums[%d]=%d != target=%d", got, got, nums[got], target)
+			}
+		}
+
+		// LeftBound / RightBound：左右边界对称验证
+		left, right := SearchBound(nums, target)
+		leftOpt, rightOpt := SearchBoundOpt(nums, target)
+		if left != leftOpt || right != rightOpt {
+			t.Fatalf("SearchBound vs SearchBoundOpt 不一致：target=%d left=%d/%d right=%d/%d",
+				target, left, leftOpt, right, rightOpt)
+		}
+		if left != -1 {
+			if nums[left] != target || nums[right] != target {
+				t.Fatalf("边界值错误：target=%d left=%d right=%d", target, left, right)
+			}
+			if left > 0 && nums[left-1] == target {
+				t.Fatalf("左边界不是最左：target=%d left=%d", target, left)
+			}
+			if right < len(nums)-1 && nums[right+1] == target {
+				t.Fatalf("右边界不是最右：target=%d right=%d", target, right)
+			}
+		}
+	}
+}
+
+var benchSizes = []int{100, 1000, 10_000, 100_000, 1_000_000}
+
+func BenchmarkBinarySearch(b *testing.B) {
+	for _, n := range benchSizes {
+		nums := make([]int, n)
+		for i := range nums {
+			nums[i] = i * 2 // 偶数有序数组
+		}
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				BinarySearch(nums, i%n*2+1) // 查找奇数（不存在），触发完整遍历
+			}
+		})
+	}
+}
+
+func BenchmarkLeftBound(b *testing.B) {
+	for _, n := range benchSizes {
+		nums := make([]int, n)
+		for i := range nums {
+			nums[i] = i / 2 // 含大量重复
+		}
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				LeftBound(nums, i%n)
+			}
+		})
+	}
+}
+
+func BenchmarkSearchBoundOpt(b *testing.B) {
+	for _, n := range benchSizes {
+		nums := make([]int, n)
+		for i := range nums {
+			nums[i] = i / 2
+		}
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				SearchBoundOpt(nums, i%n)
 			}
 		})
 	}

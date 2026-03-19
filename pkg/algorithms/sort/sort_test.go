@@ -1,6 +1,8 @@
 package sort
 
 import (
+	"fmt"
+	"math/rand/v2"
 	"reflect"
 	"sort"
 	"testing"
@@ -478,5 +480,57 @@ func BenchmarkGoSort(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		data := append([]int{}, input...)
 		sort.Ints(data)
+	}
+}
+
+// 多规模基准：覆盖 100 ~ 1_000_000，观察复杂度曲线
+var multiSizes = []int{100, 1_000, 10_000, 100_000, 1_000_000}
+
+func BenchmarkQuickSort_Multi(b *testing.B) {
+	for _, n := range multiSizes {
+		input := make([]int, n)
+		b.Run(fmt.Sprintf("n=%d/random", n), func(b *testing.B) {
+			for i := range input {
+				input[i] = rand.IntN(n)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				QuickSort(append([]int{}, input...))
+			}
+		})
+	}
+}
+
+func BenchmarkCountingSort_Multi(b *testing.B) {
+	for _, n := range multiSizes {
+		input := make([]int, n)
+		b.Run(fmt.Sprintf("n=%d/random", n), func(b *testing.B) {
+			for i := range input {
+				input[i] = rand.IntN(n)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				CountingSort(append([]int{}, input...))
+			}
+		})
+	}
+}
+
+func BenchmarkGoSort_Multi(b *testing.B) {
+	for _, n := range multiSizes {
+		input := make([]int, n)
+		b.Run(fmt.Sprintf("n=%d/random", n), func(b *testing.B) {
+			for i := range input {
+				input[i] = rand.IntN(n)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				data := append([]int{}, input...)
+				sort.Ints(data)
+			}
+		})
 	}
 }
