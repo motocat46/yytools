@@ -33,33 +33,30 @@ func IsAssertOpen() bool {
 	return isAssertOpen
 }
 
-// 获取断言调用者的文件名和行号
-func getPrefix() string {
-	// 获取调用栈信息
-	_, file, line, _ := runtime.Caller(2)
-	
-	// 这里使用strings.Builder手动拼接字符串效率更高
+// 获取调用者的文件名和行号。
+// extraSkip：在固定的 getPrefix→Assert→调用方 三层之外，额外跳过的帧数。
+// 直接调用 Assert 时传 0；每多一层包装函数就加 1。
+func getPrefix(extraSkip int) string {
+	// 调用链：getPrefix(skip=0) → Assert(skip=1) → 调用方(skip=2)
+	_, file, line, _ := runtime.Caller(2 + extraSkip)
+
 	prefixBuilder := strings.Builder{}
 	prefixBuilder.WriteString("assertion failed at ")
 	prefixBuilder.WriteString(file)
 	prefixBuilder.WriteRune(':')
 	prefixBuilder.WriteString(strconv.Itoa(line))
-	
-	prefix := prefixBuilder.String()
-	return prefix
+	return prefixBuilder.String()
 }
 
 // 断言
-// 当断言失败时，调用panic
+// 当断言失败时，调用 panic
 func Assert(condition bool, list ...interface{}) {
 	if isAssertOpen && !condition {
-		prefix := getPrefix()
+		prefix := getPrefix(0)
 		if len(list) == 0 {
 			panic(prefix)
 		}
-		// 1.使用Builder拼接字符串效率更高，但是不方便;list传入的参数类型是不确定的，手动处理很麻烦。
-		// 又因只有断言失败才会执行，这里直接使用fmt.Sprint(list...)来处理
-		// 2.展开list参数，拥有更好的打印格式
+		// list 参数类型不确定，直接用 fmt.Sprint；断言失败才执行，不在热路径上
 		panic(fmt.Sprintf("%s - %s", prefix, fmt.Sprint(list...)))
 	}
 }
@@ -67,7 +64,22 @@ func Assert(condition bool, list ...interface{}) {
 // 快速断言，不传入参数
 func AssertFast(cond bool) {
 	if isAssertOpen && !cond {
-		prefix := getPrefix()
-		panic(prefix)
+		panic(getPrefix(0))
+	}
+}
+
+// AssertSkip 与 Assert 相同，但允许调用方指定额外跳过的栈帧数。
+// 用于将 Assert 包装在辅助函数中的场景：
+//
+//	func myCheck(cond bool) {
+//	    assert.AssertSkip(cond, 1, "message") // 跳过 myCheck 这一层
+//	}
+func AssertSkip(condition bool, skip int, list ...interface{}) {
+	if isAssertOpen && !condition {
+		prefix := getPrefix(skip + 1) // +1 跳过 AssertSkip 本身
+		if len(list) == 0 {
+			panic(prefix)
+		}
+		panic(fmt.Sprintf("%s - %s", prefix, fmt.Sprint(list...)))
 	}
 }
