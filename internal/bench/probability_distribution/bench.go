@@ -104,7 +104,7 @@ func voseAliasMethodTest(x []int) {
 
 func dynamicWeightsTest(x []int) {
 	println("动态计算权重:")
-	weights := make(map[interface{}]int, len(x))
+	weights := make(map[int]int, len(x))
 	for k, v := range x {
 		weights[k] = v
 	}
@@ -112,7 +112,7 @@ func dynamicWeightsTest(x []int) {
 	totalWeights := method.TtlWght
 	tmp := make(map[int]int)
 	for method.CanGenerate() {
-		index := method.Generate().(int)
+		index := method.Generate()
 		tmp[index]++
 	}
 	for i := range x {

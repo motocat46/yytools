@@ -44,5 +44,8 @@ func (this *MaxHeap[T]) PushItem(item *Item[T]) {
 }
 
 func (this *MaxHeap[T]) PopItem() *Item[T] {
+	if this.Len() == 0 {
+		return nil
+	}
 	return heap.Pop(this).(*Item[T])
 }

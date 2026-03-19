@@ -103,14 +103,18 @@ func TestPriorityQueue_UpdatePriority(t *testing.T) {
 	}
 }
 
-func TestPriorityQueue_PopPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("空优先级队列的 PopItem 应该 panic")
-		}
-	}()
+func TestPriorityQueue_PopItem_Empty(t *testing.T) {
 	pq := NewPriorityQueue[int]()
-	pq.PopItem()
+	if got := pq.PopItem(); got != nil {
+		t.Errorf("空优先级队列 PopItem 应返回 nil，实际返回 %v", got)
+	}
+}
+
+func TestPriorityQueue_PeekItem_Empty(t *testing.T) {
+	pq := NewPriorityQueue[int]()
+	if got := pq.PeekItem(); got != nil {
+		t.Errorf("空优先级队列 PeekItem 应返回 nil，实际返回 %v", got)
+	}
 }
 
 func TestPriorityQueue_SamePriority(t *testing.T) {

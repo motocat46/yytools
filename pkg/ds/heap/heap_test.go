@@ -60,16 +60,20 @@ func TestHeap_PopItem(t *testing.T) {
 	}
 }
 
-func TestHeap_PeekItem(t *testing.T) {
-	heap := NewHeap[string]()
+func TestHeap_PeekItem_Empty(t *testing.T) {
+	h := NewHeap[string]()
+	// 空堆返回 nil，不 panic
+	if got := h.PeekItem(); got != nil {
+		t.Errorf("空堆 PeekItem 应返回 nil，实际返回 %v", got)
+	}
+}
 
-	// 测试空堆的 PeekItem 操作
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("空堆的 PeekItem 操作应该 panic")
-		}
-	}()
-	heap.PeekItem()
+func TestHeap_PopItem_Empty(t *testing.T) {
+	h := NewHeap[int]()
+	// 空堆返回 nil，不 panic
+	if got := h.PopItem(); got != nil {
+		t.Errorf("空堆 PopItem 应返回 nil，实际返回 %v", got)
+	}
 }
 
 func TestHeap_PeekItemWithItems(t *testing.T) {
@@ -172,31 +176,8 @@ func TestHeap_WithPointer(t *testing.T) {
 	}
 }
 
-func TestHeap_ConcurrentOperations(t *testing.T) {
-	heap := NewHeap[int]()
-	done := make(chan bool, 2)
-
-	// 并发推入
-	go func() {
-		for i := 0; i < 1000; i++ {
-			heap.PushItem(&Item[int]{Data: i, Weight: i % 10})
-		}
-		done <- true
-	}()
-
-	// 并发弹出
-	go func() {
-		for i := 0; i < 1000; i++ {
-			if heap.Length() > 0 {
-				heap.PopItem()
-			}
-		}
-		done <- true
-	}()
-
-	<-done
-	<-done
-}
+// Heap 非并发安全，不提供 ConcurrentOperations 测试。
+// 需要并发访问时，调用方负责加锁。
 
 func TestHeap_LargeDataset(t *testing.T) {
 	heap := NewHeap[int]()

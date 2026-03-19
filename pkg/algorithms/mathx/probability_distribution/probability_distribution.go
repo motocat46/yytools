@@ -151,32 +151,6 @@ func searchLeftBound[T Integer](weightsSum []T, target T) int {
 	return -1
 }
 
-// 在区间中进行二分查找（区别于普通的二分查找）
-// (l[0], l[1]]
-// (l[1], l[2]]
-// (l[2], l[3]]
-// ...
-// (l[n-1], l[n]]
-func binarySearchInRange[T Integer](tmpList []T, n T) int {
-	length := len(tmpList)
-	if length == 0 {
-		return -1
-	}
-
-	for low, high := 1, length-1; low <= high; {
-		mid := low + (high-low)/2
-
-		if n > tmpList[mid-1] && n <= tmpList[mid] {
-			// 命中
-			return mid
-		} else if n > tmpList[mid] {
-			low = mid + 1
-		} else {
-			high = mid - 1
-		}
-	}
-	return -1
-}
 
 // Vose's Alias Method(Vose的别名方法)
 // 十分高效而优雅的实现方式

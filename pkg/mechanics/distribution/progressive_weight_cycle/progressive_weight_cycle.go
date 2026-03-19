@@ -31,8 +31,8 @@ type Item struct {
 
 // State 特殊层的运行时状态（仅属于特殊层）
 type State struct {
-	Dw       *pd.DynamicWeights[int32] // 动态权重机
-	Unlocked map[int]bool              // 已加入动态权重机的权重 key
+	Dw       *pd.DynamicWeights[int, int32] // 动态权重机（key=items下标，weight=剩余配额）
+	Unlocked map[int]bool                   // 已加入动态权重机的权重 key
 }
 
 // Layer 特殊层：封装特殊保底分布的规则与算法
@@ -74,8 +74,8 @@ func TotalQuota(items []Item) int32 {
 	return n
 }
 
-func newEmptyDW() *pd.DynamicWeights[int32] {
-	return pd.NewDynamicWeightsProgressive[int32]()
+func newEmptyDW() *pd.DynamicWeights[int, int32] {
+	return pd.NewDynamicWeightsProgressive[int, int32]()
 }
 
 func checkSpecialCycleCoreParams(used map[int32]int32, specialOccIdx int32, items []Item) error {
@@ -123,16 +123,15 @@ func specialCycleCore(used map[int32]int32, specialOccIdx int32, items []Item) (
 // specialCycleCoreV2 执行特殊抽取选择（V2 实现，使用动态权重机）。
 // specialOccIdx 为当前特殊出现序号（0-based），即本次特殊抽是周期内第几次特殊抽。
 // Items[i].JoinAt 表示第几次特殊抽（0-based）时该奖励才开始进入候选池。
-func specialCycleCoreV2(unlocked map[int]bool, specialOccIdx int32, items []Item, dw *pd.DynamicWeights[int32]) (selectedIndex int, err error) {
+func specialCycleCoreV2(unlocked map[int]bool, specialOccIdx int32, items []Item, dw *pd.DynamicWeights[int, int32]) (selectedIndex int, err error) {
 	for i, item := range items {
 		if specialOccIdx >= item.JoinAt && !unlocked[i] {
 			unlocked[i] = true
-			dw.Weights[i] = item.Quota
-			dw.TtlWght += item.Quota
+			dw.AddWeight(i, item.Quota)
 		}
 	}
 	if !dw.CanGenerate() {
 		return -1, fmt.Errorf("no candidate: specialOccIdx=%d", specialOccIdx)
 	}
-	return dw.Generate().(int), nil
+	return dw.Generate(), nil
 }

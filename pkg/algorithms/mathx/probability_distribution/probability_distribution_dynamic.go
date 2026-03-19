@@ -29,25 +29,26 @@ import (
 *   区别于 probability_distribution.go里的方法
  */
 
-type IDynamicProbDistr[T base.Signed] interface {
+type IDynamicProbDistr[K comparable, T base.Signed] interface {
 	CanGenerate() bool
-	Generate() interface{}
+	Generate() K
 	SetReduce(reduce T)
 }
 
-// 可以得到一个周期的完整分布
-type DynamicWeights[T base.Signed] struct {
-	Weights map[interface{}]T // 权重map
-	TtlWght T                 // 总权重
-	Reduce  T                 // 权重减少的值
+// DynamicWeights 可以得到一个周期的完整分布。
+// K 为权重 key 类型（comparable），T 为权重值类型（Signed）。
+type DynamicWeights[K comparable, T base.Signed] struct {
+	Weights map[K]T // 权重map
+	TtlWght T        // 总权重
+	Reduce  T        // 权重减少的值
 }
 
 // 一般而言reduce为1,表示减去一个单位的权重
-func NewDynamicWeights[T base.Signed](weights map[interface{}]T) *DynamicWeights[T] {
-	return NewDynamicWeightsWithReduce[T](weights, 1)
+func NewDynamicWeights[K comparable, T base.Signed](weights map[K]T) *DynamicWeights[K, T] {
+	return NewDynamicWeightsWithReduce[K, T](weights, 1)
 }
 
-func NewDynamicWeightsWithReduce[T base.Signed](weights map[interface{}]T, reduce T) *DynamicWeights[T] {
+func NewDynamicWeightsWithReduce[K comparable, T base.Signed](weights map[K]T, reduce T) *DynamicWeights[K, T] {
 	assert.Assert(len(weights) > 0)
 	assert.Assert(reduce > 0)
 	total := T(0)
@@ -56,7 +57,7 @@ func NewDynamicWeightsWithReduce[T base.Signed](weights map[interface{}]T, reduc
 		assert.Assert(w > 0)
 	}
 	assert.Assert(total > 0, "总权重需要大于0：", total)
-	return &DynamicWeights[T]{
+	return &DynamicWeights[K, T]{
 		Weights: weights,
 		TtlWght: total,
 		Reduce:  reduce,
@@ -65,30 +66,34 @@ func NewDynamicWeightsWithReduce[T base.Signed](weights map[interface{}]T, reduc
 
 // NewDynamicWeightsProgressive 创建初始为空、支持后续动态增加权重的 DW。
 // 与 NewDynamicWeights 不同，此构造器不要求初始权重非空。
-func NewDynamicWeightsProgressive[T base.Signed]() *DynamicWeights[T] {
-	return &DynamicWeights[T]{
-		Weights: make(map[interface{}]T),
+func NewDynamicWeightsProgressive[K comparable, T base.Signed]() *DynamicWeights[K, T] {
+	return &DynamicWeights[K, T]{
+		Weights: make(map[K]T),
 		TtlWght: 0,
 		Reduce:  1,
 	}
 }
 
 // 判断是否可以继续获得
-func (this *DynamicWeights[T]) CanGenerate() bool {
-	if this.TtlWght > 0 {
-		return true
-	}
-	return false
+func (this *DynamicWeights[K, T]) CanGenerate() bool {
+	return this.TtlWght > 0
 }
 
-func (this *DynamicWeights[T]) SetReduce(reduce T) {
+func (this *DynamicWeights[K, T]) SetReduce(reduce T) {
 	this.Reduce = reduce
 }
 
-// 遍历查找
-// 调用者去判断是否可以继续获得(CanGenerate判断)
+// AddWeight 向 DW 中新增（或累加）一个 key 的权重。
+// 用于 Progressive 模式：在运行时动态解锁新的候选项。
+func (this *DynamicWeights[K, T]) AddWeight(key K, weight T) {
+	this.Weights[key] += weight
+	this.TtlWght += weight
+}
+
+// Generate 遍历查找，返回命中的 key。
+// 调用者应先通过 CanGenerate() 确认可以继续生成。
 // 时间复杂度O(n)
-func (this *DynamicWeights[T]) Generate() interface{} {
+func (this *DynamicWeights[K, T]) Generate() K {
 	assert.Assert(this.TtlWght > 0, "总权重需要大于0：", this.TtlWght)
 	traverse := T(0)
 	// 先根据总权重计算一个随机值，范围在[1,totalWeight]
@@ -112,5 +117,6 @@ func (this *DynamicWeights[T]) Generate() interface{} {
 	}
 	// 直接断言 逻辑不应该执行到这里
 	assert.Assert(false, "未命中任何区间,r:", r, "totalWeight:", this.TtlWght)
-	return nil
+	var zero K
+	return zero
 }

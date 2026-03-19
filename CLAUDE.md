@@ -94,12 +94,36 @@ go vet ./...
 
 ### 数据结构 API 边界规范
 
-`pkg/ds/` 下的数据结构（sorted_set、heap、queue、stack 等）遵循以下越界约定：
+`pkg/ds/` 下的数据结构根据**返回类型**采用不同的空/越界策略：
 
-- **越界访问**：超出范围的 rank / index / key 查询，返回零值（nil / 0 / false），不 panic
+#### 指针返回方法 → 返回 nil，不 panic
+
+适用：`sorted_set`、`heap`、`priority_queue` 等返回 `*NodeData`、`*Item`、`*PriorityItem` 的方法。
+
+- `nil` 在语义上是明确的"没有该元素"，调用方可以直接做 nil 检查
 - 例：`GetByRankDesc(999)` 在只有 3 个元素时返回 nil，不 panic
+- 例：`Heap.PopItem()` 空堆返回 nil，不 panic
 
-这与 Go 原生 slice 索引（越界 panic）不同，是有序集合类 API 的惯例（参考 Redis ZADD/ZRANK 语义）。
+这是有序集合类 API 的惯例（参考 Redis ZADD/ZRANK 语义）。
+
+#### 泛型 T 返回方法 → panic，不返回零值
+
+适用：`Stack[T].Pop()`、`Stack[T].Top()`、`Queue[T].Dequeue()`、`Queue[T].Peek()` 等返回泛型 `T` 的方法。
+
+- `T` 的零值（`0`、`""`、`false` 等）可能是合法元素，调用方**无法区分**"空集合"和"真实零值元素"
+- 返回零值是**静默错误**，比 panic 更危险——调用方收到一个看似正常的值却不知道操作失败了
+- 正确做法：调用前先用 `Empty()` 检查，空时操作直接 panic，迫使调用方写防御代码
+
+```go
+// ✅ 正确
+if !stack.Empty() {
+    item := stack.Pop()
+    // ...
+}
+
+// ❌ 错误：0 可能是真实元素，也可能是空栈的静默返回
+item := stack.Pop()
+```
 
 ### Testing Strategy
 - Unit tests follow `*_test.go` naming convention

@@ -100,9 +100,15 @@ func (this *Heap[T]) PushItem(item *Item[T]) {
 }
 
 func (this *Heap[T]) PopItem() *Item[T] {
+	if this.Len() == 0 {
+		return nil
+	}
 	return heap.Pop(this).(*Item[T])
 }
 
 func (this *Heap[T]) PeekItem() *Item[T] {
+	if this.Len() == 0 {
+		return nil
+	}
 	return this.Items[0]
 }

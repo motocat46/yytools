@@ -262,14 +262,14 @@ func TestProbFactory(t *testing.T) {
 
 func TestDynamicWeights_CanGenerate(t *testing.T) {
 	t.Run("初始状态可以生成", func(t *testing.T) {
-		dw := NewDynamicWeights(map[interface{}]int{"a": 2, "b": 3})
+		dw := NewDynamicWeights(map[string]int{"a": 2, "b": 3})
 		if !dw.CanGenerate() {
 			t.Error("初始总权重 > 0，CanGenerate 应返回 true")
 		}
 	})
 
 	t.Run("权重耗尽后不可生成", func(t *testing.T) {
-		dw := NewDynamicWeights(map[interface{}]int{"a": 1})
+		dw := NewDynamicWeights(map[string]int{"a": 1})
 		dw.Generate() // 消耗唯一权重
 		if dw.CanGenerate() {
 			t.Error("权重耗尽后 CanGenerate 应返回 false")
@@ -279,9 +279,9 @@ func TestDynamicWeights_CanGenerate(t *testing.T) {
 
 func TestDynamicWeights_Generate(t *testing.T) {
 	t.Run("生成结果是合法key", func(t *testing.T) {
-		weights := map[interface{}]int{"x": 3, "y": 5, "z": 2}
+		weights := map[string]int{"x": 3, "y": 5, "z": 2}
 		dw := NewDynamicWeights(weights)
-		validKeys := map[interface{}]struct{}{"x": {}, "y": {}, "z": {}}
+		validKeys := map[string]struct{}{"x": {}, "y": {}, "z": {}}
 		for dw.CanGenerate() {
 			got := dw.Generate()
 			if _, ok := validKeys[got]; !ok {
@@ -292,7 +292,7 @@ func TestDynamicWeights_Generate(t *testing.T) {
 
 	t.Run("总采样次数等于总权重", func(t *testing.T) {
 		// 每次 Generate 权重减 1，所以可以生成 totalWeight 次
-		dw := NewDynamicWeights(map[interface{}]int{"a": 3, "b": 2})
+		dw := NewDynamicWeights(map[string]int{"a": 3, "b": 2})
 		count := 0
 		for dw.CanGenerate() {
 			dw.Generate()
@@ -304,9 +304,9 @@ func TestDynamicWeights_Generate(t *testing.T) {
 	})
 
 	t.Run("每个key最多被选中其初始权重次", func(t *testing.T) {
-		initial := map[interface{}]int{"a": 2, "b": 3}
+		initial := map[string]int{"a": 2, "b": 3}
 		dw := NewDynamicWeights(initial)
-		hitCount := map[interface{}]int{}
+		hitCount := map[string]int{}
 		for dw.CanGenerate() {
 			k := dw.Generate()
 			hitCount[k]++
@@ -323,7 +323,7 @@ func TestDynamicWeights_Generate(t *testing.T) {
 func TestDynamicWeights_SetReduce(t *testing.T) {
 	t.Run("SetReduce修改每次减少量", func(t *testing.T) {
 		// 总权重 6，reduce=2，则可生成 3 次
-		dw := NewDynamicWeightsWithReduce(map[interface{}]int{"a": 6}, 2)
+		dw := NewDynamicWeightsWithReduce(map[string]int{"a": 6}, 2)
 		count := 0
 		for dw.CanGenerate() {
 			dw.Generate()
@@ -335,7 +335,7 @@ func TestDynamicWeights_SetReduce(t *testing.T) {
 	})
 
 	t.Run("运行中修改reduce", func(t *testing.T) {
-		dw := NewDynamicWeights(map[interface{}]int{"a": 4})
+		dw := NewDynamicWeights(map[string]int{"a": 4})
 		dw.Generate() // reduce=1，总权重变为 3
 		dw.SetReduce(3)
 		dw.Generate() // reduce=3，总权重变为 0
@@ -347,7 +347,7 @@ func TestDynamicWeights_SetReduce(t *testing.T) {
 
 func TestNewDynamicWeightsWithReduce(t *testing.T) {
 	t.Run("自定义reduce构造", func(t *testing.T) {
-		dw := NewDynamicWeightsWithReduce(map[interface{}]int{"k": 10}, 5)
+		dw := NewDynamicWeightsWithReduce(map[string]int{"k": 10}, 5)
 		if dw.Reduce != 5 {
 			t.Errorf("期望 Reduce=5，实际 %d", dw.Reduce)
 		}

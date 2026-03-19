@@ -79,16 +79,24 @@ func TestStack_Pop(t *testing.T) {
 	}
 }
 
-func TestStack_Top(t *testing.T) {
-	stack := NewStack[int]()
-
-	// 测试空栈的 Top 操作
+func TestStack_Top_Empty(t *testing.T) {
+	s := NewStack[int]()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("空栈的 Top 操作应该 panic")
+			t.Error("空栈 Top 应 panic，但没有 panic")
 		}
 	}()
-	stack.Top()
+	s.Top()
+}
+
+func TestStack_Pop_Empty(t *testing.T) {
+	s := NewStack[string]()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("空栈 Pop 应 panic，但没有 panic")
+		}
+	}()
+	s.Pop()
 }
 
 func TestStack_TopWithItems(t *testing.T) {
@@ -167,31 +175,8 @@ func TestStack_TryShrink(t *testing.T) {
 	}
 }
 
-func TestStack_ConcurrentOperations(t *testing.T) {
-	stack := NewStack[int]()
-	done := make(chan bool, 2)
-
-	// 并发推入
-	go func() {
-		for i := 0; i < 1000; i++ {
-			stack.Push(i)
-		}
-		done <- true
-	}()
-
-	// 并发弹出
-	go func() {
-		for i := 0; i < 1000; i++ {
-			if !stack.Empty() {
-				stack.Pop()
-			}
-		}
-		done <- true
-	}()
-
-	<-done
-	<-done
-}
+// Stack 非并发安全，不提供 ConcurrentOperations 测试。
+// 需要并发访问时，调用方负责加锁。
 
 func TestStack_WithStruct(t *testing.T) {
 	type Person struct {

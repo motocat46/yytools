@@ -80,6 +80,7 @@ func (this *Stack[T]) tryShrink() {
 }
 
 // 需要调用者保证(可以调用Empty()判断)，栈里还有元素可以出栈
+// 栈为空时 panic；调用前应先检查 Empty()
 func (this *Stack[T]) Pop() T {
 	length := this.Length()
 	assert.Assert(length > 0, "栈空了，无法出栈!")
@@ -97,8 +98,9 @@ func (this *Stack[T]) Pop() T {
 }
 
 // 需要调用者保证(可以调用Empty()判断)，栈里还有元素可以查看
-func (this *Stack[T]) Top() (item T) {
+// 栈为空时 panic；调用前应先检查 Empty()
+func (this *Stack[T]) Top() T {
 	length := this.Length()
-	assert.Assert(length > 0, "栈空了，无法出栈!")
+	assert.Assert(length > 0, "栈空了，无法查看!")
 	return this.Items[length-1]
 }

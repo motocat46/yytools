@@ -83,25 +83,19 @@ func TestMaxHeap_PeekItem(t *testing.T) {
 		}
 	})
 
-	t.Run("空堆Peek触发panic", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("空最大堆的 PeekItem 应该 panic")
-			}
-		}()
+	t.Run("空堆Peek返回nil", func(t *testing.T) {
 		h := NewMaxHeap[int]()
-		h.PeekItem()
+		if got := h.PeekItem(); got != nil {
+			t.Errorf("空最大堆 PeekItem 应返回 nil，实际返回 %v", got)
+		}
 	})
 }
 
-func TestMaxHeap_PopPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("空最大堆的 PopItem 应该 panic")
-		}
-	}()
+func TestMaxHeap_PopItem_Empty(t *testing.T) {
 	h := NewMaxHeap[int]()
-	h.PopItem()
+	if got := h.PopItem(); got != nil {
+		t.Errorf("空最大堆 PopItem 应返回 nil，实际返回 %v", got)
+	}
 }
 
 func TestMaxHeap_WithStruct(t *testing.T) {

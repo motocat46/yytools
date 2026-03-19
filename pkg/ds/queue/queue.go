@@ -44,7 +44,7 @@ func NewQueue[T any]() *Queue[T] {
 }
 
 func NewQueueWithSize[T any](size int) *Queue[T] {
-	assert.Assert(size >= 0, "size must >= 0,size:", size)
+	assert.Assert(size > 0, "size must > 0,size:", size)
 	items := make([]T, size)
 	return &Queue[T]{
 		Items: items,
@@ -180,8 +180,9 @@ func (this *Queue[T]) nextHead() int {
 }
 
 // 需要调用者保证(可以调用Empty()判断)，队列里还有元素可以出队列
+// 队列为空时 panic；调用前应先检查 Empty()
 func (this *Queue[T]) Dequeue() T {
-	// assert.Assert(!this.Empty(), "队列空了，无法出队列!")
+	assert.Assert(!this.Empty(), "队列空了，无法出队列!")
 	item := this.Items[this.Head]
 	// 为了安全（避免内存泄露）
 	var defaultItem T
@@ -196,7 +197,8 @@ func (this *Queue[T]) Dequeue() T {
 }
 
 // 需要调用者保证(可以调用Empty()判断)，队列里还有元素可以查看
-func (this *Queue[T]) Peek() (item T) {
+// 队列为空时 panic；调用前应先检查 Empty()
+func (this *Queue[T]) Peek() T {
 	if this.Empty() {
 		panic("queue is empty")
 	}

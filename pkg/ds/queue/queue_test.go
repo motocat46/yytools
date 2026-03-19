@@ -24,7 +24,6 @@ func TestNewQueueWithSize(t *testing.T) {
 		expected int
 	}{
 		{"正常大小", 10, 0},
-		{"零大小", 0, 0},
 		{"大尺寸", 1000, 0},
 	}
 
@@ -79,16 +78,24 @@ func TestQueue_Dequeue(t *testing.T) {
 	}
 }
 
-func TestQueue_Peek(t *testing.T) {
+func TestQueue_Peek_Empty(t *testing.T) {
 	queue := NewQueue[int]()
-
-	// 测试空队列的 Peek 操作
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("空队列的 Peek 操作应该 panic")
+			t.Error("空队列 Peek 应 panic，但没有 panic")
 		}
 	}()
 	queue.Peek()
+}
+
+func TestQueue_Dequeue_Empty(t *testing.T) {
+	queue := NewQueue[int]()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("空队列 Dequeue 应 panic，但没有 panic")
+		}
+	}()
+	queue.Dequeue()
 }
 
 func TestQueue_PeekWithItems(t *testing.T) {
@@ -224,31 +231,8 @@ func TestQueue_ExpandAndShrink(t *testing.T) {
 	}
 }
 
-func TestQueue_ConcurrentOperations(t *testing.T) {
-	queue := NewQueue[int]()
-	done := make(chan bool, 2)
-
-	// 并发入队
-	go func() {
-		for i := 0; i < 1000; i++ {
-			queue.Enqueue(i)
-		}
-		done <- true
-	}()
-
-	// 并发出队
-	go func() {
-		for i := 0; i < 1000; i++ {
-			if !queue.Empty() {
-				queue.Dequeue()
-			}
-		}
-		done <- true
-	}()
-
-	<-done
-	<-done
-}
+// Queue 非并发安全，不提供 ConcurrentOperations 测试。
+// 需要并发访问时，调用方负责加锁。
 
 func TestQueue_WithStruct(t *testing.T) {
 	type Person struct {

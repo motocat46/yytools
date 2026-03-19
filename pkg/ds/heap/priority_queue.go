@@ -86,10 +86,16 @@ func (this *PriorityQueue[T]) PushItem(item *PriorityItem[T]) {
 }
 
 func (this *PriorityQueue[T]) PopItem() *PriorityItem[T] {
+	if this.Len() == 0 {
+		return nil
+	}
 	return heap.Pop(this).(*PriorityItem[T])
 }
 
 func (this *PriorityQueue[T]) PeekItem() *PriorityItem[T] {
+	if this.Len() == 0 {
+		return nil
+	}
 	return this.Items[0]
 }
 
