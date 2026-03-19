@@ -90,6 +90,7 @@ go run ./cmd/demo http            # 启动排序性能可视化服务
 |------|---------|
 | [pkg/algorithms](pkg/algorithms/README.md) | 排序、二分查找、数学工具、唯一 ID 生成 |
 | [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合 |
+| [pkg/mechanics](pkg/mechanics/distribution/README.md) | 游戏规则机制：渐进式权重周期、双层保底抽卡引擎 |
 | [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、OS 封装、无界 Channel |
 | [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架 |
 | [pkg/slicex](pkg/slicex/README.md) | 切片工具函数（MinBy、MaxBy 等） |
