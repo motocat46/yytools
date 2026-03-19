@@ -18,7 +18,6 @@
 package sort
 
 import (
-	"github.com/motocat46/yytools/pkg/common/assert"
 	"github.com/motocat46/yytools/pkg/common/base"
 	"math"
 )
@@ -26,20 +25,22 @@ import (
 // 基数排序（Radix Sort）：基数排序适用于排序非负整数序列，其时间复杂度为O(d * (n + k))，
 // 其中d是最大数字的位数，n是元素个数，k是每个位的范围大小。
 // 基数排序按照数字的个位、十位、百位等依次进行排序，直到最高位排序完成，得到有序序列。
+// 注意：仅支持非负整数，传入负数将 panic。
 func RadixSort[T base.Integer](array []T) {
 	if len(array) < 2 {
 		return
 	}
-	assert.Assert(array[0] >= 0)
 	min := array[0]
 	max := array[0]
 	for i := 1; i < len(array); i++ {
-		assert.Assert(array[i] >= 0)
 		if min > array[i] {
 			min = array[i]
 		} else if max < array[i] {
 			max = array[i]
 		}
+	}
+	if min < 0 {
+		panic("RadixSort: 仅支持非负整数，传入了负数")
 	}
 	if min == max {
 		// 数组中的数字都相等，无需再排序

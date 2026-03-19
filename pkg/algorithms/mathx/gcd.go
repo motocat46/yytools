@@ -18,7 +18,6 @@
 package mathx
 
 import (
-	"github.com/motocat46/yytools/pkg/common/assert"
 	"github.com/motocat46/yytools/pkg/common/base"
 )
 
@@ -33,8 +32,9 @@ import (
  空间复杂度: O(log(min(x, y)))  // 递归栈
 */
 func GcdR[T base.Integer](x, y T) T {
-	assert.Assert(x >= 0, "x must >= 0, x:", x)
-	assert.Assert(y >= 0, "y must >= 0, y:", y)
+	if x < 0 || y < 0 {
+		panic("GcdR: 参数必须为非负整数")
+	}
 	if y == 0 {
 		return x
 	}
@@ -52,8 +52,9 @@ func GcdR[T base.Integer](x, y T) T {
  空间复杂度: O(1)
 */
 func GcdI[T base.Integer](x, y T) T {
-	assert.Assert(x >= 0, "x must >= 0, x:", x)
-	assert.Assert(y >= 0, "y must >= 0, y:", y)
+	if x < 0 || y < 0 {
+		panic("GcdI: 参数必须为非负整数")
+	}
 	for {
 		if y == 0 {
 			return x

@@ -46,7 +46,12 @@ func CountingSort[T base.Integer](array []T) {
 		// 数组中的数字都相等，无需再排序
 		return
 	}
-	
+	// 防止 max-min 过大导致 OOM（建议差值 ≤ 1e7，超出此范围请改用 QuickSort）
+	const maxRange = 1e7
+	if uint64(max-min) > maxRange {
+		panic("CountingSort: max-min 差值超出限制，请改用 QuickSort")
+	}
+
 	aux := make([]T, max-min+1)
 	for _, v := range array {
 		// 根据偏移量计算元素对应的数量

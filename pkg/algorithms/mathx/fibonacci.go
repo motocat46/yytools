@@ -35,8 +35,12 @@ func NewFibMem[T base.Integer]() *Fibonacci[T] {
 
 // 计算斐波那契数（并将斐波那契数列保存到备忘录中）
 // 该方法需要传入初始为空的备忘录
+// n 必须 >= 1 且不超过类型 T 可表示的最大斐波那契下标（可用 FibNMax[T]() 查询）
 func (a *Fibonacci[T]) Calculate(n T) T {
 	assert.Assert(n >= 1)
+	if int(n) > FibNMax[T]()+1 {
+		panic("Fibonacci.Calculate: n 超出类型 T 可表示的斐波那契数范围")
+	}
 	// 如果已经计算过的斐波那契数就从备忘录中获取
 	target := int(n - 1)
 	if target < len(a.mem) {

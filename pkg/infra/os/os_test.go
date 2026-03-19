@@ -48,7 +48,7 @@ func TestIsFileExist(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err, exists := IsFileExist(tt.filePath)
+			exists, err := IsFileExist(tt.filePath)
 
 			if tt.exists {
 				if err != nil {
@@ -90,7 +90,7 @@ func TestIsFileNormalStat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err, exists := IsFileNormalStat(tt.filePath)
+			exists, err := IsFileNormalStat(tt.filePath)
 
 			if tt.exists {
 				if err != nil {
@@ -120,7 +120,7 @@ func TestBackupFile(t *testing.T) {
 	}
 
 	t.Run("备份存在的文件", func(t *testing.T) {
-		err, success := BackupFile(testFile)
+		success, err := BackupFile(testFile)
 
 		if err != nil {
 			t.Errorf("BackupFile(%q) 返回了错误: %v", testFile, err)
@@ -130,7 +130,7 @@ func TestBackupFile(t *testing.T) {
 		}
 
 		// 检查原文件是否被重命名
-		_, exists := IsFileExist(testFile)
+		exists, _ := IsFileExist(testFile)
 		if exists {
 			t.Errorf("原文件 %q 仍然存在，应该被重命名", testFile)
 		}
@@ -145,7 +145,7 @@ func TestBackupFile(t *testing.T) {
 
 	t.Run("备份不存在的文件", func(t *testing.T) {
 		nonexistentFile := filepath.Join(tempDir, "nonexistent.txt")
-		_, success := BackupFile(nonexistentFile)
+		success, _ := BackupFile(nonexistentFile)
 
 		if success {
 			t.Errorf("BackupFile(%q) = %t, 期望 false", nonexistentFile, success)
@@ -153,7 +153,7 @@ func TestBackupFile(t *testing.T) {
 	})
 
 	t.Run("备份空路径", func(t *testing.T) {
-		_, success := BackupFile("")
+		success, _ := BackupFile("")
 
 		if success {
 			t.Errorf("BackupFile(\"\") = %t, 期望 false", success)
@@ -174,7 +174,7 @@ func TestBackupFileMultipleTimes(t *testing.T) {
 		}
 
 		// 备份文件
-		err, success := BackupFile(testFile)
+		success, err := BackupFile(testFile)
 		if err != nil {
 			t.Errorf("第 %d 次备份失败: %v", i+1, err)
 		}
@@ -204,7 +204,7 @@ func TestBackupFileWithSpecialCharacters(t *testing.T) {
 		t.Fatalf("创建测试文件失败: %v", err)
 	}
 
-	err, success := BackupFile(specialFile)
+	success, err := BackupFile(specialFile)
 	if err != nil {
 		t.Errorf("备份特殊字符文件名失败: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestBackupFilePerformance(t *testing.T) {
 			t.Fatalf("创建测试文件失败: %v", err)
 		}
 
-		err, success := BackupFile(testFile)
+		success, err := BackupFile(testFile)
 		if err != nil {
 			t.Errorf("性能测试中备份失败: %v", err)
 		}

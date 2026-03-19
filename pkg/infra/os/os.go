@@ -24,39 +24,39 @@ import (
 )
 
 // 检测路径是否存在
-func IsFileExist(file string) (error, bool) {
-	err, ok := IsFileNormalStat(file)
+func IsFileExist(file string) (bool, error) {
+	ok, err := IsFileNormalStat(file)
 	if ok {
-		return err, ok
+		return ok, err
 	}
-	return err, os.IsExist(err)
+	return os.IsExist(err), err
 }
 
-func IsFileNormalStat(file string) (error, bool) {
+func IsFileNormalStat(file string) (bool, error) {
 	_, err := os.Stat(file)
 	if err == nil {
-		return nil, true
+		return true, nil
 	}
-	return err, false
+	return false, err
 }
 
 // 备份指定路径文件
 // 重命名原文件(添加日期时间后缀)
 // 例如 ~/work/test.go -> ~/work/test.go_202306071537010001
-func BackupFile(file string) (error, bool) {
-	err, ok := IsFileNormalStat(file)
+func BackupFile(file string) (bool, error) {
+	ok, err := IsFileNormalStat(file)
 	if ok {
 		now := time.Now()
 		for i := 1; i < 1e4; i++ {
 			newName := fmt.Sprintf("%v_%d%02d%02d%02d%02d%02d%04d",
 				file, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), i)
-			if _, isExist := IsFileExist(newName); isExist {
+			if isExist, _ := IsFileExist(newName); isExist {
 				continue
 			}
 			err1 := os.Rename(file, newName)
-			return err1, ok
+			return ok, err1
 		}
-		return os.ErrExist, false
+		return false, os.ErrExist
 	}
-	return err, ok
+	return ok, err
 }

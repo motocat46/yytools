@@ -29,7 +29,7 @@ func Abs[T base.Integer](a T) T {
 	return a
 }
 
-// 计算两个数的较小值
+// Deprecated: Go 1.21 已内置 min() 泛型函数，新代码请直接使用内置 min()。
 func Min[T base.Ordered](a T, b T) T {
 	if a < b {
 		return a
@@ -37,7 +37,7 @@ func Min[T base.Ordered](a T, b T) T {
 	return b
 }
 
-// 计算两个数的较大值
+// Deprecated: Go 1.21 已内置 max() 泛型函数，新代码请直接使用内置 max()。
 func Max[T base.Ordered](a T, b T) T {
 	if a > b {
 		return a

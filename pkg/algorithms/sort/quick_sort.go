@@ -136,6 +136,9 @@ func quickSortDescTraversal[T base.Integer](arr []T, start, end int) {
 }
 
 func quickSortDesc[T base.Integer](arr []T, start, end int) {
+	if end <= start+1 {
+		return
+	}
 	if end-start <= maxInsertion {
 		// 元素较少时，插入排序的效率是很高的
 		// 元素较少时采用插入排序,减小快排的递归深度

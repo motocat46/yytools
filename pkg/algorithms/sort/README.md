@@ -10,7 +10,7 @@
 | 快速排序（降序）| `QuickSortDesc[T]` | 平均 O(n log n) | 通用，大数据量 |
 | 快速排序-迭代版（升序）| `QuickSortTraversal[T]` | 平均 O(n log n) | 避免栈溢出的超大数组 |
 | 快速排序-迭代版（降序）| `QuickSortDescTraversal[T]` | 平均 O(n log n) | 避免栈溢出的超大数组 |
-| 冒泡排序 | `BubbleSort[T]` | O(n²) | 教学、极小数组 |
+| 选择排序 | `SelectionSort[T]` | O(n²) | 教学、极小数组 |
 | 插入排序 | `InsertionSort[T]` | O(n²)，近乎有序时接近 O(n) | 小数组（≤12）或近乎有序 |
 | 计数排序 | `CountingSort[T]` | O(n+k) | 元素值域集中的大数组 |
 | 基数排序 | `RadixSort[T]` | O(n·k) | 元素值域较大的整数排序 |
@@ -44,5 +44,6 @@ sort.CountingSort(scores) // [78 85 88 92 95]
 ## 注意事项
 
 - 所有排序均为**原地排序**（in-place），会修改传入的切片
-- `CountingSort` 的额外内存开销为 `O(max - min + 1)`，值域过大时不适用
+- `CountingSort` 的额外内存开销为 `O(max - min + 1)`，**差值超过 1e7 时会 panic**，请改用 `QuickSort`
+- `RadixSort` 仅支持非负整数，传入负数会 panic
 - `QuickSort` 使用随机化 pivot，避免有序输入退化为 O(n²)

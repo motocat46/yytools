@@ -26,34 +26,34 @@ import (
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
-func BubbleSortTest(cnt int) {
-	fmt.Printf("冒泡排序测试开始..\n")
+func SelectionSortTest(cnt int) {
+	fmt.Printf("选择排序测试开始..\n")
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
 			arr[i] = random.RandInt[int32](1, 1e3)
 		}
-		sort.BubbleSort(arr)
+		sort.SelectionSort(arr)
 		for z := 1; z < len(arr); z++ {
 			assert.Assert(arr[z-1] <= arr[z])
 		}
 	}
-	fmt.Printf("冒泡排序测试完毕..\n")
+	fmt.Printf("选择排序测试完毕..\n")
 }
 
-func BubbleSortDescTest(cnt int) {
-	fmt.Printf("冒泡排序(降序)测试开始..\n")
+func SelectionSortDescTest(cnt int) {
+	fmt.Printf("选择排序(降序)测试开始..\n")
 	arr := make([]int32, 1e3)
 	for j := 0; j < cnt; j++ {
 		for i := 0; i < len(arr); i++ {
 			arr[i] = random.RandInt[int32](1, 1e3)
 		}
-		sort.BubbleSortDesc(arr)
+		sort.SelectionSortDesc(arr)
 		for z := 1; z < len(arr); z++ {
 			assert.Assert(arr[z-1] >= arr[z])
 		}
 	}
-	fmt.Printf("冒泡排序(降序)测试完毕..\n")
+	fmt.Printf("选择排序(降序)测试完毕..\n")
 }
 
 func InsertionSortTest(cnt int) {
@@ -200,9 +200,9 @@ func RadixSortTest(cnt int) {
 }
 
 func SortTest(cnt int) {
-	// 冒泡排序
-	BubbleSortTest(cnt)
-	BubbleSortDescTest(cnt)
+	// 选择排序
+	SelectionSortTest(cnt)
+	SelectionSortDescTest(cnt)
 	// 插入排序
 	InsertionSortTest(cnt)
 	InsertionSortDescTest(cnt)

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestBubbleSort(t *testing.T) {
+func TestSelectionSort(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []int
@@ -47,7 +47,7 @@ func TestBubbleSort(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			input := append([]int{}, tt.input...)
-			BubbleSort(input)
+			SelectionSort(input)
 			if !reflect.DeepEqual(input, tt.expected) {
 				t.Errorf("期望 %v，实际 %v", tt.expected, input)
 			}
@@ -390,7 +390,7 @@ func TestSortConsistency(t *testing.T) {
 		name string
 		fn   func([]int)
 	}{
-		{"BubbleSort", func(a []int) { BubbleSort(a) }},
+		{"SelectionSort", func(a []int) { SelectionSort(a) }},
 		{"InsertionSort", func(a []int) { InsertionSort(a) }},
 		{"QuickSort", func(a []int) { QuickSort(a) }},
 		{"QuickSortTraversal", func(a []int) { QuickSortTraversal(a) }},
@@ -408,7 +408,7 @@ func TestSortConsistency(t *testing.T) {
 	}
 }
 
-func BenchmarkBubbleSort(b *testing.B) {
+func BenchmarkSelectionSort(b *testing.B) {
 	input := make([]int, 1000)
 	for i := range input {
 		input[i] = 1000 - i
@@ -416,7 +416,7 @@ func BenchmarkBubbleSort(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		BubbleSort(append([]int{}, input...))
+		SelectionSort(append([]int{}, input...))
 	}
 }
 

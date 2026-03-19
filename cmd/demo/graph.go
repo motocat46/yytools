@@ -128,7 +128,7 @@ func createSimpleSortLine() *charts.Line {
 		sortFn func([]int32)
 	}
 	series := []*entry{
-		{name: "Bubble Sort", sortFn: sort2.BubbleSort[int32]},
+		{name: "Selection Sort", sortFn: sort2.SelectionSort[int32]},
 		{name: "Insertion Sort", sortFn: sort2.InsertionSort[int32]},
 		{name: "Quick Sort (参照)", sortFn: sort2.QuickSort[int32]},
 	}
@@ -223,7 +223,7 @@ const indexHTML = `<!DOCTYPE html>
   <h2>排序算法</h2>
   <ul>
     <li><a href="/sort/efficient">高效排序对比（QuickSort / CountingSort / RadixSort / Go stdlib）</a></li>
-    <li><a href="/sort/simple">简单排序对比（BubbleSort / InsertionSort）</a></li>
+    <li><a href="/sort/simple">简单排序对比（SelectionSort / InsertionSort）</a></li>
     <li><a href="/sort/compare">快排 vs pdqsort — 不同输入场景对比（随机 / 近乎有序 / 有序 / 逆序 / 大量重复）</a></li>
   </ul>
 
