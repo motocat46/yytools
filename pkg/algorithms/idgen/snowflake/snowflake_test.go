@@ -169,6 +169,21 @@ func TestNewGeneratorWithLayout_InvalidBitSum(t *testing.T) {
 	}
 }
 
+// TestNewGeneratorWithLayout_ZeroBitField 验证任一位宽为 0 时返回 error
+func TestNewGeneratorWithLayout_ZeroBitField(t *testing.T) {
+	cases := []Layout{
+		{TimestampBits: 0, NodeIDBits: 32, SequenceBits: 31, Epoch: Epoch},
+		{TimestampBits: 32, NodeIDBits: 0, SequenceBits: 31, Epoch: Epoch},
+		{TimestampBits: 32, NodeIDBits: 31, SequenceBits: 0, Epoch: Epoch},
+	}
+	for _, layout := range cases {
+		_, err := NewGeneratorWithLayout(0, layout)
+		if err == nil {
+			t.Errorf("zero bit field %+v should return error", layout)
+		}
+	}
+}
+
 // TestNewGeneratorWithLayout_Uniqueness 验证自定义布局下并发生成 ID 全局唯一
 func TestNewGeneratorWithLayout_Uniqueness(t *testing.T) {
 	const n = 100_000

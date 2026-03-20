@@ -53,12 +53,13 @@ type Layout struct {
 	NodeIDBits    int
 	SequenceBits  int
 	// Epoch 自定义纪元（UTC 毫秒时间戳），ID 中存储的时间戳是相对此纪元的偏移量。
-	// 纪元越近，可用年限越长；必须早于当前时间，否则 [Generator.NewID] 会 panic。
+	// 纪元越近，可用年限越长；必须早于当前时间，否则 [NewGeneratorWithLayout] 构造时 panic。
 	Epoch int64
 }
 
-// DefaultLayout 是默认位布局（41+10+12，纪元 2025-01-01），与包级常量保持一致。
-var DefaultLayout = Layout{
+// defaultLayout 是默认位布局（41+10+12，纪元 2025-01-01），仅供 NewGenerator 使用。
+// 不导出，防止外部修改影响全局行为。需要查看默认值时直接使用包级常量。
+var defaultLayout = Layout{
 	TimestampBits: TimestampBits,
 	NodeIDBits:    NodeIDBits,
 	SequenceBits:  SequenceBits,
@@ -120,6 +121,10 @@ func (g *Generator) unpackState(state int64) (ms, seq int64) {
 //
 // 警告：同一进程内使用相同 nodeID 创建多个 Generator 实例会产生重复 ID，调用方负责保证 nodeID 全局唯一。
 func NewGeneratorWithLayout(nodeID int32, layout Layout) (*Generator, error) {
+	if layout.TimestampBits <= 0 || layout.NodeIDBits <= 0 || layout.SequenceBits <= 0 {
+		return nil, fmt.Errorf("snowflake: each of TimestampBits(%d), NodeIDBits(%d), SequenceBits(%d) must be > 0",
+			layout.TimestampBits, layout.NodeIDBits, layout.SequenceBits)
+	}
 	if layout.TimestampBits+layout.NodeIDBits+layout.SequenceBits != 63 {
 		return nil, fmt.Errorf("snowflake: TimestampBits(%d)+NodeIDBits(%d)+SequenceBits(%d) must equal 63",
 			layout.TimestampBits, layout.NodeIDBits, layout.SequenceBits)
@@ -147,7 +152,7 @@ func NewGeneratorWithLayout(nodeID int32, layout Layout) (*Generator, error) {
 //
 // 警告：同一进程内使用相同 nodeID 创建多个 Generator 实例会产生重复 ID，调用方负责保证 nodeID 全局唯一。
 func NewGenerator(nodeID int32) (*Generator, error) {
-	return NewGeneratorWithLayout(nodeID, DefaultLayout)
+	return NewGeneratorWithLayout(nodeID, defaultLayout)
 }
 
 // ---- Generator 核心方法 ----
