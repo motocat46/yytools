@@ -16,7 +16,7 @@
 
 // Package snowflake 提供无锁线程安全的雪花算法唯一 ID 生成器，专为游戏服务器设计。
 //
-// # 位布局（63位，符号位永远为0）
+// # 默认位布局（63位，符号位永远为0）
 //
 //	63                                              0
 //	+------------------------------------------+----------+-------------+
@@ -30,25 +30,29 @@
 //
 // # 典型使用流程
 //
-//  1. 启动时调用一次 Init，传入本节点唯一编号（0–1023）：
-//
-//     snowflake.Init(nodeID)
-//
-//  2. 之后任意位置调用 NewID() 获取唯一ID：
-//
-//     id := snowflake.NewID()
-//
-// # 多节点/测试场景
-//
-// 可直接构造 Generator 实例，适用于测试或需要多个生成器的场景：
-//
 //	g, err := snowflake.NewGenerator(nodeID)
-//	if err != nil { ... }
+//	if err != nil { panic(err) }
 //	id := g.NewID()
+//	parts := g.ParseID(id)
+//
+// # 自定义位布局
+//
+// 不同项目可能需要不同的位分配（如更多节点或更高序号上限）。通过 [Layout] 传入自定义布局：
+//
+//	layout := snowflake.Layout{
+//	    TimestampBits: 40,
+//	    NodeIDBits:    12,  // 最多 4096 个节点
+//	    SequenceBits:  11,  // 每毫秒每节点最多 2048 个 ID
+//	    Epoch:         snowflake.Epoch,
+//	}
+//	g, err := snowflake.NewGeneratorWithLayout(nodeID, layout)
+//
+// 约束：TimestampBits + NodeIDBits + SequenceBits 必须等于 63。
+// 自定义布局的 ID 须用 [Generator.ParseID] 解码，不能用包级 [ParseID]（后者固定使用默认布局）。
 //
 // # 解码调试
 //
-//	parts := snowflake.ParseID(id)
+//	parts := g.ParseID(id)
 //	// parts.Timestamp  距纪元毫秒数
 //	// parts.NodeID     节点ID
 //	// parts.Sequence   毫秒内序号
@@ -56,8 +60,7 @@
 //
 // # 错误处理
 //
-// 包级 [NewID] 通过 assert 检查 defaultGen 是否已初始化，assert 始终开启，未调用 Init 时
-// 会以清晰的错误信息 panic。[currentMillis] 的时钟越界检测同样 panic，始终有效。
+// [Generator.NewID] 中的 [currentMillis] 时钟越界检测会无条件 panic，始终有效。
 //
 // # Lua 5.1 注意事项
 //

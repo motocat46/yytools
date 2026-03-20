@@ -96,22 +96,18 @@ goroutine 将自旋约等于回拨幅度的时长。NTP 典型调整为毫秒级
 
 ---
 
-## 包级 defaultGen 与线程安全
+## 删除包级 API（Init / NewID / ParseID）
 
-`Init` 写入 `defaultGen`（普通指针），`NewID()` 读取，均无额外同步原语。
+**决策时间**：2026-03-20
 
-这依赖 Go 内存模型的 goroutine 创建 happens-before 保证：
+**原因**：
 
-```go
-// main goroutine
-snowflake.Init(nodeID)     // 写 defaultGen
-go worker()                // goroutine 创建是同步点
-// worker 内 NewID() 读 defaultGen，可见 Init 的写入
-```
+1. `Init` 维护隐式全局状态，`NewID()` 依赖这个状态，两者之间存在运行时顺序依赖，编译器无法发现问题。
+2. 引入 `Layout` 后，包级函数和 `NewGeneratorWithLayout` 并存，极易误用：使用自定义布局但忘记调用 `g.NewID()`，退而调用包级 `NewID()`，产生错误布局的 ID，且静默——这是典型的不可见 bug 温床。
+3. 包级 `ParseID` 硬绑定默认布局，与自定义布局生成的 ID 混用时静默返回错误字段，同理。
+4. 调用方只需 `NewGenerator(nodeID)` 或 `NewGeneratorWithLayout(nodeID, layout)` 即可，包级便捷函数的使用门槛优势不值得引入的风险。
 
-**不变量**：`Init` 必须在任何调用 `NewID()` 的 goroutine 启动之前完成。
-
-若需支持热重载（运行中更换 nodeID），应改用 `atomic.Pointer[Generator]`，当前版本不需要。
+**结果**：移除 `defaultGen`、`Init`、包级 `NewID`、包级 `ParseID`。统一入口为 `g.NewID()` / `g.ParseID(id)`。
 
 ---
 
@@ -137,3 +133,19 @@ go worker()                // goroutine 创建是同步点
 41 位时间戳的上限为 `MaxTimestamp = 2^41 - 1 = 2199023255551`，对应 2094 年。
 `currentMillis()` 同时检测下界（< 2025-01-01）和上界（> 2094），两者均无条件 panic，
 不允许静默产生符号位损坏的负数 ID。2094 年前需迁移至新纪元或扩展时间戳位数。
+
+---
+
+## 符号位（bit 63）不占用
+
+**决策**：时间戳固定 41 位，bit 63 永远为 0，不扩展为 42 位。
+
+**备选方案**：利用 bit 63 将时间戳扩展至 42 位，可用期延长至 2163 年（138 年）。
+
+**为什么不做**：
+
+1. **收益可忽略**：41 位从 2025 年起有效 69 年（到 2094）。42 位延长到 2163，超出任何软件实际生命周期，无实用价值。
+2. **跨系统一致性**：负数 ID 在下游系统易引发静默 bug——数据库索引排序异常、某些语言/框架 JSON 序列化行为不一致、调用方 `if id > 0` 防御判断误报。
+3. **免费有效性校验**：负数 ID 立即可判为非法，简化调试和异常检测。
+
+**结论**：保留 bit 63 = 0，以可读性和跨系统兼容性换取毫无实用价值的 69 年。

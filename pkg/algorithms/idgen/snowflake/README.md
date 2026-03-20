@@ -21,22 +21,21 @@
 ## 快速使用
 
 ```go
-// 启动时初始化一次（nodeID 为本节点唯一编号，0–1023）
-snowflake.Init(nodeID)
+g, err := snowflake.NewGenerator(nodeID) // nodeID 为本节点唯一编号，0–1023
+if err != nil { panic(err) }
 
-// 任意位置生成唯一 ID
-id := snowflake.NewID()
+id := g.NewID()
 
 // 调试：解码 ID 各字段
-parts := snowflake.ParseID(id)
+parts := g.ParseID(id)
 fmt.Println(parts.Timestamp, parts.NodeID, parts.Sequence, parts.Time)
 ```
 
-多节点/测试场景直接构造实例：
+自定义位布局（如更多节点或更高序号上限）：
 
 ```go
-g, err := snowflake.NewGenerator(nodeID)
-id := g.NewID()
+layout := snowflake.Layout{TimestampBits: 40, NodeIDBits: 12, SequenceBits: 11, Epoch: snowflake.Epoch}
+g, err := snowflake.NewGeneratorWithLayout(nodeID, layout)
 ```
 
 ## 运行测试

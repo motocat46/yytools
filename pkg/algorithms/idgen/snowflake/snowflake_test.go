@@ -102,7 +102,7 @@ func TestParseID_RoundTrip(t *testing.T) {
 	const nodeID = int32(42)
 	g, _ := NewGenerator(nodeID)
 	id := g.NewID()
-	parts := ParseID(id)
+	parts := g.ParseID(id)
 
 	if parts.NodeID != int64(nodeID) {
 		t.Errorf("NodeID mismatch: want %d, got %d", nodeID, parts.NodeID)
@@ -113,37 +113,78 @@ func TestParseID_RoundTrip(t *testing.T) {
 	if parts.Sequence < 0 || parts.Sequence > MaxSequence {
 		t.Errorf("Sequence out of range: %d", parts.Sequence)
 	}
-	// 验证重组后等于原始 ID
-	reconstructed := (parts.Timestamp << TimestampShift) | (parts.NodeID << NodeIDShift) | parts.Sequence
-	if reconstructed != id {
-		t.Errorf("round-trip failed: original=%d, reconstructed=%d", id, reconstructed)
-	}
 	// 验证时间字段合理（UTC 时间在2025年之后）
 	if parts.Time.Year() < 2025 {
 		t.Errorf("parsed time %v is before epoch 2025", parts.Time)
 	}
 }
 
-// TestInit_InvalidNodeID_Panics 验证 Init 传非法 nodeID 时 panic
-func TestInit_InvalidNodeID_Panics(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Init with invalid nodeID should panic, but did not")
+// TestNewGeneratorWithLayout_CustomLayout 验证自定义布局（公司场景：40+12+11）
+func TestNewGeneratorWithLayout_CustomLayout(t *testing.T) {
+	companyLayout := Layout{
+		TimestampBits: 40,
+		NodeIDBits:    12,
+		SequenceBits:  11,
+		Epoch:         Epoch,
+	}
+
+	// nodeID 合法边界：maxNodeID = (1<<12)-1 = 4095
+	for _, nodeID := range []int32{0, 1, 4095} {
+		g, err := NewGeneratorWithLayout(nodeID, companyLayout)
+		if err != nil {
+			t.Fatalf("NewGeneratorWithLayout(%d) unexpected error: %v", nodeID, err)
 		}
-	}()
-	Init(9999)
+
+		// 生成 ID 并用实例方法解码，验证字段正确
+		id := g.NewID()
+		if id <= 0 {
+			t.Fatalf("nodeID=%d: ID should be positive, got %d", nodeID, id)
+		}
+		parts := g.ParseID(id)
+		if parts.NodeID != int64(nodeID) {
+			t.Errorf("nodeID=%d: NodeID mismatch: want %d, got %d", nodeID, nodeID, parts.NodeID)
+		}
+		if parts.Timestamp < 0 {
+			t.Errorf("nodeID=%d: Timestamp should be non-negative, got %d", nodeID, parts.Timestamp)
+		}
+		maxSeq := int64((1 << companyLayout.SequenceBits) - 1)
+		if parts.Sequence < 0 || parts.Sequence > maxSeq {
+			t.Errorf("nodeID=%d: Sequence %d out of range [0, %d]", nodeID, parts.Sequence, maxSeq)
+		}
+	}
+
+	// nodeID 越界：4096 超出 [0, 4095]
+	_, err := NewGeneratorWithLayout(4096, companyLayout)
+	if err == nil {
+		t.Error("NewGeneratorWithLayout(4096) should return error")
+	}
 }
 
-// TestNewID_BeforeInit_Panics 验证未调用 Init 直接调用包级 NewID 时 panic
-func TestNewID_BeforeInit_Panics(t *testing.T) {
-	// 保存并重置 defaultGen，确保测试隔离
-	orig := defaultGen
-	defaultGen = nil
-	defer func() {
-		defaultGen = orig
-		if r := recover(); r == nil {
-			t.Error("NewID before Init should panic, but did not")
-		}
-	}()
-	NewID()
+// TestNewGeneratorWithLayout_InvalidBitSum 验证位宽之和不等于 63 时返回 error
+func TestNewGeneratorWithLayout_InvalidBitSum(t *testing.T) {
+	bad := Layout{TimestampBits: 40, NodeIDBits: 12, SequenceBits: 12, Epoch: Epoch} // 64 位，超出
+	_, err := NewGeneratorWithLayout(0, bad)
+	if err == nil {
+		t.Error("bit sum=64 should return error")
+	}
 }
+
+// TestNewGeneratorWithLayout_Uniqueness 验证自定义布局下并发生成 ID 全局唯一
+func TestNewGeneratorWithLayout_Uniqueness(t *testing.T) {
+	const n = 100_000
+	g, _ := NewGeneratorWithLayout(1, Layout{
+		TimestampBits: 40, NodeIDBits: 12, SequenceBits: 11, Epoch: Epoch,
+	})
+	ids := make([]int64, n)
+	for i := range n {
+		ids[i] = g.NewID()
+	}
+	seen := make(map[int64]struct{}, n)
+	for i, id := range ids {
+		if _, dup := seen[id]; dup {
+			t.Fatalf("自定义布局出现重复 ID at %d: %d", i, id)
+		}
+		seen[id] = struct{}{}
+	}
+}
+

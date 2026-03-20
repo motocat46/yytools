@@ -146,8 +146,8 @@ func TestStress_SequenceExhaustion(t *testing.T) {
 	g, _ := NewGenerator(2)
 	
 	// futureMs 确保 now <= oldMs 成立，第1次调用一定触发序号耗尽分支
-	futureMs := currentMillis() + 2
-	atomic.StoreInt64(&g.state, packState(futureMs, MaxSequence))
+	futureMs := g.currentMillis() + 2
+	atomic.StoreInt64(&g.state, g.packState(futureMs, MaxSequence))
 	
 	const n = 20
 	ids := make([]int64, n)
@@ -166,7 +166,7 @@ func TestStress_SequenceExhaustion(t *testing.T) {
 	
 	// 自旋等到 currentMillis() > futureMs 才返回，所有 ID 的 timestamp > futureMs
 	for i, id := range ids {
-		if ts := ParseID(id).Timestamp; ts <= futureMs {
+		if ts := g.ParseID(id).Timestamp; ts <= futureMs {
 			t.Errorf("ID[%d] timestamp=%d 应 > futureMs=%d（未正确跨越毫秒边界）", i, ts, futureMs)
 		}
 	}
@@ -196,7 +196,7 @@ func TestStress_BitFields_AllValid(t *testing.T) {
 			t.Fatalf("ID[%d]=%d 不是正 int64（符号位污染）", i, id)
 		}
 		
-		parts := ParseID(id)
+		parts := g.ParseID(id)
 		if parts.NodeID != int64(wantNodeID) {
 			t.Fatalf("ID[%d] NodeID 错误: want %d, got %d", i, wantNodeID, parts.NodeID)
 		}
@@ -234,8 +234,8 @@ func TestStress_ClockRollback_Simulation(t *testing.T) {
 	
 	// 模拟时钟回拨：将 lastMs 推到"未来" 500ms，sequence 置 0
 	// 等价于：系统时钟被调快 500ms 后调回，lastMs 记录了那个"未来"值
-	rollbackMs := currentMillis() + 500
-	atomic.StoreInt64(&g.state, packState(rollbackMs, 0))
+	rollbackMs := g.currentMillis() + 500
+	atomic.StoreInt64(&g.state, g.packState(rollbackMs, 0))
 	
 	// 在回拨区间生成 ID（now < rollbackMs，走回拨分支）
 	const n = 100
@@ -262,7 +262,7 @@ func TestStress_ClockRollback_Simulation(t *testing.T) {
 	
 	// timestamp 均等于 rollbackMs（100个 ID，sequence 1-100，同一毫秒内）
 	for i, id := range rollbackIDs {
-		if ts := ParseID(id).Timestamp; ts != rollbackMs {
+		if ts := g.ParseID(id).Timestamp; ts != rollbackMs {
 			t.Errorf("回拨 ID[%d] timestamp=%d，预期 rollbackMs=%d", i, ts, rollbackMs)
 		}
 	}
@@ -309,12 +309,12 @@ func TestStress_MultiNode_Isolation(t *testing.T) {
 	
 	// nodeID 字段正确编码
 	for i, id := range ids0 {
-		if nid := ParseID(id).NodeID; nid != 0 {
+		if nid := g0.ParseID(id).NodeID; nid != 0 {
 			t.Fatalf("g0 ID[%d] nodeID 错误: want 0, got %d", i, nid)
 		}
 	}
 	for i, id := range ids1 {
-		if nid := ParseID(id).NodeID; nid != 1023 {
+		if nid := g1.ParseID(id).NodeID; nid != 1023 {
 			t.Fatalf("g1023 ID[%d] nodeID 错误: want 1023, got %d", i, nid)
 		}
 	}
@@ -328,8 +328,8 @@ func TestStress_IDMonotonicity_AcrossMsBoundary(t *testing.T) {
 	g, _ := NewGenerator(3)
 	
 	// 等到新毫秒刚开始时再采样，确保必然覆盖至少2个毫秒边界
-	start := currentMillis()
-	for currentMillis() == start {
+	start := g.currentMillis()
+	for g.currentMillis() == start {
 	}
 	
 	deadline := time.Now().Add(3 * time.Millisecond)
@@ -482,6 +482,6 @@ func BenchmarkParseID(b *testing.B) {
 	g, _ := NewGenerator(1)
 	id := g.NewID()
 	for b.Loop() {
-		ParseID(id)
+		g.ParseID(id)
 	}
 }
