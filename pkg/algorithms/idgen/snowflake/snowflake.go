@@ -73,13 +73,10 @@ func currentMillis() int64 {
 	ms := time.Now().UnixMilli() - Epoch
 	if ms < 0 {
 		// 系统时钟早于纪元（2025-01-01），负数时间戳左移后会污染符号位，导致 ID 为负。
-		// 不用 assert.Assert：assert 可被 assertion_off build tag 关闭，
-		// 此处必须无条件 panic，不允许静默产生非法 ID。
 		panic(fmt.Sprintf("snowflake: system clock is before epoch 2025-01-01 (ms=%d)", ms))
 	}
 	if ms > MaxTimestamp {
 		// 时间戳超过 41 位上限（2094 年后），左移后会污染 nodeID 位并置位符号位，导致 ID 为负。
-		// 与下界检测对称，不允许静默产生非法 ID。
 		panic(fmt.Sprintf("snowflake: timestamp overflow, system clock is beyond 2094 (ms=%d, max=%d)", ms, MaxTimestamp))
 	}
 	return ms

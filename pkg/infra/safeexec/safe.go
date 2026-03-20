@@ -18,19 +18,19 @@
 package safeexec
 
 import (
-    "fmt"
-    "log"
-    "runtime/debug"
+	"fmt"
+	"log/slog"
+	"runtime/debug"
 )
 
-// Safe 是 SafeCall 的简便形式，tag 固定为 "anonymous"。
+// Safe 是 SafeExec 的简便形式，tag 固定为 "anonymous"。
 // 适用于不需要区分调用来源的临时或一次性场景。
-// 若需在日志中区分不同调用点，请改用 SafeCall 并传入有意义的 tag。
+// 若需在日志中区分不同调用点，请改用 SafeExec 并传入有意义的 tag。
 func Safe(f func()) {
-    SafeCall("anonymous", f)
+	SafeExec("anonymous", f)
 }
 
-// SafeCall 安全执行一个无参数、无返回值的函数。
+// SafeExec 安全执行一个无参数、无返回值的函数。
 //
 // 设计目标：将 panic 的传播边界限制在本函数内，保障调用方所在的主流程不受影响。
 // 适用场景：独立的业务单元（如为单个玩家发奖、执行定时任务、处理外部回调），
@@ -40,26 +40,31 @@ func Safe(f func()) {
 //   - tag：调用方标识，用于日志定位，建议传入能反映业务语义的常量字符串，如 "giveReward"。
 //   - f：待执行的函数。若为 nil，记录日志后直接返回，不会 panic。
 //
-// panic 处理：捕获 f 执行期间的任何 panic，将 panic 值和完整调用栈记录到日志，
+// panic 处理：捕获 f 执行期间的任何 panic，将 panic 值和完整调用栈写入 slog.Default()，
 // 然后正常返回，调用方无感知。
-func SafeCall(tag string, f func()) {
-    if f == nil {
-        log.Printf("[safeexec] %s: f is nil", tag)
-        return
-    }
-    defer func() {
-        if r := recover(); r != nil {
-            log.Printf("[safeexec] panic in %s: %v\n%s", tag, r, debug.Stack())
-        }
-    }()
-    f()
+// 日志输出目标由应用层通过 slog.SetDefault() 配置，默认写入 stderr。
+func SafeExec(tag string, f func()) {
+	if f == nil {
+		slog.Warn("[safeexec] f is nil", slog.String("tag", tag))
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("[safeexec] panic",
+				slog.String("tag", tag),
+				slog.Any("panic", r),
+				slog.String("stack", string(debug.Stack())),
+			)
+		}
+	}()
+	f()
 }
 
-// SafeExecWithError 安全执行一个返回 error 的函数。
+// SafeExecErr 安全执行一个返回 error 的函数。
 //
 // 设计目标：将 panic 的传播边界限制在本函数内，同时保留 f 的正常 error 返回语义。
 // 适用场景：需要区分"业务错误"与"意外崩溃"的调用点。f 返回的业务 error 原样透传给调用方；
-// 若发生 panic，则将其包装为 error 返回，同时记录 panic 值和完整调用栈到日志。
+// 若发生 panic，则将其包装为 error 返回。
 //
 // 参数：
 //   - tag：调用方标识，用于日志定位，建议传入能反映业务语义的常量字符串。
@@ -67,21 +72,21 @@ func SafeCall(tag string, f func()) {
 //
 // 返回值：
 //   - f 正常执行：返回 f 的原始 error（可能为 nil）。
-//   - f 发生 panic：返回包含 tag 和 panic 值的 error，并记录调用栈日志。
-func SafeExecWithError(tag string, f func() error) (err error) {
-    if f == nil {
-        return fmt.Errorf("[safeexec] %s: f is nil", tag)
-    }
-    defer func() {
-        if r := recover(); r != nil {
-            err = fmt.Errorf("panic in %s: %v", tag, r)
-            log.Printf("[safeexec] panic in %s: %v\n%s", tag, r, debug.Stack())
-        }
-    }()
-    return f()
+//   - f 发生 panic：返回包含 tag、panic 值和完整调用栈的 error，不额外打日志。
+//     调用方从 error 中获取完整信息，自行决定如何记录（可附加 request ID 等业务上下文）。
+func SafeExecErr(tag string, f func() error) (err error) {
+	if f == nil {
+		return fmt.Errorf("[safeexec] %s: f is nil", tag)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("[safeexec] panic in %s: %v\n%s", tag, r, debug.Stack())
+		}
+	}()
+	return f()
 }
 
-// SafeExecResult 安全执行一个带返回值的函数。
+// SafeExecVal 安全执行一个带返回值的函数。
 //
 // 设计目标：将 panic 的传播边界限制在本函数内，同时保留 f 的返回值语义。
 // 适用场景：需要获取 f 执行结果，同时防止 panic 向上传播的调用点。
@@ -92,19 +97,18 @@ func SafeExecWithError(tag string, f func() error) (err error) {
 //
 // 返回值：
 //   - f 正常执行：返回 f 的结果和 nil error。
-//   - f 发生 panic：返回 T 的零值和包含 tag、panic 值的 error，并记录调用栈日志。
+//   - f 发生 panic：返回 T 的零值和包含 tag、panic 值和完整调用栈的 error，不额外打日志。
 //     调用方收到非 nil error 时，不应使用返回的零值 res。
-func SafeExecResult[T any](tag string, f func() T) (res T, err error) {
-    if f == nil {
-        err = fmt.Errorf("[safeexec] %s: f is nil", tag)
-        return
-    }
-    defer func() {
-        if r := recover(); r != nil {
-            err = fmt.Errorf("panic in %s: %v", tag, r)
-            log.Printf("[safeexec] panic in %s: %v\n%s", tag, r, debug.Stack())
-        }
-    }()
-    res = f()
-    return
+func SafeExecVal[T any](tag string, f func() T) (res T, err error) {
+	if f == nil {
+		err = fmt.Errorf("[safeexec] %s: f is nil", tag)
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("[safeexec] panic in %s: %v\n%s", tag, r, debug.Stack())
+		}
+	}()
+	res = f()
+	return
 }

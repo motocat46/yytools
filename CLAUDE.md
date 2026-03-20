@@ -133,9 +133,10 @@ item := stack.Pop()
 
 ### Assertion System
 - All code uses the custom assertion framework in `pkg/common/assert/`
-- Assertions can be enabled/disabled globally via `assert.SetAssert(bool)`
-- Use `assert.Assert(condition, message...)` for conditional assertions
+- Assertions are always enabled and cannot be disabled
+- Use `assert.Assert(condition, message...)` for contract violations (caller bug)
 - Use `assert.AssertFast(condition)` for simple boolean checks
+- Use unconditional `panic(...)` for runtime boundary protection (e.g. timestamp overflow, type range exceeded)
 
 ### Code Conventions
 - Generic implementations use type constraints from `pkg/common/base/`

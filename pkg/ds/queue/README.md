@@ -63,6 +63,6 @@ q.Range(func(v int) {
 
 ## 注意事项
 
-- `Dequeue()` 不检查空队列，调用前需确保 `!Empty()` 或 `Len() > 0`
-- `Peek()` 空队列时触发 panic
+- `Dequeue()` 和 `Peek()` 空队列时均触发 panic；调用前须先用 `Empty()` 检查
+- 泛型 T 的零值无法区分"无数据"和"真实零值元素"，因此不返回零值而是 panic
 - 非并发安全，多 goroutine 使用时需自行加锁

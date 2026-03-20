@@ -23,13 +23,19 @@ import (
 	"time"
 )
 
-// 检测路径是否存在
+// IsFileExist 检测路径是否存在。
+//   - 路径存在：返回 (true, nil)
+//   - 路径不存在：返回 (false, nil)——不存在是正常情况，不是错误
+//   - 权限不足等系统错误：返回 (false, err)
 func IsFileExist(file string) (bool, error) {
-	ok, err := IsFileNormalStat(file)
-	if ok {
-		return ok, err
+	_, err := os.Stat(file)
+	if err == nil {
+		return true, nil
 	}
-	return os.IsExist(err), err
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 func IsFileNormalStat(file string) (bool, error) {

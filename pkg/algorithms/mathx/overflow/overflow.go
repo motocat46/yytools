@@ -51,14 +51,19 @@ func MulInt[T base.Signed](a, b T) (T, bool) {
 	sign := (a ^ b) < 0
 	minT := T(1) << (bits - 1) // 补码：T(1)<<(bits-1) 即为 MinT
 	maxT := ^minT
-	if sign { // 异号（一负一正），结果一定是负数
-		if a < 0 && a < minT/b { // b > 0
+	if sign { // 异号（一正一负），结果为负数，检查是否低于 MinT
+		// a < 0, b > 0: a*b < MinT 等价于 a < MinT/b（b > 0，除法方向不变）
+		if a < 0 && a < minT/b {
 			return res, true
 		}
-		if a > 0 && b < minT/a { // b < 0
+		// a > 0, b < 0: a*b < MinT 等价于 b < MinT/a（a > 0，除法方向不变）
+		if a > 0 && b < minT/a {
 			return res, true
 		}
-	} else { // 同号（都为正，或都为负），结果一定是正数
+	} else { // 同号（都为正或都为负），结果为正数，检查是否超出 MaxT
+		// 用 MaxT/b 作为 a 的上界：若 |a| > MaxT/|b|，则 |a*b| > MaxT
+		// 都为正：limit = MaxT/b > 0，a > limit 则溢出
+		// 都为负：limit = MaxT/b < 0（b < 0），a < limit（|a| 更大）则溢出
 		limit := maxT / b
 		if a < 0 && a < limit {
 			return res, true
@@ -84,9 +89,8 @@ func DivInt[T base.Signed](a, b T) (T, bool) {
 	// 本身go语言会在除以0时，调用panic，这里不再判断
 	bits := uint(unsafe.Sizeof(a)) * 8
 	minT := T(1) << (bits - 1) // 补码规则：T(1)<<(bits-1) 即为 MinT
-	// 负数除以负数应该是正数，但实际a/b的结果仍然是a本身
-	// 因为正数最大值比负数最小值的绝对值小1
-	// 根据补码规则，得到的结果仍然是a，实际上就是溢出了
+	// 整数除法唯一的溢出情形：MinT / -1
+	// 数学结果 |MinT| = MaxT+1，超出正数范围，补码运算回绕，CPU 实际返回 MinT 本身
 	if a == minT && b == -1 {
 		return a, true
 	}

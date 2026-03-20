@@ -38,4 +38,4 @@ bits.CountingBits(0)   // 0
 
 - `AreSignsOpposite`：利用异或最高位（符号位），异或结果 < 0 则符号相反
 - `IsPowerOfTwo`：`a & (a-1)` 清除最低有效位，2 的幂只有一个 1，结果必为 0
-- `CountingBits`：Brian Kernighan 算法，每次 `a &= a-1` 清除一个 1，循环次数等于 1 的个数
+- `CountingBits`：Brian Kernighan 算法，每次 `a &= a-1` 清除一个 1，循环次数等于 1 的个数。负数输入时统计补码中所有 1-bit（含符号位），例如 `int8(-1)` 返回 8

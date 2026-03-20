@@ -31,7 +31,6 @@ import (
 	benchsort "github.com/motocat46/yytools/internal/bench/sort"
 	benchsortedset "github.com/motocat46/yytools/internal/bench/sorted_set"
 	benchstack "github.com/motocat46/yytools/internal/bench/stack"
-	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 // benchCmd 描述一个 bench 子命令
@@ -63,8 +62,6 @@ func parseNum(args []string) int {
 }
 
 func main() {
-	assert.SetAssert(true)
-
 	rootCmd := &cobra.Command{
 		Use:   "yytools",
 		Short: "yytools demo — 算法与数据结构演示",

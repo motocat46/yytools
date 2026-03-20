@@ -7,7 +7,8 @@
       "Bash(go test:*)",
       "Bash(go list:*)",
       "Bash(__NEW_LINE_85b8769aff24f07f__ echo:*)",
-      "Bash(go:*)"
+      "Bash(go:*)",
+      "Bash(wait)"
     ],
     "deny": []
   }

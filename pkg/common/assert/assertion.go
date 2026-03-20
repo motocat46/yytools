@@ -18,55 +18,23 @@
 
 package assert
 
-import (
-	"fmt"
-	"runtime"
-	"strconv"
-	"strings"
-)
+import "fmt"
 
-func SetAssert(open bool) {
-	isAssertOpen = open
-}
-
-func IsAssertOpen() bool {
-	return isAssertOpen
-}
-
-// 获取断言调用者的文件名和行号。
-// 调用链固定为：getPrefix → Assert/AssertFast → 调用方，因此 skip=2。
-// Assert 设计为直接调用，不应被包装——包装会导致行号指向包装层而非真实调用处。
-func getPrefix() string {
-	_, file, line, _ := runtime.Caller(2)
-
-	// 这里使用strings.Builder手动拼接字符串效率更高
-	prefixBuilder := strings.Builder{}
-	prefixBuilder.WriteString("assertion failed at ")
-	prefixBuilder.WriteString(file)
-	prefixBuilder.WriteRune(':')
-	prefixBuilder.WriteString(strconv.Itoa(line))
-	return prefixBuilder.String()
-}
-
-// 断言
-// 当断言失败时，调用panic
+// Assert 断言条件为真，否则 panic。
+// 用于表达"绝不应该出现的情况"——触发即意味着调用方存在 bug，需在开发期修复。
+// 不可关闭，始终生效。
 func Assert(condition bool, list ...interface{}) {
-	if isAssertOpen && !condition {
-		prefix := getPrefix()
+	if !condition {
 		if len(list) == 0 {
-			panic(prefix)
+			panic("assertion failed")
 		}
-		// 1.使用Builder拼接字符串效率更高，但是不方便;list传入的参数类型是不确定的，手动处理很麻烦。
-		// 又因只有断言失败才会执行，这里直接使用fmt.Sprint(list...)来处理
-		// 2.展开list参数，拥有更好的打印格式
-		panic(fmt.Sprintf("%s - %s", prefix, fmt.Sprint(list...)))
+		panic(fmt.Sprintf("assertion failed - %s", fmt.Sprint(list...)))
 	}
 }
 
-// 快速断言，不传入参数
+// AssertFast 快速断言，不附带额外信息。
 func AssertFast(cond bool) {
-	if isAssertOpen && !cond {
-		prefix := getPrefix()
-		panic(prefix)
+	if !cond {
+		panic("assertion failed")
 	}
 }

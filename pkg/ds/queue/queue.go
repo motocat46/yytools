@@ -83,7 +83,8 @@ func (this *Queue[T]) Len() int {
 
 // Head和Tail指向同一个位置就说明队列是空的
 func (this *Queue[T]) Empty() bool {
-	// assert.Assert(this.Length == 0)
+	// 内部不变量：Length 必须与 Head/Tail 的几何计算结果始终一致
+	assert.Assert(this.calcLen() == this.Length, "队列内部状态不一致: Length 与 Head/Tail 计算值矛盾")
 	return this.Head == this.Tail
 }
 
@@ -164,11 +165,8 @@ func (this *Queue[T]) tryShrink() {
 	// 尽可能避免频繁扩容、缩容
 	threshold := this.Capacity() / 4
 	if this.Len() < threshold {
-		// 缩容（一半）
-		newCapacity := this.Capacity() / 2
-		if newCapacity < DEFAULT_QUEUE_SIZE {
-			newCapacity = DEFAULT_QUEUE_SIZE
-		}
+		// 缩容（一半），但不低于默认容量
+		newCapacity := max(this.Capacity()/2, DEFAULT_QUEUE_SIZE)
 		// 队列中最大元素数量是capacity-1
 		assert.Assert(this.Len() < newCapacity, "缩容后必须要保证元素都能放得下!", this.Len(), ",", newCapacity)
 		this.resize(newCapacity)
@@ -199,9 +197,7 @@ func (this *Queue[T]) Dequeue() T {
 // 需要调用者保证(可以调用Empty()判断)，队列里还有元素可以查看
 // 队列为空时 panic；调用前应先检查 Empty()
 func (this *Queue[T]) Peek() T {
-	if this.Empty() {
-		panic("queue is empty")
-	}
+	assert.Assert(!this.Empty(), "队列空了，无法查看队首元素!")
 	return this.Items[this.Head]
 }
 

@@ -262,5 +262,5 @@ BenchmarkSortedSet_Mixed/n=1000000  	    33601	  82511 ns/op	235549 B/op	 6 allo
 
 ## 注意事项
 
-- `assert` 断言**默认开启**（build tag `assertion_off` 可关闭），合约违反（如 `GetByRank(0)`）会 panic
+- `assert` 断言**始终开启**，合约违反（如 `GetByRank(0)`）会 panic
 - 并发安全性不在单元测试范围内，如需验证请使用 `-race` 标志

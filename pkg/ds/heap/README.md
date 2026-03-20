@@ -82,6 +82,6 @@ pq.PopItem() // {normal, 20}
 ## 注意事项
 
 - **不要直接调用 `Push`/`Pop`**，这是实现 `container/heap` 接口的内部方法；使用 `PushItem`/`PopItem`
-- `PeekItem` 在空堆时会 panic（index out of range）
+- `PeekItem` / `PopItem` 在空堆时返回 `nil`，不 panic；调用前无需检查是否为空
 - `UpdatePriority` 要求元素当前**在队列中**，否则触发断言 panic
 - 非并发安全，多 goroutine 使用时需自行加锁

@@ -54,11 +54,10 @@
 //	// parts.Sequence   毫秒内序号
 //	// parts.Time       对应的 UTC 绝对时间
 //
-// # 关闭 assert 时的注意事项
+// # 错误处理
 //
-// 生产环境若使用 `-tags assertion_off` 关闭断言，包级 [NewID] 对 defaultGen 的 nil 检查
-// 将退化为 nil pointer dereference panic（行为等价，但错误信息不同）。
-// [currentMillis] 的时钟越界检测使用无条件 panic，不受 assertion_off 影响，始终有效。
+// 包级 [NewID] 通过 assert 检查 defaultGen 是否已初始化，assert 始终开启，未调用 Init 时
+// 会以清晰的错误信息 panic。[currentMillis] 的时钟越界检测同样 panic，始终有效。
 //
 // # Lua 5.1 注意事项
 //

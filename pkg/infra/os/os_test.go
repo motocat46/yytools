@@ -58,6 +58,9 @@ func TestIsFileExist(t *testing.T) {
 					t.Errorf("IsFileExist(%q) = %t, 期望 true", tt.filePath, exists)
 				}
 			} else {
+				if err != nil {
+					t.Errorf("IsFileExist(%q) 文件不存在时不应返回错误, 实际: %v", tt.filePath, err)
+				}
 				if exists {
 					t.Errorf("IsFileExist(%q) = %t, 期望 false", tt.filePath, exists)
 				}
