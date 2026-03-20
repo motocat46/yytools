@@ -15,10 +15,12 @@ go test ./... -race -short
 ### 打 tag / 上线前完整验证
 
 ```bash
-go test ./... -race
+go test ./... -race -count=1
 ```
 
-去掉 `-short`，运行全部测试，包括大规模压测。各包完整耗时见对应 `TEST.md`。
+- 去掉 `-short`，运行全部测试，包括大规模压测
+- **`-count=1` 强制禁用缓存**，确保每个测试真实执行，见下方说明
+- 各包完整耗时见对应 `TEST.md`
 
 ### 只跑某个包
 
@@ -52,6 +54,29 @@ go test ./... -race -short -failfast
 ```
 
 `-failfast`：遇到第一个失败立即终止，适合 CI 快速反馈。
+
+---
+
+## 测试缓存
+
+Go 会缓存测试结果：测试代码和被测代码均未变化时，直接复用上次结果，输出 `(cached)`，**不重新执行**。
+
+```
+ok  github.com/motocat46/yytools/pkg/ds/sorted_set  (cached)
+```
+
+**禁用缓存的方式：**
+
+```bash
+# 方式一：-count=1（官方推荐，语义明确）
+go test ./... -race -count=1
+
+# 方式二：清空全局缓存
+go clean -testcache
+```
+
+**打 tag 前必须用 `-count=1`**，原因：缓存只看代码哈希，不感知外部状态（系统时间、环境变量、文件系统）。
+代码没变但环境变了的情况下，缓存会掩盖真实问题。
 
 ---
 
