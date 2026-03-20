@@ -19,9 +19,19 @@ package safeexec
 
 import (
 	"errors"
+	"io"
+	"log/slog"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	// 测试期间静默 slog：panic 恢复写日志是预期行为，不应污染测试输出。
+	// 本包的测试只验证 panic 捕获和返回值语义，不断言日志内容。
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	os.Exit(m.Run())
+}
 
 func TestSafe(t *testing.T) {
 	t.Run("正常执行", func(t *testing.T) {
