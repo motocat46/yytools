@@ -20,6 +20,14 @@
 | `pkg/algorithms/sort` | [example_test.go](../pkg/algorithms/sort/example_test.go) | QuickSort、CountingSort、QuickSortDesc |
 | `pkg/algorithms/idgen/snowflake` | [example_test.go](../pkg/algorithms/idgen/snowflake/example_test.go) | 标准布局生成 ID、自定义位布局 |
 
+### 算法工具
+
+| 包 | 示例文件 | 示例函数 |
+|----|---------|---------|
+| `pkg/algorithms/binary_search` | [example_test.go](../pkg/algorithms/binary_search/example_test.go) | 精确查找、LeftBound、RightBound、SearchBound |
+| `pkg/algorithms/mathx/probability_distribution` | [example_test.go](../pkg/algorithms/mathx/probability_distribution/example_test.go) | CalcIndexByWeight、NormalMethod、VoseAliasMethod、ProbFactory |
+| `pkg/slicex` | [example_test.go](../pkg/slicex/example_test.go) | MinInSlice、MaxInSlice、MinBy、MaxBy、空切片安全版 |
+
 ### 基础设施
 
 | 包 | 示例文件 | 示例函数 |

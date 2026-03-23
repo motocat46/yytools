@@ -1,5 +1,7 @@
 # yytools
 
+[![CI](https://github.com/motocat46/yytools/actions/workflows/ci.yml/badge.svg)](https://github.com/motocat46/yytools/actions/workflows/ci.yml)
+
 yytools 的 API 必须可预测、可搜索、可扩展；宁可少也要稳定。
 
 提供算法、数据结构和常用工具方法，方便日常开发使用。
