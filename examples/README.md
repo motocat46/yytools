@@ -10,6 +10,15 @@
 |----|---------|---------|
 | `pkg/ds/sorted_set` | [example_test.go](../pkg/ds/sorted_set/example_test.go) | 游戏积分排行榜、积分更新后排名调整 |
 | `pkg/ds/heap` | [example_test.go](../pkg/ds/heap/example_test.go) | 最小堆按权重出堆、优先级队列动态更新 |
+| `pkg/ds/queue` | [example_test.go](../pkg/ds/queue/example_test.go) | FIFO 基本用法、Range 非消费遍历 |
+| `pkg/ds/stack` | [example_test.go](../pkg/ds/stack/example_test.go) | LIFO 基本用法、Top 查看栈顶 |
+
+### 算法
+
+| 包 | 示例文件 | 示例函数 |
+|----|---------|---------|
+| `pkg/algorithms/sort` | [example_test.go](../pkg/algorithms/sort/example_test.go) | QuickSort、CountingSort、QuickSortDesc |
+| `pkg/algorithms/idgen/snowflake` | [example_test.go](../pkg/algorithms/idgen/snowflake/example_test.go) | 标准布局生成 ID、自定义位布局 |
 
 ### 基础设施
 
