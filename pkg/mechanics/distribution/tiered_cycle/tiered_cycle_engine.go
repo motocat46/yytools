@@ -85,14 +85,8 @@ type Engine struct {
 	special  SpecialLayer
 }
 
-// TODO
-// 默认入口 New(cfg)：Config 固定（方便多数场景）
-// 目前New由固定的配置决定分层的规则
-// 假如有多个标准层的随机规则，要制定某一个规则（这就是工厂模式了），就无法再用Config控制
-// 如果后续有每层规则变化的情况，可以考虑单独构造Engine，独立设置每一层的结构体
-// Engine只暴露:Init()\Next()\NextAutoRest()\Reset()4个方法
-// 暂不过度设计
-// 保留了扩展的能力,如果确实需要为使用者提供独立可替换的Layer再考虑提供EngineV2
+// New 根据配置创建 Engine。Config 固定两层结构，覆盖多数使用场景。
+// 如未来需要可插拔 Layer，参见 tiered_cycle_design.md §六"未来演进策略"。
 func New(cfg Config) (*Engine, error) {
 	if cfg.CycleLen <= 0 {
 		return nil, fmt.Errorf("CycleLen must be > 0, got %d", cfg.CycleLen)

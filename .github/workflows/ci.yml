@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "运行完整测试（不跳过慢速测试，-count=1）"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # 日常快速验证：竞态检测 + 跳过慢速测试
+      - name: Test (fast)
+        if: ${{ inputs.full != 'true' }}
+        run: go test -race -short ./...
+
+      # 手动触发完整验证：关闭测试缓存，不跳过任何测试
+      - name: Test (full)
+        if: ${{ inputs.full == 'true' }}
+        run: go test -race -count=1 ./...
+        timeout-minutes: 30

@@ -42,7 +42,7 @@ yytools/
 │   │   ├── safeexec/          # panic 安全执行（Safe、SafeCall 等）
 │   │   └── timeutil/          # 时间工具函数
 │   ├── common/
-│   │   ├── assert/            # 运行时断言框架（可全局开关）
+│   │   ├── assert/            # 运行时断言框架（始终启用，正向条件语法糖）
 │   │   └── base/              # 泛型类型约束（Integer、Ordered 等）
 │   ├── numconst/              # 数字和时间常量（时间单位等）
 │   ├── mechanics/             # 规则机制（分布策略、调度策略等）
@@ -101,7 +101,7 @@ go run ./cmd/demo http            # 启动排序性能可视化服务
 - 泛型实现使用 `pkg/common/base` 中的类型约束
 - 代码注释使用中文
 - 所有文件包含 Apache 2.0 License 头
-- 使用 `assert.Assert` 做运行时契约检查，生产环境可关闭
+- 使用 `assert.Assert` 做运行时契约检查，始终启用（正向条件语法糖，见 `pkg/common/assert/DESIGN.md`）
 
 ## 文档参考
 
