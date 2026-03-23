@@ -25,7 +25,12 @@
 | 包 | 示例文件 | 示例函数 |
 |----|---------|---------|
 | `pkg/algorithms/binary_search` | [example_test.go](../pkg/algorithms/binary_search/example_test.go) | 精确查找、LeftBound、RightBound、SearchBound |
+| `pkg/algorithms/mathx` | [example_test.go](../pkg/algorithms/mathx/example_test.go) | Gcd、Abs、FibN、FibNMax、Fibonacci.Calculate |
+| `pkg/algorithms/mathx/bits` | [example_test.go](../pkg/algorithms/mathx/bits/example_test.go) | AreSignsOpposite、IsPowerOfTwo、CountingBits |
+| `pkg/algorithms/mathx/overflow` | [example_test.go](../pkg/algorithms/mathx/overflow/example_test.go) | MulInt、MulIntAssert、DivInt、AddInt |
 | `pkg/algorithms/mathx/probability_distribution` | [example_test.go](../pkg/algorithms/mathx/probability_distribution/example_test.go) | CalcIndexByWeight、NormalMethod、VoseAliasMethod、ProbFactory |
+| `pkg/algorithms/mathx/random` | [example_test.go](../pkg/algorithms/mathx/random/example_test.go) | RandInt、RandIntWith、NewRand |
+| `pkg/algorithms/mathx/sampling` | [example_test.go](../pkg/algorithms/mathx/sampling/example_test.go) | SampleKDistinctFloyd、SampleWithMinGap |
 | `pkg/slicex` | [example_test.go](../pkg/slicex/example_test.go) | MinInSlice、MaxInSlice、MinBy、MaxBy、空切片安全版 |
 
 ### 基础设施
@@ -33,6 +38,8 @@
 | 包 | 示例文件 | 示例函数 |
 |----|---------|---------|
 | `pkg/infra/safeexec` | [example_test.go](../pkg/infra/safeexec/example_test.go) | panic 恢复、panic 转 error |
+| `pkg/infra/os` | [example_test.go](../pkg/infra/os/example_test.go) | IsFileExist、BackupFile |
+| `pkg/infra/timeutil` | [example_test.go](../pkg/infra/timeutil/example_test.go) | ParseDuration（'d' 天单位扩展）|
 | `pkg/infra/concurrency/unbounded_channel` | [example_test.go](../pkg/infra/concurrency/unbounded_channel/example_test.go) | 生产者消费者、select 用法、背压演示 |
 
 ### 规则机制
