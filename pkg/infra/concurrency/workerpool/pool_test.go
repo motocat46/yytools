@@ -16,6 +16,8 @@ package workerpool_test
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -26,6 +28,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	// 静默 slog 输出：测试只验证行为，不断言日志内容
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	goleak.VerifyTestMain(m)
 }
 
