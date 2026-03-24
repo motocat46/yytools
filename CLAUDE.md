@@ -144,6 +144,19 @@ item := stack.Pop()
 - Apache 2.0 license header in all files
 - Flat package structure: no `concrete/generic` intermediate directories except where both truly exist
 
+### 复用优先：实现前先搜索
+
+内联实现工具代码前，先确认以下包是否已有现成实现：
+
+| 需求 | 检查位置 |
+|------|---------|
+| panic 恢复 / 安全执行 | `pkg/infra/safeexec/` |
+| 运行时断言 | `pkg/common/assert/` |
+| 时间解析 / 工具 | `pkg/infra/timeutil/` |
+| 数值 / 时间常量 | `pkg/numconst/` |
+
+重复实现已有功能不可接受：维护成本翻倍，且两份实现容易产生语义分歧。
+
 ### Performance Considerations
 - Sorting algorithms include performance comparison with Go's standard library
 - Use `cmd/demo/graph.go` for performance visualization at `http://localhost:8081`
