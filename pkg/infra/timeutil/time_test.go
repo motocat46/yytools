@@ -47,6 +47,15 @@ func TestParseDuration(t *testing.T) {
 		{"天数加标准格式 - 负数", "-1d30m", -24*time.Hour - 30*time.Minute, false},
 		{"标准格式加天数", "1d30m", 24*time.Hour + 30*time.Minute, false},
 
+		// 小数天数（Bug 2 修复验证）
+		{"小数天数", "1.5d", 36 * time.Hour, false},
+		{"小数天数加时间", "0.5d1h", 13 * time.Hour, false},
+		{"负数小数天", "-1.5d", -36 * time.Hour, false},
+		{"负数小数天加时间", "-1.5d30m", -36*time.Hour - 30*time.Minute, false},
+
+		// 负零天数（Bug 1 修复验证）
+		{"负零天加时间", "-0d30m", -30 * time.Minute, false},
+
 		// 错误测试用例
 		{"无效格式", "invalid", 0, true},
 		{"无效天数", "ad", 0, true},

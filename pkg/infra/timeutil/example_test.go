@@ -37,9 +37,17 @@ func ExampleParseDuration() {
 	d, _ = timeutil.ParseDuration("0")
 	fmt.Println(d) // 0s
 
+	// 小数天数（1.5 天 = 36 小时）
+	d, _ = timeutil.ParseDuration("1.5d")
+	fmt.Println(d) // 36h0m0s
+
 	// 负数天（向前推 1 天）
 	d, _ = timeutil.ParseDuration("-1d")
 	fmt.Println(d) // -24h0m0s
+
+	// 负零天（-0d30m 应得 -30m）
+	d, _ = timeutil.ParseDuration("-0d30m")
+	fmt.Println(d) // -30m0s
 
 	// 不含 'd'，直接委托给标准库
 	d, _ = timeutil.ParseDuration("1h30m")
@@ -49,6 +57,8 @@ func ExampleParseDuration() {
 	// 51h0m0s
 	// 24h30m0s
 	// 0s
+	// 36h0m0s
 	// -24h0m0s
+	// -30m0s
 	// 1h30m0s
 }
