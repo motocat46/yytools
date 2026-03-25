@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -97,7 +98,8 @@ func TestWorkerPool_Workers1_QueueSize0(t *testing.T) {
 	}
 }
 
-func TestWorkerPool_集成_无遗漏无重复(t *testing.T) {
+// TestWorkerPool_Integration_Sequential 单调用方顺序提交，验证基本正确性。
+func TestWorkerPool_Integration_Sequential(t *testing.T) {
 	const n = 100_000
 	pool := workerpool.NewWorkerPool(8, 1000)
 	defer pool.Close()
@@ -108,13 +110,43 @@ func TestWorkerPool_集成_无遗漏无重复(t *testing.T) {
 	}
 	pool.Wait()
 	if count.Load() != n {
-		t.Errorf("执行数 = %d, 期望 %d", count.Load(), n)
+		t.Errorf("执行数 = %d，期望 %d", count.Load(), n)
 	}
 }
 
-func TestWorkerPool_压力_百万任务(t *testing.T) {
+// TestWorkerPool_Integration_Concurrent 多调用方并发提交，验证并发场景下无遗漏无重复。
+// 单调用方测试无法触发 Submit 内的锁竞争路径，此测试为并发原语的必要覆盖。
+func TestWorkerPool_Integration_Concurrent(t *testing.T) {
+	const (
+		callers   = 20
+		perCaller = 5_000
+		total     = callers * perCaller
+	)
+	pool := workerpool.NewWorkerPool(8, 1000)
+	defer pool.Close()
+
+	var wg sync.WaitGroup
+	var count atomic.Int64
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range perCaller {
+				_ = pool.Submit(context.Background(), func() { count.Add(1) })
+			}
+		}()
+	}
+	wg.Wait()
+	pool.Wait()
+	if got := count.Load(); got != total {
+		t.Errorf("执行数 = %d，期望 %d（%d 个调用方 × %d）", got, total, callers, perCaller)
+	}
+}
+
+// TestWorkerPool_Stress_Sequential 单调用方百万任务压力测试。
+func TestWorkerPool_Stress_Sequential(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过百万级压力测试")
+		t.Skip("跳过压力测试")
 	}
 	const n = 1_000_000
 	pool := workerpool.NewWorkerPool(16, 10000)
@@ -126,10 +158,42 @@ func TestWorkerPool_压力_百万任务(t *testing.T) {
 	}
 	pool.Wait()
 	if count.Load() != n {
-		t.Errorf("执行数 = %d, 期望 %d", count.Load(), n)
+		t.Errorf("执行数 = %d，期望 %d", count.Load(), n)
 	}
 }
 
+// TestWorkerPool_Stress_Concurrent 多调用方并发百万任务压力测试。
+// 验证高并发提交下正确性不退化。
+func TestWorkerPool_Stress_Concurrent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过并发压力测试")
+	}
+	const (
+		callers   = 50
+		perCaller = 20_000 // 总量 = 1,000,000
+	)
+	pool := workerpool.NewWorkerPool(16, 10000)
+	defer pool.Close()
+
+	var wg sync.WaitGroup
+	var count atomic.Int64
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range perCaller {
+				_ = pool.Submit(context.Background(), func() { count.Add(1) })
+			}
+		}()
+	}
+	wg.Wait()
+	pool.Wait()
+	if got := count.Load(); got != callers*perCaller {
+		t.Errorf("执行数 = %d，期望 %d（%d 个调用方 × %d）", got, callers*perCaller, callers, perCaller)
+	}
+}
+
+// BenchmarkWorkerPool_Submit 单 goroutine 顺序提交，测量无竞争下的基线吞吐。
 func BenchmarkWorkerPool_Submit(b *testing.B) {
 	for _, workers := range []int{1, 10, 100, 1000} {
 		b.Run(fmt.Sprintf("workers=%d", workers), func(b *testing.B) {
@@ -139,6 +203,26 @@ func BenchmarkWorkerPool_Submit(b *testing.B) {
 			for range b.N {
 				_ = pool.Submit(context.Background(), func() {})
 			}
+			pool.Wait()
+			pool.Close()
+		})
+	}
+}
+
+// BenchmarkWorkerPool_ConcurrentSubmit 多 goroutine 并发提交，暴露 Submit 内锁竞争。
+// 对比 BenchmarkWorkerPool_Submit 可量化锁竞争的实际代价。
+func BenchmarkWorkerPool_ConcurrentSubmit(b *testing.B) {
+	for _, parallelism := range []int{1, 4, 16, 64} {
+		b.Run(fmt.Sprintf("parallelism=%d", parallelism), func(b *testing.B) {
+			pool := workerpool.NewWorkerPool(parallelism*2, b.N+parallelism)
+			b.SetParallelism(parallelism)
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					_ = pool.Submit(context.Background(), func() {})
+				}
+			})
 			pool.Wait()
 			pool.Close()
 		})
