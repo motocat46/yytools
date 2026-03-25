@@ -74,7 +74,6 @@ func TestCorrectness_CloseWaitsForCompletion(t *testing.T) {
 			results := make([]int64, n)
 
 			for i := range n {
-				i := i
 				_ = pool.Submit(context.Background(), func() {
 					// 模拟有多步副作用的任务，验证 Close 等到最后一步
 					runtime.Gosched()
@@ -278,8 +277,8 @@ func TestCorrectness_Pipeline_NoResultLost_NoDuplicate(t *testing.T) {
 		seen[r.Value].Add(1)
 	}
 
-	for i, v := range seen {
-		if cnt := v.Load(); cnt != 1 {
+	for i := range seen {
+		if cnt := seen[i].Load(); cnt != 1 {
 			t.Errorf("元素 %d 出现 %d 次（期望恰好 1 次）", i, cnt)
 		}
 	}
