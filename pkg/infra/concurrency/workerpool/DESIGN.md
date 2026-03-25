@@ -121,7 +121,31 @@ p.once.Do(func() {
 
 ---
 
-## 6. 为什么用 stop channel 而非 close(queue)
+## 6. submitLocker 接口：默认 RWMutex，保留 Mutex 版用于对比
+
+**背景**：Submit 与 Close 对锁的需求不对称——Submit 只需保证"check+Add 原子"，多个并发 Submit 之间没有互斥需求；Close 需要独占，防止新的 Add 进入。
+
+**决策**：将锁行为抽象为 `submitLocker` 接口，Submit 调用 `lockSubmit/unlockSubmit`，Close 调用 `lockClose/unlockClose`。两种实现：
+
+| 实现 | Submit 锁 | Close 锁 |
+|------|-----------|---------|
+| `mutexLocker` | 排他锁 | 排他锁 |
+| `rwMutexLocker` | 读锁（并发不互斥）| 写锁（独占）|
+
+**benchmark 结果**（Apple M4，`-benchtime=3s -count=3`）：
+
+| 场景 | Mutex | RWMutex | 差异 |
+|------|-------|---------|------|
+| 顺序基线 | ~163 ns | ~159 ns | 持平 |
+| 并发 p=1 | ~151 ns | ~106 ns | RW 快 ~30% |
+| 并发 p=16 | ~134 ns | ~107 ns | RW 快 ~20% |
+| 并发 p=64 | ~136 ns | ~108 ns | RW 快 ~20% |
+
+**结论**：RWMutex 在并发场景下稳定提升约 20%，顺序场景持平，改动低风险，默认切换为 RWMutex。Mutex 版以 `NewWorkerPoolMutex` 保留，供性能回归对比使用。
+
+---
+
+## 7. 为什么用 stop channel 而非 close(queue)
 
 **close(queue) 的问题**：多个 worker 并发执行 `close(queue)` 或向已关闭的 channel 发送数据都会 panic。即便只由 Close 关闭，`Submit` 在 Close 之后若还持有任务并执行 `p.queue <- task` 也会 panic。
 
