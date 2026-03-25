@@ -80,10 +80,8 @@ func (p *WorkerPool) run() {
 	for {
 		select {
 		case task := <-p.queue:
-			func() {
-				defer p.wg.Done()
-				safeexec.SafeExec("workerpool.task", task) // task panic 隔离并记录日志，worker goroutine 继续服务
-			}()
+			safeexec.SafeExec("workerpool.task", task) // task panic 隔离并记录日志，worker goroutine 继续服务
+			p.wg.Done()
 		case <-p.stop:
 			return
 		}
