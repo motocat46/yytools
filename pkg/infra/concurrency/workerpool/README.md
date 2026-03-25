@@ -66,12 +66,16 @@ for r := range p.Process(in) {
 
 #### `NewWorkerPool(workers, queueSize int) *WorkerPool`
 
-创建固定大小的 goroutine 池，同时启动 `workers` 个 worker goroutine。
+创建固定大小的 goroutine 池，同时启动 `workers` 个 worker goroutine。内部使用 **RWMutex**：多个调用方可并发提交任务，Close 独占锁。适合多调用方高并发提交的场景（推荐默认选择）。
 
 | 参数 | 说明 |
 |------|------|
 | `workers` | 并发 goroutine 数，必须 > 0 |
 | `queueSize` | 待执行队列容量，0 表示无缓冲（每次 Submit 都直接阻塞到有 worker 空闲） |
+
+#### `NewWorkerPoolMutex(workers, queueSize int) *WorkerPool`
+
+与 `NewWorkerPool` 行为完全相同，但内部使用 **Mutex**：Submit 与 Close 均为独占锁。适合单调用方或需要与 Mutex 版本对比基准性能的场景。参数含义与 `NewWorkerPool` 相同。
 
 #### `Submit(ctx context.Context, task func()) error`
 
