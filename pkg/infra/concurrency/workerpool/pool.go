@@ -43,20 +43,31 @@ var ErrPoolClosed = errors.New("workerpool: pool is closed")
 type WorkerPool struct {
 	queue  chan func()
 	wg     sync.WaitGroup
-	mu     sync.Mutex // 保护 closed 标志，与 wg.Add 原子
+	locker submitLocker // 抽象锁，保护 closed 标志与 wg.Add 的原子性
 	closed bool
 	once   sync.Once
 	stop   chan struct{} // close 广播通知所有 worker 退出
 }
 
-// NewWorkerPool 创建固定大小的 worker pool。
+// NewWorkerPool 创建固定大小的 worker pool，使用 Mutex（默认推荐）。
 // workers：并发 goroutine 数；queueSize：待执行队列容量（提供背压）。
 func NewWorkerPool(workers, queueSize int) *WorkerPool {
+	return newWorkerPool(workers, queueSize, &mutexLocker{})
+}
+
+// NewWorkerPoolRW 创建使用 RWMutex 的 worker pool，用于与 NewWorkerPool 做性能对比。
+// Submit 持读锁（并发提交不互斥），Close 持写锁（独占）。
+func NewWorkerPoolRW(workers, queueSize int) *WorkerPool {
+	return newWorkerPool(workers, queueSize, &rwMutexLocker{})
+}
+
+func newWorkerPool(workers, queueSize int, locker submitLocker) *WorkerPool {
 	assert.Assert(workers > 0, "workerpool: workers 必须大于 0")
 	assert.Assert(queueSize >= 0, "workerpool: queueSize 不能为负数")
 	p := &WorkerPool{
-		queue: make(chan func(), queueSize),
-		stop:  make(chan struct{}),
+		queue:  make(chan func(), queueSize),
+		stop:   make(chan struct{}),
+		locker: locker,
 	}
 	for range workers {
 		go p.run()
@@ -82,16 +93,16 @@ func (p *WorkerPool) run() {
 // Submit 提交任务。队列满时阻塞，直到有空位或 ctx 取消。
 // pool 已关闭时返回 ErrPoolClosed。
 //
-// mu 保证"检查 closed"与"wg.Add(1)"是原子操作，
+// locker 保证"检查 closed"与"wg.Add(1)"是原子操作，
 // 从而杜绝 Close 在两者之间插入、导致 wg.Wait() 提前返回的竞态。
 func (p *WorkerPool) Submit(ctx context.Context, task func()) error {
-	p.mu.Lock()
+	p.locker.lockSubmit()
 	if p.closed {
-		p.mu.Unlock()
+		p.locker.unlockSubmit()
 		return ErrPoolClosed
 	}
 	p.wg.Add(1)
-	p.mu.Unlock()
+	p.locker.unlockSubmit()
 
 	select {
 	case p.queue <- task:
@@ -113,9 +124,9 @@ func (p *WorkerPool) Close() {
 	p.once.Do(func() {
 		// 持锁设置 closed，与 Submit 的 check+Add 互斥，
 		// 保证之后不会再有新的 wg.Add(1)。
-		p.mu.Lock()
+		p.locker.lockClose()
 		p.closed = true
-		p.mu.Unlock()
+		p.locker.unlockClose()
 		// 等待所有已提交（wg.Add 已完成）的任务执行完毕。
 		p.wg.Wait()
 		// 所有任务已处理完毕，通知 worker 退出。
