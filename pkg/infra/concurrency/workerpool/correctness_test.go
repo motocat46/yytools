@@ -169,7 +169,31 @@ func TestCorrectness_SubmitClose_NoPanic(t *testing.T) {
 	}
 }
 
-// ─── 命题 5：Pipeline 结果完整性 ──────────────────────────────────────────────
+// ─── 命题 5：Close 幂等性 ─────────────────────────────────────────────────────
+//
+// 不变量：并发多次调用 Close() 不 panic、不死锁。
+
+func TestCorrectness_Close_Idempotent_Concurrent(t *testing.T) {
+	pool := workerpool.NewWorkerPool(4, 100)
+
+	for range 10 {
+		_ = pool.Submit(context.Background(), func() {
+			time.Sleep(time.Millisecond)
+		})
+	}
+
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			pool.Close()
+		}()
+	}
+	wg.Wait()
+}
+
+// ─── 命题 6：Pipeline 结果完整性 ──────────────────────────────────────────────
 //
 // 不变量：每个输入元素恰好产生一个输出结果。
 
