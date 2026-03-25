@@ -13,7 +13,10 @@
 
 package workerpool
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Result 携带 Pipeline 处理结果或错误。
 // 调用方自行决定如何处理 Err（忽略、记录或终止）。
@@ -37,16 +40,18 @@ type Result[R any] struct {
 //	    fmt.Println(r.Value)
 //	}
 type Pipeline[T, R any] struct {
-	pool *WorkerPool
-	fn   func(T) (R, error)
+	pool    *WorkerPool
+	fn      func(T) (R, error)
+	workers int // 用于输出 channel 的 buffer size，保证 worker 写结果时不阻塞
 }
 
 // NewPipeline 创建泛型 pipeline。
 // workers、queueSize 透传给内部 WorkerPool；fn 为每个元素的处理函数。
 func NewPipeline[T, R any](workers, queueSize int, fn func(T) (R, error)) *Pipeline[T, R] {
 	return &Pipeline[T, R]{
-		pool: NewWorkerPool(workers, queueSize),
-		fn:   fn,
+		pool:    NewWorkerPool(workers, queueSize),
+		fn:      fn,
+		workers: workers,
 	}
 }
 
@@ -55,18 +60,22 @@ func NewPipeline[T, R any](workers, queueSize int, fn func(T) (R, error)) *Pipel
 //
 // 注意：调用方必须消费完输出 channel，否则会导致 worker goroutine 阻塞。
 func (p *Pipeline[T, R]) Process(in <-chan T) <-chan Result[R] {
-	out := make(chan Result[R], cap(in)+1)
+	out := make(chan Result[R], p.workers)
 	go func() {
 		defer func() {
 			p.pool.Wait()
 			close(out)
 		}()
 		for item := range in {
-			item := item
-			_ = p.pool.Submit(context.Background(), func() {
+			if err := p.pool.Submit(context.Background(), func() {
 				val, err := p.fn(item)
 				out <- Result[R]{Value: val, Err: err}
-			})
+			}); err != nil {
+				// pool 已关闭，本任务无法提交；通知调用方并排空输入避免生产者阻塞
+				out <- Result[R]{Err: fmt.Errorf("pipeline: submit failed: %w", err)}
+				for range in {}
+				break
+			}
 		}
 	}()
 	return out
