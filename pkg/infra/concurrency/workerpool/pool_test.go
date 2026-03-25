@@ -41,8 +41,8 @@ type poolFactory struct {
 }
 
 var allFactories = []poolFactory{
-	{"Mutex", workerpool.NewWorkerPool},
-	{"RWMutex", workerpool.NewWorkerPoolRW},
+	{"RWMutex", workerpool.NewWorkerPool},
+	{"Mutex", workerpool.NewWorkerPoolMutex},
 }
 
 func TestWorkerPool_Submit_Normal(t *testing.T) {
@@ -240,7 +240,7 @@ func TestWorkerPool_Stress_Concurrent(t *testing.T) {
 	}
 }
 
-// BenchmarkWorkerPool_Submit_Sequential Mutex 版单调用方顺序提交，无竞争基线。
+// BenchmarkWorkerPool_Submit_Sequential RWMutex 版（默认）单调用方顺序提交，无竞争基线。
 func BenchmarkWorkerPool_Submit_Sequential(b *testing.B) {
 	pool := workerpool.NewWorkerPool(8, b.N+1)
 	b.ResetTimer()
@@ -252,9 +252,9 @@ func BenchmarkWorkerPool_Submit_Sequential(b *testing.B) {
 	pool.Close()
 }
 
-// BenchmarkWorkerPoolRW_Submit_Sequential RWMutex 版单调用方顺序提交，无竞争基线。
-func BenchmarkWorkerPoolRW_Submit_Sequential(b *testing.B) {
-	pool := workerpool.NewWorkerPoolRW(8, b.N+1)
+// BenchmarkWorkerPoolMutex_Submit_Sequential Mutex 版单调用方顺序提交，对比基线。
+func BenchmarkWorkerPoolMutex_Submit_Sequential(b *testing.B) {
+	pool := workerpool.NewWorkerPoolMutex(8, b.N+1)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
@@ -264,7 +264,7 @@ func BenchmarkWorkerPoolRW_Submit_Sequential(b *testing.B) {
 	pool.Close()
 }
 
-// BenchmarkWorkerPool_Submit_Concurrent Mutex 版多调用方并发提交，暴露锁竞争代价。
+// BenchmarkWorkerPool_Submit_Concurrent RWMutex 版（默认）多调用方并发提交。
 func BenchmarkWorkerPool_Submit_Concurrent(b *testing.B) {
 	for _, parallelism := range []int{1, 4, 16, 64} {
 		b.Run(fmt.Sprintf("p=%d", parallelism), func(b *testing.B) {
@@ -283,11 +283,11 @@ func BenchmarkWorkerPool_Submit_Concurrent(b *testing.B) {
 	}
 }
 
-// BenchmarkWorkerPoolRW_Submit_Concurrent RWMutex 版多调用方并发提交，与 Mutex 版横向对比。
-func BenchmarkWorkerPoolRW_Submit_Concurrent(b *testing.B) {
+// BenchmarkWorkerPoolMutex_Submit_Concurrent Mutex 版多调用方并发提交，与 RWMutex 版横向对比。
+func BenchmarkWorkerPoolMutex_Submit_Concurrent(b *testing.B) {
 	for _, parallelism := range []int{1, 4, 16, 64} {
 		b.Run(fmt.Sprintf("p=%d", parallelism), func(b *testing.B) {
-			pool := workerpool.NewWorkerPoolRW(parallelism*2, b.N+parallelism)
+			pool := workerpool.NewWorkerPoolMutex(parallelism*2, b.N+parallelism)
 			b.SetParallelism(parallelism)
 			b.ResetTimer()
 			b.ReportAllocs()
