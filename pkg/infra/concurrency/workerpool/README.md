@@ -17,7 +17,6 @@ pool := workerpool.NewWorkerPool(4, 100)
 defer pool.Close() // 等待所有任务完成后退出 worker
 
 for _, item := range items {
-    item := item
     if err := pool.Submit(ctx, func() {
         process(item)
     }); err != nil {

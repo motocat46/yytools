@@ -36,6 +36,7 @@
 | `TestCorrectness_SubmitClose_NoPanic` | 并发安全 | 大量并发 Submit/Close 不触发 panic 或数据竞争 |
 | `TestCorrectness_Close_Idempotent_Concurrent` | Close 幂等 | 多 goroutine 并发调用 Close 不 panic |
 | `TestCorrectness_Pipeline_ResultCompleteness` | 结果完整性 | Pipeline 每个输入恰好产生一个输出 |
+| `TestCorrectness_Pipeline_MultiProducer` | 多生产者并发安全 | 10 生产者 × 5000 = 5 万，输出总数严格等于输入总数 |
 | `TestCorrectness_Pipeline_NoResultLost_NoDuplicate` | 无丢失无重复 | 大规模并发下 Pipeline 结果数精确等于输入数 |
 
 ### pipeline_test.go 覆盖点

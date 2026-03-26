@@ -119,6 +119,8 @@ p.once.Do(func() {
 
 `sync.Once` 保证 Close 的 body 只执行一次，使 Close 幂等。
 
+> **注**：上方伪代码中的 `p.mu.Lock()` / `p.mu.Unlock()` 对应实际实现中的 `p.locker.lockSubmit/unlockSubmit` 和 `p.locker.lockClose/unlockClose`。锁行为已通过 `submitLocker` 接口抽象，支持 Mutex 和 RWMutex 两种实现，详见第 6 节。
+
 ---
 
 ## 6. submitLocker 接口：默认 RWMutex，保留 Mutex 版用于对比
@@ -132,16 +134,14 @@ p.once.Do(func() {
 | `mutexLocker` | 排他锁 | 排他锁 |
 | `rwMutexLocker` | 读锁（并发不互斥）| 写锁（独占）|
 
-**benchmark 结果**（Apple M4，`-benchtime=3s -count=3`）：
+**benchmark 结论**（具体数字以 TEST.md 基准基线为准）：
 
-| 场景 | Mutex | RWMutex | 差异 |
-|------|-------|---------|------|
-| 顺序基线 | ~163 ns | ~159 ns | 持平 |
-| 并发 p=1 | ~151 ns | ~106 ns | RW 快 ~30% |
-| 并发 p=16 | ~134 ns | ~107 ns | RW 快 ~20% |
-| 并发 p=64 | ~136 ns | ~108 ns | RW 快 ~20% |
+| 场景 | 结论 |
+|------|------|
+| 顺序基线 | RWMutex 与 Mutex 吞吐相近，均无内存分配 |
+| 并发（p=1～64）| RWMutex 吞吐高约 **28%**，随并发度增加保持稳定 |
 
-**结论**：RWMutex 在并发场景下稳定提升约 20%，顺序场景持平，改动低风险，默认切换为 RWMutex。Mutex 版以 `NewWorkerPoolMutex` 保留，供性能回归对比使用。
+**结论**：RWMutex 在并发场景下稳定提升约 20-30%，顺序场景持平，改动低风险，默认切换为 RWMutex。Mutex 版以 `NewWorkerPoolMutex` 保留，供性能回归对比使用。
 
 ---
 

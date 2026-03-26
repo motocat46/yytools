@@ -32,11 +32,15 @@ func TestCorrectness_ExactlyOnce_ConcurrentSubmitClose(t *testing.T) {
 			var submitted atomic.Int64
 			var executed atomic.Int64
 
+			// ready 屏障：所有 goroutine 就绪后同时起跑，主 goroutine 紧随关闭，
+			// 保证 Submit 与 Close 真正并发，不依赖 time.Sleep 的时序假设。
+			ready := make(chan struct{})
 			var wg sync.WaitGroup
 			for range submitters {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
+					<-ready // 等待起跑信号
 					for range perWorker {
 						err := pool.Submit(context.Background(), func() {
 							executed.Add(1)
@@ -48,9 +52,8 @@ func TestCorrectness_ExactlyOnce_ConcurrentSubmitClose(t *testing.T) {
 				}()
 			}
 
-			// 短暂并发后关闭
-			time.Sleep(2 * time.Millisecond)
-			pool.Close()
+			close(ready) // 所有 goroutine 同时开始提交
+			pool.Close() // 立即关闭，制造真实的 Submit/Close 竞态
 			wg.Wait()
 
 			// Close 返回时所有任务已完成，精确计数
@@ -84,8 +87,8 @@ func TestCorrectness_CloseWaitsForCompletion(t *testing.T) {
 			pool.Close() // 必须等所有任务完成
 
 			// Close 返回后立即检查，不允许有任何 0 值
-			for i, v := range results {
-				if atomic.LoadInt64(&v) != 1 {
+			for i := range results {
+				if atomic.LoadInt64(&results[i]) != 1 {
 					t.Errorf("Close 返回后 results[%d] 仍为 0，说明任务未完成", i)
 				}
 			}
@@ -248,6 +251,58 @@ func TestCorrectness_Pipeline_ResultCompleteness(t *testing.T) {
 	expected := int64(n) * int64(n-1)
 	if sum != expected {
 		t.Errorf("结果总和 %d ≠ 期望 %d", sum, expected)
+	}
+}
+
+// ─── 命题 7（前置）：Pipeline 多生产者并发安全 ─────────────────────────────────
+//
+// 不变量：多个 goroutine 同时向同一 Pipeline 提交（通过共享 in channel），
+// 输出结果总数严格等于输入总数，无丢失无重复。
+// 单生产者命题无法覆盖 in channel 的并发写竞争。
+
+func TestCorrectness_Pipeline_MultiProducer(t *testing.T) {
+	const (
+		producers = 10
+		perProd   = 5_000 // 总量 50,000
+	)
+
+	p := workerpool.NewPipeline(8, 200, func(i int) (int, error) {
+		return i, nil
+	})
+	defer p.Close()
+
+	in := make(chan int, 500)
+
+	// 多生产者并发写同一 channel
+	ready := make(chan struct{})
+	var prodWg sync.WaitGroup
+	for prod := range producers {
+		prodWg.Add(1)
+		go func(base int) {
+			defer prodWg.Done()
+			<-ready
+			for j := range perProd {
+				in <- base*perProd + j
+			}
+		}(prod)
+	}
+	go func() {
+		close(ready)      // 所有生产者同时开始
+		prodWg.Wait()     // 等所有生产者写完
+		close(in)         // 输入结束，Process 将关闭输出 channel
+	}()
+
+	var count int
+	for r := range p.Process(in) {
+		if r.Err != nil {
+			t.Fatalf("意外错误: %v", r.Err)
+		}
+		count++
+	}
+
+	total := producers * perProd
+	if count != total {
+		t.Errorf("输出数 %d ≠ 输入数 %d（多生产者场景结果丢失）", count, total)
 	}
 }
 

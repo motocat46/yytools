@@ -81,7 +81,7 @@ func (p *WorkerPool) run() {
 		select {
 		case task := <-p.queue:
 			safeexec.SafeExec("workerpool.task", task) // task panic 隔离并记录日志，worker goroutine 继续服务
-			p.wg.Done()
+			p.wg.Done()                                // 依赖 safeexec 保证 task panic 不穿透；若穿透则 wg.Done 被跳过，Close 将永久阻塞
 		case <-p.stop:
 			return
 		}
