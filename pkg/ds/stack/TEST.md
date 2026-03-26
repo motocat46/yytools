@@ -5,6 +5,7 @@
 | 文件 | 覆盖范围 |
 |------|---------|
 | `stack_test.go` | Push/Pop/Top（含空栈 panic）、LIFO 顺序、自动缩容、指针/结构体元素 |
+| `correctness_test.go` | 命题1 Length精确性（10k随机Push/Pop）；命题2 LIFO顺序（10k随机序列逐步验证）；命题3 缩容安全性（push 10k/pop 9750 后剩余元素完整可取）；命题4 随机混合参考模型（10万次Push/Pop/Top与标准slice逐步对比） |
 
 ## 分层执行命令
 

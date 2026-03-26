@@ -7,6 +7,7 @@
 | `heap_test.go` | 最小堆：Push、Pop、Peek（含空堆零值返回）、大数据集堆序验证 |
 | `max_heap_test.go` | 最大堆：降序弹出、空堆零值返回、结构体元素 |
 | `priority_queue_test.go` | 优先级队列：Push/Pop 顺序、UpdatePriority、Index 跟踪、空队列零值返回 |
+| `correctness_test.go` | 命题1 MinHeap最小值语义（10万次随机Push/Pop与参考模型逐步对比）；命题2 MaxHeap最大值语义（同上）；命题3 PriorityQueue最高优先级语义（同上）；命题4 UpdatePriority不破坏堆序（5k元素+2k次随机更新后Pop全部验证降序） |
 
 ## 分层执行命令
 

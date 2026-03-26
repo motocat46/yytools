@@ -5,6 +5,7 @@
 | 文件 | 覆盖范围 |
 |------|---------|
 | `queue_test.go` | Enqueue/Dequeue/Peek/Empty/Range 正确性；空队列 Dequeue/Peek 必须 panic；自动扩容与缩容；指针/结构体元素；Benchmark |
+| `correctness_test.go` | 命题1 Length精确性（10k随机操作）；命题2 FIFO顺序（10k随机序列逐步验证）；命题3 环绕完整性（100轮交替入/出队强制ring buffer环绕）；命题4 扩缩容完整性（push 10k/pop 9750 后剩余元素可按FIFO取出）；命题5 随机混合参考模型（10万次Enqueue/Dequeue/Peek与标准slice逐步对比） |
 
 ## 分层执行命令
 
