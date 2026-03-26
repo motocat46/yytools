@@ -5,6 +5,7 @@
 | 子模块 | 功能 |
 |--------|------|
 | [safeexec](safeexec/README.md) | panic 安全执行包装（Safe、SafeCall、SafeExecWithError 等） |
-| [timeutil](timeutil/README.md) | 时间工具函数（`ParseDuration` 支持天单位；`Parse`/`ParseUnixMilli` 解析日期时间字符串） |
+| [timeutil](timeutil/README.md) | 时间工具函数（`ParseDuration` 支持天单位；`Parse`/`ParseUnixMilli` 解析日期时间；日历边界计算；`IsSameDay/Week`、`DaysBetween` 等比较函数） |
 | [os](os/README.md) | OS 工具封装（文件存在检测、备份等） |
 | [concurrency/unbounded_channel](concurrency/unbounded_channel/README.md) | 无大小限制的 Channel，多种实现变体 |
+| [concurrency/workerpool](concurrency/workerpool/README.md) | 固定大小 goroutine 池 + 泛型 Pipeline |

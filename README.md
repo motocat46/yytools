@@ -30,7 +30,8 @@ yytools/
 │   │   │   ├── bits/          # 位运算工具
 │   │   │   ├── overflow/      # 数值溢出检查
 │   │   │   ├── probability_distribution/  # 概率分布（普通/Vose别名/动态权重）
-│   │   │   └── random/        # 随机数生成
+│   │   │   ├── random/        # 随机数生成
+│   │   │   └── sampling/      # Floyd 不重复采样、带最小间隔约束采样
 │   │   └── sort/              # 排序算法（快排、计数排序、基数排序等）
 │   ├── ds/                    # 数据结构
 │   │   ├── heap/              # 最小堆 / 最大堆 / 优先级队列
@@ -39,7 +40,8 @@ yytools/
 │   │   └── sorted_set/        # 有序集合（跳表实现，类 Redis ZADD）
 │   ├── infra/                 # 基础设施工具
 │   │   ├── concurrency/
-│   │   │   └── unbounded_channel/  # 无大小限制的 Channel
+│   │   │   ├── unbounded_channel/  # 无大小限制的 Channel
+│   │   │   └── workerpool/         # 固定大小 goroutine 池 + 泛型 Pipeline
 │   │   ├── os/                # OS 工具封装
 │   │   ├── safeexec/          # panic 安全执行（Safe、SafeCall 等）
 │   │   └── timeutil/          # 时间工具函数
