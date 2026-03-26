@@ -13,8 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// 作者:  yangyuan
-// 创建日期:2025/1/7
+// Package timeutil 提供时间工具函数，扩展标准库 time 包：
+//   - ParseDuration：支持 'd'（天）单位的时长解析
+//   - Parse / ParseUnixMilli：宽松格式的日期时间字符串解析
+//   - 日历边界计算：StartOfDay、StartOfWeekday、StartOfNextMonthDay 等
+//   - 时间比较：IsSameDay、IsSameWeek、DaysBetween 等
+//
+// 所有接受 time.Time 的函数均保留其时区；int64 毫秒变体（Ms 后缀）需显式传入 *time.Location。
 package timeutil
 
 import (
@@ -30,8 +35,8 @@ import (
 // 在标准库基础上，支持更大的日期单位——d（日）
 // 最大时长近似290年（int64 纳秒上限）。
 //
-// 支持负数 day："-2d1h30m" 表示向前推 2 天 1 小时 30 分钟（即 -49.5 小时）。
-// 正负号只允许出现在字符串开头，中间不允许再出现 + 或 -。
+// 支持负数："-2d1h30m" 表示向前推 2 天 1 小时 30 分钟（即 -49.5 小时）。
+// '-' 只允许出现在字符串开头；不支持 '+' 前缀（正数直接省略符号）；中间位置不允许出现 '+' 或 '-'。
 func ParseDuration(s string) (time.Duration, error) {
 	if s == "" || s == "0" {
 		return 0, nil
@@ -102,12 +107,16 @@ func combineWithRemain(daysPart int64, negative bool, right string) (time.Durati
 // validateDuration 检查长度上限与符号位置约束。
 func validateDuration(s string) error {
 	if len(s) > 100 {
-		return fmt.Errorf("timeutil string s is too big:%s", s)
+		return fmt.Errorf("时间字符串过长（长度 %d，上限 100）", len(s))
 	}
-	// 正负号只允许出现在第一个字符，中间出现会产生歧义
+	// 不支持 '+' 前缀：正数直接省略符号即可
+	if s[0] == '+' {
+		return fmt.Errorf("不支持 '+' 前缀，正数直接省略符号: %q", s)
+	}
+	// '+' 和 '-' 只允许出现在第一个字符，中间出现会产生歧义
 	for i := 1; i < len(s); i++ {
 		if s[i] == '-' || s[i] == '+' {
-			return fmt.Errorf("invalid remain timeutil s:%s", s)
+			return fmt.Errorf("符号位置非法（'+'/'-' 只允许出现在开头）: %q", s)
 		}
 	}
 	return nil

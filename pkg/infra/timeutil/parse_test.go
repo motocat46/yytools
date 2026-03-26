@@ -174,29 +174,27 @@ func TestParse_ValidInputs(t *testing.T) {
 }
 
 func TestParseUnixMilli(t *testing.T) {
-	t.Run("合法输入与Parse一致", func(t *testing.T) {
-		cases := []string{
-			"2024-03-05 09:05:03",
-			"2024-03-05",
-			"2024/03/05",
-			"2024-3-5",
-			"2024/3/5",
-			"2024-3-5 9:5:3",
-			"2024-03-05 09:05",
-			"  2024-03-05  ",
-			"2024-03-05  09:05:03",
+	// 合法输入：与 time.Date 直接构造的期望值对比，不依赖 Parse 的实现
+	// 避免循环验证（ParseUnixMilli 内部调用 Parse，两者比较无法发现绝对值 bug）
+	t.Run("合法输入绝对值验证", func(t *testing.T) {
+		cases := []struct {
+			input string
+			want  int64
+		}{
+			{"2024-03-05 09:05:03", time.Date(2024, 3, 5, 9, 5, 3, 0, time.Local).UnixMilli()},
+			{"2024-03-05", time.Date(2024, 3, 5, 0, 0, 0, 0, time.Local).UnixMilli()},
+			{"2024/03/05", time.Date(2024, 3, 5, 0, 0, 0, 0, time.Local).UnixMilli()},
+			{"2024-3-5", time.Date(2024, 3, 5, 0, 0, 0, 0, time.Local).UnixMilli()},
+			{"2024-3-5 9:5:3", time.Date(2024, 3, 5, 9, 5, 3, 0, time.Local).UnixMilli()},
+			{"2024-03-05 09:05", time.Date(2024, 3, 5, 9, 5, 0, 0, time.Local).UnixMilli()},
 		}
-		for _, input := range cases {
-			wantTime, err := Parse(input)
+		for _, tc := range cases {
+			got, err := ParseUnixMilli(tc.input)
 			if err != nil {
-				t.Fatalf("Parse(%q) 失败: %v", input, err)
+				t.Fatalf("ParseUnixMilli(%q) unexpected error: %v", tc.input, err)
 			}
-			got, err := ParseUnixMilli(input)
-			if err != nil {
-				t.Fatalf("ParseUnixMilli(%q) unexpected error: %v", input, err)
-			}
-			if got != wantTime.UnixMilli() {
-				t.Errorf("ParseUnixMilli(%q) = %d, want %d", input, got, wantTime.UnixMilli())
+			if got != tc.want {
+				t.Errorf("ParseUnixMilli(%q) = %d, want %d", tc.input, got, tc.want)
 			}
 		}
 	})

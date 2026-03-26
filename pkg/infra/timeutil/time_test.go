@@ -45,7 +45,7 @@ func TestParseDuration(t *testing.T) {
 		{"负数天数", "-1d", -24 * time.Hour, false},
 		{"天数加标准格式", "1d30m", 24*time.Hour + 30*time.Minute, false},
 		{"天数加标准格式 - 负数", "-1d30m", -24*time.Hour - 30*time.Minute, false},
-		{"标准格式加天数", "1d30m", 24*time.Hour + 30*time.Minute, false},
+		{"d后置报错（标准格式在d前）", "30m1d", 0, true},
 
 		// 小数天数（Bug 2 修复验证）
 		{"小数天数", "1.5d", 36 * time.Hour, false},
@@ -115,19 +115,23 @@ func TestParseDurationEdgeCases(t *testing.T) {
 	})
 }
 
-func TestParseDurationPerformance(t *testing.T) {
-	// 性能测试
-	inputs := []string{
-		"1d", "1h30m", "30s", "1d1h1m1s",
-		"-1d", "-1h30m", "-30s", "-1d1h1m1s",
+func BenchmarkParseDuration_NoDay(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		_, _ = ParseDuration("1h30m15s")
 	}
+}
 
-	for i := 0; i < 1000; i++ {
-		for _, input := range inputs {
-			_, err := ParseDuration(input)
-			if err != nil {
-				t.Errorf("性能测试中 ParseDuration(%q) 返回了错误: %v", input, err)
-			}
-		}
+func BenchmarkParseDuration_WithDay(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		_, _ = ParseDuration("1d12h30m")
+	}
+}
+
+func BenchmarkParseDuration_NegativeDay(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		_, _ = ParseDuration("-2d6h")
 	}
 }

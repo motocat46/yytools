@@ -15,6 +15,7 @@ package timeutil_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/motocat46/yytools/pkg/infra/timeutil"
 )
@@ -61,4 +62,50 @@ func ExampleParseDuration() {
 	// -24h0m0s
 	// -30m0s
 	// 1h30m0s
+}
+
+// ExampleParse 展示 Parse 的常用格式（返回 time.Local，输出因机器时区而异，不验证 Output）。
+func ExampleParse() {
+	// 纯日期（返回 time.Local 当天 00:00:00）
+	_, _ = timeutil.Parse("2024-01-05")
+	_, _ = timeutil.Parse("2024/1/5")
+
+	// 日期时间
+	_, _ = timeutil.Parse("2024-01-05 09:05:03")
+	_, _ = timeutil.Parse("2024-1-5 9:5:3")
+
+	// 省略秒（默认 :00）
+	_, _ = timeutil.Parse("2024-01-05 09:05")
+
+	// 非法输入返回错误
+	_, err := timeutil.Parse("not-a-date")
+	fmt.Println(err != nil) // true
+	// Output:
+	// true
+}
+
+// ExampleStartOfDay 展示日历边界函数的使用（使用固定时区保证输出确定性）。
+func ExampleStartOfDay() {
+	loc := time.UTC
+	t := time.Date(2026, time.March, 26, 15, 30, 0, 0, loc)
+	fmt.Println(timeutil.StartOfDay(t))
+	fmt.Println(timeutil.StartOfTomorrow(t))
+	// Output:
+	// 2026-03-26 00:00:00 +0000 UTC
+	// 2026-03-27 00:00:00 +0000 UTC
+}
+
+// ExampleIsSameDay 展示时间比较函数的使用。
+func ExampleIsSameDay() {
+	loc := time.UTC
+	a := time.Date(2026, time.March, 26, 10, 0, 0, 0, loc)
+	b := time.Date(2026, time.March, 26, 22, 0, 0, 0, loc)
+	c := time.Date(2026, time.March, 27, 0, 0, 0, 0, loc)
+	fmt.Println(timeutil.IsSameDay(a, b, loc)) // 同一天
+	fmt.Println(timeutil.IsSameDay(a, c, loc)) // 不同天
+	fmt.Println(timeutil.DaysBetween(a, c, loc))
+	// Output:
+	// true
+	// false
+	// 1
 }

@@ -97,3 +97,76 @@ utc   := t.UTC()
 
 **不支持：** 纯时间字符串（`"09:05:03"`）、非年月日顺序、毫秒/微秒精度。
 持续时间场景请用 `ParseDuration`。
+
+---
+
+## 日历边界与时间比较工具
+
+### 边界计算
+
+#### `time.Time` 变体（使用 `t.Location()`）
+
+| 函数 | 说明 |
+|------|------|
+| `StartOfDay(t)` | t 所在时区当天 00:00:00 |
+| `StartOfTomorrow(t)` | t 所在时区明天 00:00:00 |
+| `StartOfMonth(t)` | t 所在时区当月 1 日 00:00:00 |
+| `StartOfWeekday(t, weekday)` | t 所在时区本周指定周几 00:00:00（ISO 周，周一为第一天；目标即当天时返回今天 00:00:00） |
+| `StartOfNextWeekday(t, weekday)` | t 所在时区下周指定周几 00:00:00 |
+| `StartOfNextMonthDay(t, day)` | t 所在时区下月第 day 日 00:00:00；day < 1 时 clamp 至 1，day 超出月末时 clamp 至月末（如 4 月传 31 → 4 月 30 日） |
+
+#### `int64` 毫秒时间戳变体（显式传入 `*time.Location`）
+
+函数名在上表基础上加 `Ms` 后缀，参数 `ms int64` 替换 `t time.Time`，末尾追加 `loc *time.Location`，返回值为 `int64`（毫秒时间戳）。
+
+| 函数 | 签名 |
+|------|------|
+| `StartOfDayMs` | `(ms int64, loc *time.Location) int64` |
+| `StartOfTomorrowMs` | `(ms int64, loc *time.Location) int64` |
+| `StartOfMonthMs` | `(ms int64, loc *time.Location) int64` |
+| `StartOfWeekdayMs` | `(ms int64, weekday time.Weekday, loc *time.Location) int64` |
+| `StartOfNextWeekdayMs` | `(ms int64, weekday time.Weekday, loc *time.Location) int64` |
+| `StartOfNextMonthDayMs` | `(ms int64, day int, loc *time.Location) int64` |
+
+### 时间比较
+
+| 函数 | 签名 | 说明 |
+|------|------|------|
+| `IsSameDay` | `(a, b time.Time, loc *time.Location) bool` | a、b 在 loc 时区下是否同一天 |
+| `IsSameWeek` | `(a, b time.Time, loc *time.Location) bool` | a、b 在 loc 时区下是否同一 ISO 周 |
+| `DaysBetween` | `(a, b time.Time, loc *time.Location) int` | a→b 的日历天数（b>a 为正，DST 安全） |
+| `IsSameDayMs` | `(a, b int64, loc *time.Location) bool` | 同 IsSameDay，毫秒时间戳入参 |
+| `IsSameWeekMs` | `(a, b int64, loc *time.Location) bool` | 同 IsSameWeek，毫秒时间戳入参 |
+| `DaysBetweenMs` | `(a, b int64, loc *time.Location) int` | 同 DaysBetween，毫秒时间戳入参 |
+
+> **注意：** 比较函数和 `Ms` 变体均要求显式传入 `*time.Location`，不依赖机器 Local——这对全球同服游戏、多时区数据处理等场景尤为重要。
+
+### 使用示例
+
+```go
+import (
+    "time"
+    "github.com/motocat46/yytools/pkg/infra/timeutil"
+)
+
+cst := time.FixedZone("CST", 8*60*60) // UTC+8
+now := time.Now().In(cst)
+
+// 边界计算
+sod   := timeutil.StartOfDay(now)               // 今天 00:00:00 CST
+tom   := timeutil.StartOfTomorrow(now)          // 明天 00:00:00 CST
+mon   := timeutil.StartOfWeekday(now, time.Monday)     // 本周一 00:00:00 CST
+nxtMon := timeutil.StartOfNextWeekday(now, time.Monday) // 下周一 00:00:00 CST
+next15 := timeutil.StartOfNextMonthDay(now, 15)         // 下月 15 日 00:00:00 CST
+
+// Ms 变体（输入/输出均为毫秒时间戳）
+ms    := now.UnixMilli()
+sodMs := timeutil.StartOfDayMs(ms, cst)                   // 今天 00:00:00 CST（毫秒）
+monMs := timeutil.StartOfWeekdayMs(ms, time.Monday, cst)  // 本周一 00:00:00 CST（毫秒）
+
+// 时间比较
+a, b := now, now.Add(2*24*time.Hour)
+timeutil.IsSameDay(a, b, cst)      // false
+timeutil.IsSameWeek(a, b, cst)     // 取决于 now 是否在周末附近
+timeutil.DaysBetween(a, b, cst)    // 2
+```

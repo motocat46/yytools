@@ -101,25 +101,25 @@ func normalizeDate(s string) (string, error) {
 	hasDash := strings.Contains(s, "-")
 	hasSlash := strings.Contains(s, "/")
 	if hasDash && hasSlash {
-		return "", fmt.Errorf("日期分隔符混用（同时含 - 和 /）: %q", s)
+		return "", fmt.Errorf("日期分隔符混用（同时含 - 和 /）")
 	}
 	s = strings.ReplaceAll(s, "/", "-")
 	parts := strings.Split(s, "-")
 	if len(parts) != 3 {
-		return "", fmt.Errorf("日期格式不合法，期望 3 段，实际 %d 段: %q", len(parts), s)
+		return "", fmt.Errorf("日期格式不合法，期望 3 段，实际 %d 段", len(parts))
 	}
 	year, month, day := parts[0], parts[1], parts[2]
 	if len(year) != 4 {
-		return "", fmt.Errorf("年份必须为 4 位: %q", s)
+		return "", fmt.Errorf("年份必须为 4 位")
 	}
 	if _, err := strconv.Atoi(year); err != nil {
-		return "", fmt.Errorf("年份非数字: %q", s)
+		return "", fmt.Errorf("年份非数字")
 	}
-	month, err := padTwo(month, s)
+	month, err := padTwo(month)
 	if err != nil {
 		return "", err
 	}
-	day, err = padTwo(day, s)
+	day, err = padTwo(day)
 	if err != nil {
 		return "", err
 	}
@@ -131,14 +131,14 @@ func normalizeDate(s string) (string, error) {
 func normalizeTime(s string) (string, error) {
 	parts := strings.Split(s, ":")
 	if len(parts) < 2 || len(parts) > 3 {
-		return "", fmt.Errorf("时间格式不合法，期望 2 或 3 段，实际 %d 段: %q", len(parts), s)
+		return "", fmt.Errorf("时间格式不合法，期望 2 或 3 段，实际 %d 段", len(parts))
 	}
 	if len(parts) == 2 {
 		parts = append(parts, "0") // 省略秒时补 0
 	}
 	result := make([]string, 3)
 	for i, p := range parts {
-		padded, err := padTwo(p, s)
+		padded, err := padTwo(p)
 		if err != nil {
 			return "", err
 		}
@@ -148,18 +148,19 @@ func normalizeTime(s string) (string, error) {
 }
 
 // padTwo 验证 s 为纯数字并补前导零至 2 位。
-func padTwo(s, orig string) (string, error) {
+// 不包含原始输入上下文，由调用方负责在错误中添加。
+func padTwo(s string) (string, error) {
 	if s == "" {
-		return "", fmt.Errorf("数字段为空（原始输入: %q）", orig)
+		return "", fmt.Errorf("数字段为空")
 	}
 	if _, err := strconv.Atoi(s); err != nil {
-		return "", fmt.Errorf("数字段非数字 %q（原始输入: %q）", s, orig)
+		return "", fmt.Errorf("数字段非数字 %q", s)
 	}
 	if len(s) == 1 {
 		return "0" + s, nil
 	}
 	if len(s) > 2 {
-		return "", fmt.Errorf("数字段超过 2 位 %q（原始输入: %q）", s, orig)
+		return "", fmt.Errorf("数字段超过 2 位 %q", s)
 	}
 	return s, nil
 }

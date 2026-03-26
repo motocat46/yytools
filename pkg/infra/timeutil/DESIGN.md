@@ -60,3 +60,53 @@ HasPrefix("-0", "-") = true → result = 0 - 30m = -30m ✓（原来错误返回
 原实现：`overflow.MulInt(int64(time.Hour)*24, int64(days))` 需要两步 int64 乘法，且要求 `days` 是整数。
 
 新实现：`daysFloat * float64(24*time.Hour)` 一步完成，支持小数天，再统一做 float 范围检查后 `int64(...)` 截断。`overflow.MulInt` 只剩 `AddInt` / `SubInt` 用于合并天数与剩余时长，职责更清晰。
+
+---
+
+## 五、`padTwo` 不传 `orig` 参数——错误上下文归属
+
+**问题**：早期版本 `padTwo(s, orig string)` 接受原始输入作为第二个参数，目的是在错误信息中附上上下文。
+
+实际出现的问题是**双重上下文**：`normalizeDate` 调用 `padTwo` 时传入自己的 `orig`，`parseDate` 调用 `normalizeDate` 时又在 `fmt.Errorf` 里 `%w` 包装并追加一遍 "原始输入"，导致错误消息里出现两次相同的原始字符串。
+
+**修复**：`padTwo` 只报告它自己知道的信息（"数字段为空"、"数字段非数字 %q"、"数字段超过 2 位 %q"），不接触任何外层上下文。`normalizeDate` / `normalizeTime` 同样不在自己的错误里重复原始输入。**上下文只由距离调用方最近的一层（`parseDate` / `parseDateTime`）添加一次。**
+
+原则：**错误上下文归属最外层调用者，内层函数描述它们直接知道的事实。**
+
+---
+
+## 六、`ParseDuration` 显式拒绝 `+` 前缀
+
+`strconv.ParseFloat` 接受 `+` 前缀（`"+2.5"` 合法），因此原实现会静默接受 `"+2d"` 并返回正常结果，但这个行为没有在任何文档中说明。
+
+**问题**：`+` 前缀的含义不直观（大多数时长格式不使用它），且标准库 `time.ParseDuration` 也不接受 `+`。让 `ParseDuration` 接受标准库不接受的语法会造成语义不一致。
+
+**决策**：在 `validateDuration` 中首字符为 `+` 时直接返回错误，文档更新为"正数直接省略符号"。行为与标准库对齐，不引入无文档的特例。
+
+---
+
+## 七、`TestMsVariants` 使用硬编码绝对时间戳
+
+`StartOfDayMs(ms, cst)` 的实现等价于 `StartOfDay(time.UnixMilli(ms).In(cst)).UnixMilli()`。
+
+若测试写成：
+```go
+got := StartOfDayMs(ms, cst)
+want := msOf(StartOfDay(base))
+assert got == want
+```
+这只是验证"两边的代码等价"，而不是验证"结果是正确的日历天起始时间"。如果 `StartOfDay` 有 bug，两侧会同步出错，测试通过但结果是错的。
+
+**修复**：用独立脚本 `time.Date(2026, 3, 26, 0, 0, 0, 0, cst).UnixMilli()` 计算期望值，硬编码为字面量。测试失去对实现的依赖，真正验证正确性。
+
+同一原则也适用于 `TestMsVariants_UTC` 中的时区差异验证：CST 和 UTC 下的"今天 0 点"对应不同时间戳，两个硬编码常量的差值（`1774483200000 - 1774454400000 = 28800000 ms = 8h`）本身就是可以人工验证的事实。
+
+---
+
+## 八、`lastDayOfMonth` 提取为命名 helper
+
+`startOfNthMonthDay` 原本内联 `time.Date(y, m+1, 0, ...).Day()` 来获取月末天数。该表达式不直观（用"下月第 0 天"倒推本月末），且在函数内被引用两次时会重复调用。
+
+**提取为 `lastDayOfMonth(y, m, loc)`**：
+- 命名使意图直接可读，不需要注释解释"这个 day=0 是什么含义"
+- 在 `startOfNthMonthDay` 内调用一次后缓存在局部变量 `last`，避免重复调用
