@@ -13,7 +13,7 @@ import (
 func newFilledSet(n int) *SortedSet[int, int] {
 	ss := NewSortedSet[int, int]()
 	for i := 1; i <= n; i++ {
-		ss.Insert(&NodeData[int, int]{Key: i, Score: float64(i), Val: i})
+		ss.Insert(NewNodeData[int, int](i, float64(i), i))
 	}
 	return ss
 }
@@ -914,6 +914,9 @@ func (r *refModel) keys() []int {
 // checkSkiplistOrder 白盒检查：直接遍历跳表底层链表，
 // 验证相邻节点满足 lessOrder（score+seq 全序），
 // 以及 GetByRank(rank) 与链表位置严格对应。
+//
+// 注意：此函数与 bench_hook.go 中的 RunBenchCheck 逻辑相同。
+// 如修改其中一处，请同步更新另一处。
 func checkSkiplistOrder(t *testing.T, ss *SortedSet[int, int]) {
 	t.Helper()
 	current := ss.sl.Head.Levels[0].Forward
@@ -943,7 +946,8 @@ func checkSkiplistOrder(t *testing.T, ss *SortedSet[int, int]) {
 //  4. GetRank(GetByRank(r).Key) == r（排名双向一致）
 //  5. GetByRank 覆盖的 key 集合 == ref 中的 key 集合（无多无少）
 //  6. GetRankDesc(key) + GetRank(key) == Length+1（升降序对称）
-//  7. 跳表底层链表 lessOrder 全序（白盒）
+//  7. GetMin/GetMax 与 GetByRank(1)/GetByRank(n) 一致
+//  8. 跳表底层链表 lessOrder 全序（白盒，通过 checkSkiplistOrder 验证）
 func checkInvariants(t *testing.T, ss *SortedSet[int, int], ref *refModel) {
 	t.Helper()
 	n := ss.Length()
@@ -1517,5 +1521,79 @@ func BenchmarkSortedSet_Mixed(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+// TestSortedSet_StressOps 百万级压力测试：验证大规模混合操作后不变量仍然成立。
+//
+// 与 TestSortedSet_RandomOps 的差异：
+//   - 总操作数 100 万（10 倍），充分压测 O(log n) 路径
+//   - maxKeys=10,000，集合规模更大，暴露大集合下的跳表边界 bug
+//   - 使用 keyPool 切片实现 O(1) 随机键选取，避免 O(n) map 遍历成为瓶颈
+//   - 不对每步操作做 ref 结果对比（依靠 checkInvariants 验证每轮后全量不变量）
+func TestSortedSet_StressOps(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过百万级压力测试")
+	}
+	const (
+		rounds      = 10
+		opsPerRound = 100_000 // 总计 100 万次操作
+		scoreRange  = 100_000
+		maxKeys     = 10_000 // 较大集合，充分压测 O(log n)
+	)
+
+	rng := rand.New(rand.NewPCG(99, 0))
+	ss := NewSortedSet[int, int]()
+	ref := newRefModel()
+	// keyPool 与 ref 同步维护，swap-remove 保持 O(1) 随机选取
+	keyPool := make([]int, 0, maxKeys)
+	nextKey := 1
+
+	randScore := func() float64 {
+		return float64(rng.IntN(scoreRange)) - float64(scoreRange/2)
+	}
+
+	for round := range rounds {
+		for range opsPerRound {
+			poolSize := len(keyPool)
+			var op int
+			if poolSize == 0 || poolSize < maxKeys/4 {
+				op = 0 // 强制 insert
+			} else if poolSize >= maxKeys {
+				op = 1 + rng.IntN(2) // 只 delete 或 update
+			} else {
+				op = rng.IntN(4)
+			}
+
+			switch {
+			case op == 0: // insert
+				key := nextKey
+				nextKey++
+				score := randScore()
+				ss.Insert(NewNodeData[int, int](key, score, key))
+				ref.insert(key, score)
+				keyPool = append(keyPool, key)
+
+			case op == 1: // delete
+				idx := rng.IntN(poolSize)
+				key := keyPool[idx]
+				ss.Delete(key)
+				ref.delete(key)
+				// swap-remove：O(1) 删除，不保留 keyPool 顺序（无需有序）
+				keyPool[idx] = keyPool[poolSize-1]
+				keyPool = keyPool[:poolSize-1]
+
+			default: // update
+				key := keyPool[rng.IntN(poolSize)]
+				newScore := randScore()
+				ss.UpdateScore(key, newScore)
+				ref.updateScore(key, newScore)
+			}
+		}
+
+		// 每轮结束验证全量不变量
+		checkInvariants(t, ss, ref)
+		if t.Failed() {
+			t.Fatalf("round=%d 不变量检查失败，终止", round)
+		}
 	}
 }

@@ -139,9 +139,10 @@ go test -fuzz=FuzzRandomLevel -fuzztime=30s ./pkg/ds/sorted_set/
 
 ### 随机混合操作压力测试
 
-| 测试函数 | 覆盖场景 |
-|----------|---------|
-| `TestSortedSet_RandomOps` | 见下文 |
+| 测试函数 | 数据量 | 覆盖场景 |
+|----------|--------|---------|
+| `TestSortedSet_RandomOps` | 10 万次 | 参考模型逐步对比 + 全量不变量校验 |
+| `TestSortedSet_StressOps` | 100 万次 | 大规模不变量校验（maxKeys=10k，压测 O(log n) 路径）|
 
 `TestSortedSet_RandomOps` 通过随机混合操作序列验证整体正确性，弥补单方法测试无法覆盖的**跨操作状态一致性**：
 
@@ -155,9 +156,17 @@ go test -fuzz=FuzzRandomLevel -fuzztime=30s ./pkg/ds/sorted_set/
   4. `GetRank(GetByRank(r).Key) == r`（排名双向一致）
   5. `GetByRank` 覆盖的 key 集合 == ref key 集合（无多无少）
   6. `GetRankDesc(key) + GetRank(key) == Length+1`（升降序对称）
-  7. 白盒：跳表底层 level-0 链表 `lessOrder` 全序（`checkSkiplistOrder`）
+  7. `GetMin/GetMax` 与 `GetByRank(1)/GetByRank(n)` 一致
+  8. 白盒：跳表底层 level-0 链表 `lessOrder` 全序（`checkSkiplistOrder`）
 - 额外验证每轮随机 `GetRangeByScore` 的结果数量、范围正确性、有序性
 - 固定随机种子（PCG 42）保证失败可复现
+- 使用 `-short` 跳过（CI 快速通道）
+
+`TestSortedSet_StressOps` 在 100 万次操作下验证不变量，重点：
+- maxKeys=10,000，集合规模更大，暴露大集合下跳表边界 bug
+- 使用 keyPool 切片实现 O(1) 随机键选取（避免 O(n) map 遍历成为瓶颈）
+- 每轮结束后调用 `checkInvariants` 验证全量不变量（与 RandomOps 相同的校验逻辑）
+- 固定随机种子（PCG 99）保证失败可复现
 - 使用 `-short` 跳过（CI 快速通道）
 
 ## Benchmark

@@ -290,6 +290,10 @@ func (this *SkipList[K, V]) GetRank(data *NodeData[K, V]) int {
 	prev := this.Head
 	for i := this.Level - 1; i >= 0; i-- {
 		current := prev.Levels[i].Forward
+		// 条件包含 equalOrder：让 prev 越过目标节点停在其后，
+		// 使 prev.Data.equalOrder(data) 的检测在循环退出后立即成立。
+		// 与 Insert/Delete 只用 lessOrder 的模式不同，这里需要
+		// 在"恰好等于目标"时也推进，以便最终 prev 就是目标节点本身。
 		for current != nil && (current.Data.lessOrder(data) || current.Data.equalOrder(data)) {
 			rank += prev.Levels[i].Span
 			prev = current
