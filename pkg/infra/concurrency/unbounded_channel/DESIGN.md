@@ -159,9 +159,11 @@ Receive() / Out()
 | 类型安全 | `any` | `[T any]` 泛型 |
 
 **V6 三个信号源**：
-1. 生产者进入慢路径（enqueue buffer）→ 主动 `signal()`
-2. 消费者 `Receive()` 后若 buffer 非空 → 主动 `signal()`
+1. 消费者 `Receive()` 后若 buffer 非空 → 主动 `signal()`
+2. `Close()` 调用时 → `signal()`，确保 worker 及时感知关闭
 3. 1ms ticker 兜底（覆盖使用 `Out()` 直接消费的场景）
+
+> 注意：`sendSlow` 本身**不发** signal。channel 满时直接 return，依靠消费者 `Receive()` 触发信号；buffer 非空时调用 `transfer()` 内联搬运，同样不发 signal。
 
 ---
 

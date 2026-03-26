@@ -323,11 +323,12 @@ func TestCompare_BurstDrainLatency(t *testing.T) {
 // 性能基准测试
 // =============================================================================
 
-// benchRun 通用基准逻辑：RunParallel并发写入，单消费者持续消费
-func benchRun(b *testing.B, uc iUnboundedChan) {
+// benchRun 通用基准逻辑：RunParallel并发写入（按 parallelism 梯度），单消费者持续消费。
+// parallelism<=0 时使用默认值（GOMAXPROCS），>0 时调用 b.SetParallelism。
+func benchRun(b *testing.B, uc iUnboundedChan, parallelism int) {
 	b.Helper()
 	defer uc.Close()
-	
+
 	go func() {
 		for {
 			if _, ok := uc.Receive(); !ok {
@@ -335,7 +336,10 @@ func benchRun(b *testing.B, uc iUnboundedChan) {
 			}
 		}
 	}()
-	
+
+	if parallelism > 0 {
+		b.SetParallelism(parallelism)
+	}
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
@@ -349,14 +353,25 @@ func benchRun(b *testing.B, uc iUnboundedChan) {
 
 // --- 低负载：channel容量大，buffer几乎不触发，主要测快速路径 ---
 
+// BenchmarkV6_LowLoad 通过并发梯度（p=1/4/16/64）观察锁竞争随并发度的变化。
+// p=1 是无竞争基线；p 越高则竞争越激烈；ns/op 差距量化同步开销。
 func BenchmarkV6_LowLoad(b *testing.B) {
-	benchRun(b, NewUnboundedChannelV6[any](100000, 1000000))
+	for _, p := range []int{1, 4, 16, 64} {
+		b.Run(fmt.Sprintf("p=%d", p), func(b *testing.B) {
+			benchRun(b, NewUnboundedChannelV6[any](100000, 1000000), p)
+		})
+	}
 }
 
 // --- 高负载：channel容量小，buffer频繁触发，测慢路径+worker效率 ---
 
+// BenchmarkV6_HighLoad 同上，但强制走慢路径（小 chanSize=16），重点测 buffer 路径下的锁竞争。
 func BenchmarkV6_HighLoad(b *testing.B) {
-	benchRun(b, NewUnboundedChannelV6[any](16, 1000000))
+	for _, p := range []int{1, 4, 16, 64} {
+		b.Run(fmt.Sprintf("p=%d", p), func(b *testing.B) {
+			benchRun(b, NewUnboundedChannelV6[any](16, 1000000), p)
+		})
+	}
 }
 
 // --- 多生产者：测并发竞争下的锁争用 ---
@@ -364,7 +379,7 @@ func BenchmarkV6_HighLoad(b *testing.B) {
 func benchMultiProducer(b *testing.B, uc iUnboundedChan, producers int) {
 	b.Helper()
 	defer uc.Close()
-	
+
 	go func() {
 		for {
 			if _, ok := uc.Receive(); !ok {
@@ -372,23 +387,29 @@ func benchMultiProducer(b *testing.B, uc iUnboundedChan, producers int) {
 			}
 		}
 	}()
-	
+
 	var wg sync.WaitGroup
 	msgPerProd := b.N / producers
 	if msgPerProd == 0 {
 		msgPerProd = 1
 	}
-	
-	b.ResetTimer()
+
+	// 先创建所有 producer goroutine，统一等待 start 信号，
+	// 再 ResetTimer，确保 goroutine 创建开销不计入测量时间。
+	start := make(chan struct{})
 	wg.Add(producers)
 	for p := 0; p < producers; p++ {
 		go func(id int) {
 			defer wg.Done()
+			<-start
 			for i := 0; i < msgPerProd; i++ {
 				uc.Send(id*msgPerProd + i)
 			}
 		}(p)
 	}
+
+	b.ResetTimer()
+	close(start)
 	wg.Wait()
 	b.StopTimer()
 }
@@ -850,7 +871,7 @@ const realChanSize = 10000
 // BenchmarkReal_LowLoad_V6
 // 生产速率平稳，channel 基本不满，几乎全走快速路径
 func BenchmarkReal_LowLoad_V6(b *testing.B) {
-	benchRun(b, NewUnboundedChannelV6[any](realChanSize, 1000000))
+	benchRun(b, NewUnboundedChannelV6[any](realChanSize, 1000000), 0)
 }
 
 // BenchmarkReal_BurstOverflow_V6
@@ -1061,19 +1082,19 @@ func benchNativeChan(b *testing.B, chanSize int) {
 // 公平对比：两者都走快速路径，体现 V6 包装层的固定开销
 
 func BenchmarkQPS_NativeChan_Large(b *testing.B) { benchNativeChan(b, 100000) }
-func BenchmarkQPS_V6_Large(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](100000, 1000000)) }
+func BenchmarkQPS_V6_Large(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](100000, 1000000), 0) }
 
 // --- 场景2：chanSize 较小，buffer 频繁触发 ---
 // 非对等对比：原生 channel 满时阻塞生产者；V6 溢出到 buffer 继续接收
 // 体现"无限容量"在高负载下的额外代价（以及避免阻塞的价值）
 
 func BenchmarkQPS_NativeChan_Small(b *testing.B) { benchNativeChan(b, 64) }
-func BenchmarkQPS_V6_Small(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](64, 1000000)) }
+func BenchmarkQPS_V6_Small(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](64, 1000000), 0) }
 
 // --- 场景3：接近实际项目参数（chanSize=1万）---
 
 func BenchmarkQPS_NativeChan_10k(b *testing.B) { benchNativeChan(b, 10000) }
-func BenchmarkQPS_V6_10k(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](10000, 1000000)) }
+func BenchmarkQPS_V6_10k(b *testing.B)         { benchRun(b, NewUnboundedChannelV6[any](10000, 1000000), 0) }
 
 // --- 场景4：固定消息量，精确测量端到端吞吐（msg/s）---
 

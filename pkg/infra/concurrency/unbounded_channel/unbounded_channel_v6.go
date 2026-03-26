@@ -34,8 +34,8 @@ import (
 //   - 退避积累时存在不必要的搬运延迟
 //
 // V6改为事件驱动+固定ticker兜底：
-//  1. 生产者进入慢路径（buffer入队）后主动发信号
-//  2. 消费者调用Receive()后，若buffer非空则主动发信号
+//  1. 消费者调用Receive()后，若buffer非空则主动发信号
+//  2. 关闭时Close()发信号，确保worker及时感知
 //  3. 1ms固定ticker兜底，覆盖直接使用Out()的场景
 //
 // worker空闲时阻塞在select，零CPU消耗；有事件时精准唤醒。
@@ -120,13 +120,20 @@ func (uc *UnboundedChannelV6[T]) signal() {
 	}
 }
 
+// sendSlow 在加锁保护下处理慢路径投递，分两个阶段：
+//  1. 路由决策：根据 channel 是否满、buffer 是否有积压，决定消息去向
+//  2. 执行投递：bufferEnqueue / transfer / channelSend
+//
+// 注意：sendSlow 本身不发 signal。
+// - channel 满时：依靠消费者 Receive() 触发信号，worker 继续搬运
+// - buffer 非空时：inline transfer 内联搬运，channel 满后 Receive() 兜底
 func (uc *UnboundedChannelV6[T]) sendSlow(msg T) {
 	uc.mutex.Lock()
 	// 必须在发送到通道后解锁，因为发送数据到通道后，通道就可能满
 	// 必须要保证上面的是否满的判断和添加元素的操作为原子性操作。
 	defer uc.mutex.Unlock()
 	
-	// 在加锁保护下，直接判断通道是否已满
+	// ── 阶段一：channel 是否已满 ──────────────────────────────────────
 	if len(uc.channel) == cap(uc.channel) {
 		// 通道满了，暂存 buffer，直接返回。
 		// transfer() 此时无意义（channel 满无法搬运）。
@@ -135,7 +142,7 @@ func (uc *UnboundedChannelV6[T]) sendSlow(msg T) {
 		return
 	}
 	
-	// channel 未满，但不能直接投递。必须先检查 buffer 是否有积压消息：
+	// ── 阶段二：channel 有空位，检查 buffer 积压 ─────────────────────
 	// 若 buffer 非空，当前 msg 必须排在 buffer 末尾，保证 FIFO 顺序。
 	if uc.buffer.Len() != 0 {
 		// buffer非空,当前消息进入buffer
@@ -152,7 +159,15 @@ func (uc *UnboundedChannelV6[T]) sendSlow(msg T) {
 	}
 }
 
-// 上限判断：buffer超过上限则阻塞等待，避免内存无限增长（兜底背压）
+// senderShouldWait 判断当前 Send() 是否应因背压而阻塞。
+//
+// 在 Send() 中使用双重检查模式（double-check）：
+//  1. 无锁预检（lock-free pre-check）：快速过滤大多数不需要等待的情况，避免无谓加锁
+//  2. 加锁后 for 循环守卫（locked for-loop guard）：在 condSendWaiter.Wait() 前再次验证条件，
+//     防止虚假唤醒（spurious wakeup）导致过早退出等待
+//
+// 之所以用 for 循环而非 if：sync.Cond.Wait() 可能因调度原因提前返回，
+// 必须在 Wait() 返回后重新检查条件，否则会绕过背压保护。
 func (uc *UnboundedChannelV6[T]) senderShouldWait() bool {
 	return uc.bufferLen.Load() > uc.limit && !uc.closed.Load()
 }
@@ -276,10 +291,7 @@ func (uc *UnboundedChannelV6[T]) canClose() bool {
 	// 2.没有正在执行的 Send()（activeSenders==0）; 且
 	// 3.缓冲区无数据; 且
 	// 4.chan中没有数据
-	if uc.closed.Load() && uc.activeSenders.Load() == 0 && uc.buffer.Len() == 0 && len(uc.channel) == 0 {
-		return true
-	}
-	return false
+	return uc.closed.Load() && uc.activeSenders.Load() == 0 && uc.buffer.Len() == 0 && len(uc.channel) == 0
 }
 
 // skipCheck 是 worker 的前置过滤，避免无意义的 mutex 加锁。
@@ -287,10 +299,7 @@ func (uc *UnboundedChannelV6[T]) canClose() bool {
 // 虚假跳过的代价仅是"本次不检查"，下一次 signal 或 ticker 会补救，不影响正确性。
 func (uc *UnboundedChannelV6[T]) skipCheck() bool {
 	// 1.未关闭且2.缓冲区长度为0
-	if !uc.closed.Load() && uc.bufferLen.Load() == 0 {
-		return true
-	}
-	return false
+	return !uc.closed.Load() && uc.bufferLen.Load() == 0
 }
 
 // worker 替换V5的listCheck。
