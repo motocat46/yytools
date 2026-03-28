@@ -21,7 +21,7 @@ tr.Insert("app")
 tr.Search("apple")      // true
 tr.Search("ap")         // false（仅前缀，不是完整词）
 tr.HasPrefix("app")     // true
-tr.WithPrefix("app")    // ["apple", "application", "app"]（无序）
+tr.WithPrefix("app")    // 返回 ["app", "apple", "application"]（顺序不保证，示例已排序）
 
 tr.Delete("apple")
 tr.Len()                // 2

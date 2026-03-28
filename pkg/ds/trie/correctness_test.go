@@ -182,11 +182,12 @@ func TestCorrectness_Concurrent(t *testing.T) {
 	)
 	tr := trie.New()
 
-	// 预填充 500 个词，避免全删导致无词可查
+	// 预填充 500 个词，在并发开始前精确记录实际词数（genWord 词空间有碰撞，实际词数 <= 500）
 	rng0 := rand.New(rand.NewPCG(0, 0))
 	for range 500 {
 		tr.Insert(genWord(rng0))
 	}
+	initialLen := tr.Len()
 
 	var wg sync.WaitGroup
 	var insertCount, deleteCount atomic.Int64
@@ -216,9 +217,10 @@ func TestCorrectness_Concurrent(t *testing.T) {
 	}
 	wg.Wait()
 
-	// Len 必须非负，不应 panic，说明无 data race（配合 -race 运行）
-	if l := tr.Len(); l < 0 {
-		t.Errorf("并发操作后 Len() = %d < 0，不变量违反", l)
+	// 精确验证不变量：最终词数 == 初始词数 + 成功插入 - 成功删除
+	want := int64(initialLen) + insertCount.Load() - deleteCount.Load()
+	if got := int64(tr.Len()); got != want {
+		t.Errorf("并发结束后 Len(): got %d, want %d (initial=%d +inserts=%d -deletes=%d)",
+			got, want, initialLen, insertCount.Load(), deleteCount.Load())
 	}
-	t.Logf("并发结束：Insert=%d Delete=%d Len=%d", insertCount.Load(), deleteCount.Load(), tr.Len())
 }

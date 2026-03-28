@@ -100,8 +100,8 @@ func TestHasPrefix(t *testing.T) {
 		want   bool
 	}{
 		{"app", true},
-		{"apple", true},        // 精确匹配也是合法前缀
-		{"apples", false},      // 超出任意词的长度
+		{"apple", true},   // 精确匹配也是合法前缀
+		{"apples", false}, // 超出任意词的长度
 		{"应", true},
 		{"应用", true},
 		{"应用程序", true},
@@ -333,6 +333,23 @@ func TestSearch_EmptyStringInserted(t *testing.T) {
 	}
 }
 
+func TestDelete_EmptyString(t *testing.T) {
+	tr := New()
+	tr.Insert("")
+	if ok := tr.Delete(""); !ok {
+		t.Error(`Delete(""): got false, want true`)
+	}
+	if tr.Len() != 0 {
+		t.Errorf(`Delete("") 后 Len(): got %d, want 0`, tr.Len())
+	}
+	if tr.HasPrefix("") {
+		t.Error(`Delete("") 后 HasPrefix(""): got true, want false`)
+	}
+	if tr.Search("") {
+		t.Error(`Delete("") 后 Search(""): got true, want false`)
+	}
+}
+
 var benchSizes = []int{100, 1_000, 10_000, 100_000, 1_000_000}
 
 // makeBenchWords 生成 n 个随机词（固定种子，结果可复现）。
@@ -369,19 +386,21 @@ func BenchmarkSearch(b *testing.B) {
 }
 
 // BenchmarkInsert 维持集合规模稳定：删一个插一个。
+// 词池大小为 n + b.N，保证每次 Insert 的词都是新词，避免 b.N > n 时 i%n 回绕导致规模漂移。
 func BenchmarkInsert(b *testing.B) {
 	for _, n := range benchSizes {
 		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
-			words := makeBenchWords(n * 2) // [0,n) 预填充，[n,2n) 替换池
+			// [0,n) 预填充集合，[n, n+b.N) 作为替换词池（每次 Insert 都是新词）
+			pool := makeBenchWords(n + b.N)
 			tr := New()
 			for i := range n {
-				tr.Insert(words[i])
+				tr.Insert(pool[i])
 			}
 			b.ResetTimer()
 			b.ReportAllocs()
 			for i := range b.N {
-				tr.Delete(words[i%n])
-				tr.Insert(words[n+i%n])
+				tr.Delete(pool[i])   // 滑动窗口：删除最早插入的词（始终在 Trie 中）
+				tr.Insert(pool[n+i]) // 插入新词，集合规模保持 n 不变
 			}
 		})
 	}
