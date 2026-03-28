@@ -235,6 +235,90 @@ func TestDelete_PrefixWordRemains(t *testing.T) {
 	}
 }
 
+func TestBoundary_EmptyTrie(t *testing.T) {
+	tr := New()
+	if tr.Search("") {
+		t.Error(`空 Trie Search(""): got true, want false`)
+	}
+	if tr.HasPrefix("") {
+		t.Error(`空 Trie HasPrefix(""): got true, want false`)
+	}
+	if got := tr.WithPrefix(""); len(got) != 0 {
+		t.Errorf(`空 Trie WithPrefix(""): got %v, want []`, got)
+	}
+	if tr.Delete("x") {
+		t.Error("空 Trie Delete(x): got true, want false")
+	}
+}
+
+func TestBoundary_SingleElement(t *testing.T) {
+	tr := New()
+	tr.Insert("x")
+	if !tr.Search("x") {
+		t.Error("Search(x): got false, want true")
+	}
+	if !tr.HasPrefix("x") {
+		t.Error("HasPrefix(x): got false, want true")
+	}
+	tr.Delete("x")
+	if tr.Search("x") {
+		t.Error("Delete 后 Search(x): got true, want false")
+	}
+	if tr.Len() != 0 {
+		t.Errorf("Delete 后 Len(): got %d, want 0", tr.Len())
+	}
+}
+
+func TestBoundary_Unicode(t *testing.T) {
+	tr := New()
+	words := []string{"你好", "你好世界", "你好吗", "hello", "héllo"}
+	for _, w := range words {
+		tr.Insert(w)
+	}
+	if !tr.HasPrefix("你好") {
+		t.Error("HasPrefix(你好): got false, want true")
+	}
+	got := tr.WithPrefix("你好")
+	sort.Strings(got)
+	want := []string{"你好", "你好世界", "你好吗"}
+	if !slicesEqual(got, want) {
+		t.Errorf("WithPrefix(你好): got %v, want %v", got, want)
+	}
+}
+
+func TestBoundary_ReInsertAfterDelete(t *testing.T) {
+	tr := New()
+	tr.Insert("hello")
+	tr.Delete("hello")
+	if ok := tr.Insert("hello"); !ok {
+		t.Error("Delete 后重新 Insert: got false, want true")
+	}
+	if !tr.Search("hello") {
+		t.Error("重新 Insert 后 Search: got false, want true")
+	}
+	if tr.Len() != 1 {
+		t.Errorf("重新 Insert 后 Len(): got %d, want 1", tr.Len())
+	}
+}
+
+func TestBoundary_DeleteOnlySharedPrefix(t *testing.T) {
+	// 删除作为其他词前缀的词（如 app 是 apple 的前缀）
+	tr := New()
+	tr.Insert("app")
+	tr.Insert("apple")
+	tr.Delete("app")
+	if tr.Search("app") {
+		t.Error("Delete app 后 Search(app): got true, want false")
+	}
+	if !tr.Search("apple") {
+		t.Error("Delete app 后 Search(apple): got false, want true")
+	}
+	// apple 存在，HasPrefix("app") 仍应为 true
+	if !tr.HasPrefix("app") {
+		t.Error("Delete app 后 HasPrefix(app): got false, want true（apple 仍存在）")
+	}
+}
+
 func TestSearch_EmptyStringInserted(t *testing.T) {
 	tr := New()
 	tr.Insert("")
