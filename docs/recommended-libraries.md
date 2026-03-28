@@ -12,6 +12,7 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 | 请求合并（singleflight） | `golang.org/x/sync/singleflight` | 防缓存击穿，相同 key 的并发请求只执行一次 |
 | 并发度控制（semaphore） | `golang.org/x/sync/semaphore` | 加权信号量，控制同时执行的 goroutine 数量 |
 | 布隆过滤器 | `github.com/bits-and-blooms/bloom/v3` | 误判率计算、动态扩容、序列化均已支持 |
+| 双端队列（Deque） | `github.com/gammazero/deque` | Ring buffer，所有操作 O(1) 均摊；PushFront/PushBack/PopFront/PopBack |
 
 ## 原则
 
