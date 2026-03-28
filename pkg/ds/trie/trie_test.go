@@ -17,7 +17,10 @@
 package trie
 
 import (
+	"fmt"
+	"math/rand/v2"
 	"sort"
+	"sync/atomic"
 	"testing"
 )
 
@@ -327,5 +330,142 @@ func TestSearch_EmptyStringInserted(t *testing.T) {
 	}
 	if tr.Len() != 1 {
 		t.Errorf("Len(): got %d, want 1", tr.Len())
+	}
+}
+
+var benchSizes = []int{100, 1_000, 10_000, 100_000, 1_000_000}
+
+// makeBenchWords 生成 n 个随机词（固定种子，结果可复现）。
+func makeBenchWords(n int) []string {
+	rng := rand.New(rand.NewPCG(42, 0))
+	words := make([]string, n)
+	for i := range words {
+		length := 3 + rng.IntN(8)
+		runes := make([]rune, length)
+		for j := range runes {
+			runes[j] = rune('a' + rng.IntN(26))
+		}
+		words[i] = string(runes)
+	}
+	return words
+}
+
+// BenchmarkSearch n 个词的 Trie 上随机精确查找。
+func BenchmarkSearch(b *testing.B) {
+	for _, n := range benchSizes {
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			words := makeBenchWords(n)
+			tr := New()
+			for _, w := range words {
+				tr.Insert(w)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := range b.N {
+				tr.Search(words[i%n])
+			}
+		})
+	}
+}
+
+// BenchmarkInsert 维持集合规模稳定：删一个插一个。
+func BenchmarkInsert(b *testing.B) {
+	for _, n := range benchSizes {
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			words := makeBenchWords(n * 2) // [0,n) 预填充，[n,2n) 替换池
+			tr := New()
+			for i := range n {
+				tr.Insert(words[i])
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := range b.N {
+				tr.Delete(words[i%n])
+				tr.Insert(words[n+i%n])
+			}
+		})
+	}
+}
+
+// BenchmarkHasPrefix n 个词的 Trie 上前缀查询。
+func BenchmarkHasPrefix(b *testing.B) {
+	for _, n := range benchSizes {
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			words := makeBenchWords(n)
+			tr := New()
+			for _, w := range words {
+				tr.Insert(w)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := range b.N {
+				w := words[i%n]
+				runes := []rune(w)
+				prefix := string(runes[:max(1, len(runes)/2)])
+				tr.HasPrefix(prefix)
+			}
+		})
+	}
+}
+
+// BenchmarkMixed 模拟真实负载：60% Search，20% Insert/Delete，20% HasPrefix/WithPrefix。
+func BenchmarkMixed(b *testing.B) {
+	for _, n := range benchSizes {
+		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
+			words := makeBenchWords(n * 2)
+			tr := New()
+			for i := range n {
+				tr.Insert(words[i])
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := range b.N {
+				switch i % 10 {
+				case 0, 1: // 20% Insert/Delete
+					tr.Delete(words[i%n])
+					tr.Insert(words[n+i%n])
+				case 2, 3: // 20% HasPrefix/WithPrefix
+					w := words[i%n]
+					runes := []rune(w)
+					prefix := string(runes[:max(1, len(runes)/2)])
+					if i%2 == 0 {
+						tr.HasPrefix(prefix)
+					} else {
+						tr.WithPrefix(prefix)
+					}
+				default: // 60% Search
+					tr.Search(words[i%n])
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkConcurrent_ReadHeavy 并发读（Search+HasPrefix）为主，少量写。
+// 观察读写锁在不同并发度下的竞争代价。
+func BenchmarkConcurrent_ReadHeavy(b *testing.B) {
+	const n = 10_000
+	words := makeBenchWords(n)
+	for _, p := range []int{1, 4, 16, 64} {
+		b.Run(fmt.Sprintf("p=%d", p), func(b *testing.B) {
+			tr := New()
+			for _, w := range words {
+				tr.Insert(w)
+			}
+			b.SetParallelism(p)
+			b.ResetTimer()
+			b.ReportAllocs()
+			var i atomic.Int64
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					idx := int(i.Add(1)) % n
+					if idx%10 == 0 { // 10% 写
+						tr.Insert(words[idx])
+					} else { // 90% 读
+						tr.Search(words[idx])
+					}
+				}
+			})
+		})
 	}
 }
