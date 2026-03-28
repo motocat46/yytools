@@ -115,7 +115,6 @@ func (c *TimeCondition) Check(subjectMs, nowMs int64) bool {
 	switch c.op {
 	case OpAlways:
 		return true
-		return true
 	case OpLT:
 		return subjectMs < c.absTs
 	case OpGE:
