@@ -9,3 +9,4 @@
 | [os](os/README.md) | OS 工具封装（文件存在检测、备份等） |
 | [concurrency/unbounded_channel](concurrency/unbounded_channel/README.md) | 无大小限制的 Channel，多种实现变体 |
 | [concurrency/workerpool](concurrency/workerpool/README.md) | 固定大小 goroutine 池 + 泛型 Pipeline |
+| [timecond](timecond/README.md) | 基于配置的时间条件判断（绝对/相对时间戳，OpLT/GE/Within/RelLT/RelGE） |
