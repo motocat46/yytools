@@ -9,3 +9,4 @@
 | [os](os/README.md) | OS 工具封装（文件存在检测、备份等） |
 | [concurrency/unbounded_channel](concurrency/unbounded_channel/README.md) | 无大小限制的 Channel，多种实现变体 |
 | [concurrency/workerpool](concurrency/workerpool/README.md) | 固定大小 goroutine 池 + 泛型 Pipeline |
+| [timer/timingwheel](timer/timingwheel/README.md) | 分层时间轮定时器（O(1) add/cancel，毫秒精度，约 50 天覆盖）+ [DelayQueue](timer/delayqueue/README.md) 子模块 |
