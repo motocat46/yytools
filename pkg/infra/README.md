@@ -10,3 +10,4 @@
 | [concurrency/unbounded_channel](concurrency/unbounded_channel/README.md) | 无大小限制的 Channel，多种实现变体 |
 | [concurrency/workerpool](concurrency/workerpool/README.md) | 固定大小 goroutine 池 + 泛型 Pipeline |
 | [timecond](timecond/README.md) | 基于配置的时间条件判断（绝对/相对时间戳，OpLT/GE/Within/RelLT/RelGE） |
+| [timer/timingwheel](timer/timingwheel/README.md) | 分层时间轮定时器（O(1) add/cancel，毫秒精度，约 50 天覆盖）+ [DelayQueue](timer/delayqueue/README.md) 子模块 |
