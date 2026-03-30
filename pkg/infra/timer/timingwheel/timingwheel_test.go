@@ -174,8 +174,10 @@ func TestAfterFunc_ManyTimers_AllFire(t *testing.T) {
 	}
 }
 
-// TestCancelBeforeFire_DoesNotExecute 验证 Cancel 后回调不执行（正常路径）
-func TestCancelBeforeFire_DoesNotExecute(t *testing.T) {
+// TestCancelBeforeFire_BestEffort 验证 timer 仍在 bucket 中时 Cancel 可阻止回调执行。
+// 注意：Cancel 是 best-effort 语义（与 time.Timer.Stop() 一致）——timer 已入 taskQueue 后
+// Cancel 不再有效；本测试只覆盖"Cancel 在 Flush 之前"这条路径。
+func TestCancelBeforeFire_BestEffort(t *testing.T) {
 	tw := timingwheel.New()
 	tw.Start()
 	defer tw.Stop()
@@ -186,7 +188,7 @@ func TestCancelBeforeFire_DoesNotExecute(t *testing.T) {
 
 	time.Sleep(600 * time.Millisecond)
 	if fired.Load() {
-		t.Error("Cancel 后 timer 不应触发（正常路径）")
+		t.Error("Cancel 后 timer 不应触发（正常 best-effort 路径：timer 仍在 bucket 中）")
 	}
 }
 
