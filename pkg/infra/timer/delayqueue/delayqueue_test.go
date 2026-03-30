@@ -144,7 +144,7 @@ func TestDelayQueue_Concurrent_NoLostNoDuplicate(t *testing.T) {
 		return time.Since(start).Milliseconds()
 	})
 
-	rng := rand.New(rand.NewPCG(42, 0))
+	rng := rand.New(rand.NewPCG(42, 0)) // rand.New 返回的 rng 非并发安全，需 mu 保护
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for i := 0; i < producers; i++ {

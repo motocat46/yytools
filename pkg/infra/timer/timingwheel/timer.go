@@ -20,9 +20,9 @@ import "sync/atomic"
 // Timer 是定时任务节点，同时作为 bucket 双向循环链表的节点。
 // 调用方通过 *Timer 取消定时器。
 type Timer struct {
-	expireAt  int64  // 单调到期时间（ms，相对于 TimingWheel.startTime 的偏移）
-	interval  int64  // 0=one-shot；>0=repeating 间隔（ms）
-	task      func() // 回调，必须非阻塞
+	expireAt int64  // 从 TimingWheel.startTime 起的单调毫秒时间戳（非相对延迟）
+	interval int64  // 0=one-shot；>0=repeating 间隔（ms）
+	task     func() // 回调，必须非阻塞
 
 	// 双向链表指针（bucket 内链表使用）
 	prev, next *Timer

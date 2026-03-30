@@ -36,8 +36,10 @@ type TimingWheel struct {
 	wheels     [5]*wheel
 	delayQueue *delayqueue.DelayQueue[*bucket]
 
-	overflow   timerHeap  // overflow min-heap（超出 ~50天的定时器）
-	overflowMu sync.Mutex // 串行化并发 add() 对 overflow 的写入
+	overflow timerHeap // overflow min-heap（超出 ~50天的定时器）
+	// overflowMu 串行化 add()（持 mu.RLock）路径中多 goroutine 对 overflow 的并发写入。
+	// advanceClock()（持 mu.Lock write）独占时不加 overflowMu——writeLock 已排他。
+	overflowMu sync.Mutex
 
 	// taskQueue 携带 *Timer 而非 func()，taskExecutor 据此重新注册 repeating timer
 	taskQueue *uc.UnboundedChannel[*Timer]
