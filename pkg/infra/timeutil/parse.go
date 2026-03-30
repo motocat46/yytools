@@ -33,7 +33,18 @@ import (
 //   - 日期时间：  "2024-01-05 09:05:03" / "2024/1/5 9:5:3"（秒可省略，省略时默认 0）
 //
 // 输入前后空白和中间多余空白自动处理。不支持纯时间字符串（如 "09:05:03"）。
+// 需要指定时区时使用 ParseInLoc。
 func Parse(s string) (time.Time, error) {
+	return ParseInLoc(s, time.Local)
+}
+
+// ParseInLoc 解析同 Parse，以 loc 指定的时区解释日期时间字符串。
+// 用于服务器时区与业务时区不一致的场景（如服务器在 UTC+0，业务使用 Asia/Shanghai）。
+//
+// 示例（loc = Asia/Shanghai）：
+//
+//	"2024-03-15 10:00:00" → 2024-03-15 10:00:00 CST（= UTC+8 的 02:00:00 UTC）
+func ParseInLoc(s string, loc *time.Location) (time.Time, error) {
 	orig := s
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -45,18 +56,24 @@ func Parse(s string) (time.Time, error) {
 	fields := strings.Fields(s)
 	switch len(fields) {
 	case 1:
-		return parseDate(fields[0])
+		return parseDate(fields[0], loc)
 	case 2:
-		return parseDateTime(fields[0], fields[1])
+		return parseDateTime(fields[0], fields[1], loc)
 	default:
 		return time.Time{}, fmt.Errorf("timeutil.Parse: 格式不支持（原始输入: %q）", s)
 	}
 }
 
-// ParseUnixMilli 解析同 Parse，成功时返回 Unix 毫秒时间戳。
+// ParseUnixMilli 解析同 Parse，成功时返回 Unix 毫秒时间戳（时区为 time.Local）。
 // 非法输入返回 0 和非 nil 错误。
 func ParseUnixMilli(s string) (int64, error) {
-	t, err := Parse(s)
+	return ParseUnixMilliInLoc(s, time.Local)
+}
+
+// ParseUnixMilliInLoc 解析同 ParseInLoc，成功时返回 Unix 毫秒时间戳。
+// 语义见 ParseInLoc。
+func ParseUnixMilliInLoc(s string, loc *time.Location) (int64, error) {
+	t, err := ParseInLoc(s, loc)
 	if err != nil {
 		return 0, err
 	}
@@ -65,19 +82,19 @@ func ParseUnixMilli(s string) (int64, error) {
 
 // ── 内部实现 ──────────────────────────────────────────────────────────────────
 
-func parseDate(s string) (time.Time, error) {
+func parseDate(s string, loc *time.Location) (time.Time, error) {
 	normalized, err := normalizeDate(s)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("timeutil.Parse: %w（原始输入: %q）", err, s)
 	}
-	t, err := time.ParseInLocation("2006-01-02", normalized, time.Local)
+	t, err := time.ParseInLocation("2006-01-02", normalized, loc)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("timeutil.Parse: 日期不合法（原始输入: %q）: %w", s, err)
 	}
 	return t, nil
 }
 
-func parseDateTime(datePart, timePart string) (time.Time, error) {
+func parseDateTime(datePart, timePart string, loc *time.Location) (time.Time, error) {
 	orig := datePart + " " + timePart
 	normDate, err := normalizeDate(datePart)
 	if err != nil {
@@ -87,7 +104,7 @@ func parseDateTime(datePart, timePart string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("timeutil.Parse: %w（原始输入: %q）", err, orig)
 	}
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", normDate+" "+normTime, time.Local)
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", normDate+" "+normTime, loc)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("timeutil.Parse: 日期时间不合法（原始输入: %q %q）: %w", datePart, timePart, err)
 	}

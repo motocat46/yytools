@@ -33,9 +33,16 @@ if cond.Check(playerRegisterTs, fixedNowMs) {
 
 ## API
 
+### `ParseInLoc(op Op, value string, loc *time.Location) (*TimeCondition, error)`
+
+解析配置字符串，以 `loc` 指定的时区解释绝对时间字符串，返回可复用的条件对象。
+用于服务器时区与业务时区不一致的场景（如服务器在 UTC+0，业务使用 Asia/Shanghai）。
+`OpRelLT` / `OpRelGE` 使用时长，`loc` 对其无影响。
+
 ### `Parse(op Op, value string) (*TimeCondition, error)`
 
-解析配置字符串，返回可复用的条件对象。通常在服务启动或配置加载时调用一次，之后多次复用。
+解析同 `ParseInLoc`，以 `time.Local` 解释绝对时间字符串。语义见 `ParseInLoc`。
+通常在服务启动或配置加载时调用一次，之后多次复用。
 
 ### `(*TimeCondition).CheckNow(subjectMs int64) bool`
 

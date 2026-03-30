@@ -328,6 +328,42 @@ func TestCheck_Rel_NegativeElapsed(t *testing.T) {
 	}
 }
 
+// ── ParseInLoc：时区差异 ───────────────────────────────────────────────────────
+
+func TestParseInLoc_AbsTsDiffersByTimezone(t *testing.T) {
+	// 同一时间字符串在不同时区解析出不同的 Unix 时间戳
+	const timeStr = "2024-03-15 10:00:00"
+	shanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Skipf("无法加载 Asia/Shanghai 时区: %v", err)
+	}
+
+	condShanghai, err := timecond.ParseInLoc(timecond.OpGE, timeStr, shanghai)
+	if err != nil {
+		t.Fatalf("ParseInLoc(OpGE, %q, Shanghai): %v", timeStr, err)
+	}
+	condUTC, err := timecond.ParseInLoc(timecond.OpGE, timeStr, time.UTC)
+	if err != nil {
+		t.Fatalf("ParseInLoc(OpGE, %q, UTC): %v", timeStr, err)
+	}
+
+	// Shanghai = UTC+8：同一字符串，Shanghai 阈值比 UTC 阈值早 8h
+	// 选 subject = UTC 阈值前 1h：对 UTC 条件不满足，但已过 Shanghai 阈值（Shanghai 阈值更早），满足
+	utcThresholdMs, err2 := timeutil.ParseInLoc(timeStr, time.UTC)
+	if err2 != nil {
+		t.Fatalf("timeutil.ParseInLoc: %v", err2)
+	}
+	subject := utcThresholdMs.UnixMilli() - int64(time.Hour.Milliseconds())
+
+	wantShanghai, wantUTC := true, false
+	if got := condShanghai.Check(subject, 0); got != wantShanghai {
+		t.Errorf("Shanghai.Check(subject=%d, 0) = %v, want %v", subject, got, wantShanghai)
+	}
+	if got := condUTC.Check(subject, 0); got != wantUTC {
+		t.Errorf("UTC.Check(subject=%d, 0) = %v, want %v", subject, got, wantUTC)
+	}
+}
+
 // ── Op.String ─────────────────────────────────────────────────────────────────
 
 func TestOp_String(t *testing.T) {

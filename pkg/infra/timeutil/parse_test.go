@@ -390,3 +390,61 @@ func BenchmarkParseUnixMilli(b *testing.B) {
 		_, _ = ParseUnixMilli("2024-01-05 09:05:03")
 	}
 }
+
+func TestParseInLoc(t *testing.T) {
+	shanghai, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatalf("load Asia/Shanghai: %v", err)
+	}
+	utc := time.UTC
+
+	// 同一字符串在不同时区解析出不同 Unix 时间戳
+	const s = "2024-03-15 10:00:00"
+	tShanghai, err := ParseInLoc(s, shanghai)
+	if err != nil {
+		t.Fatalf("ParseInLoc(%q, Shanghai): %v", s, err)
+	}
+	tUTC, err := ParseInLoc(s, utc)
+	if err != nil {
+		t.Fatalf("ParseInLoc(%q, UTC): %v", s, err)
+	}
+
+	diff := tShanghai.Unix() - tUTC.Unix()
+	wantDiff := int64(-8 * 3600) // Shanghai = UTC+8，同一墙钟时间 Shanghai 比 UTC 早 8 小时
+	if diff != wantDiff {
+		t.Errorf("Shanghai - UTC = %ds，want %ds", diff, wantDiff)
+	}
+
+	// 时区信息正确附着
+	if got := tShanghai.Location().String(); got != "Asia/Shanghai" {
+		t.Errorf("location = %q, want Asia/Shanghai", got)
+	}
+}
+
+func TestParseInLoc_DateOnly(t *testing.T) {
+	shanghai, _ := time.LoadLocation("Asia/Shanghai")
+	t0, err := ParseInLoc("2024-03-15", shanghai)
+	if err != nil {
+		t.Fatalf("ParseInLoc: %v", err)
+	}
+	// 纯日期应为当天 00:00:00
+	if h, m, s := t0.Clock(); h != 0 || m != 0 || s != 0 {
+		t.Errorf("time = %02d:%02d:%02d, want 00:00:00", h, m, s)
+	}
+	if got := t0.Location().String(); got != "Asia/Shanghai" {
+		t.Errorf("location = %q, want Asia/Shanghai", got)
+	}
+}
+
+func TestParseUnixMilliInLoc(t *testing.T) {
+	shanghai, _ := time.LoadLocation("Asia/Shanghai")
+	ms, err := ParseUnixMilliInLoc("2024-03-15 10:00:00", shanghai)
+	if err != nil {
+		t.Fatalf("ParseUnixMilliInLoc: %v", err)
+	}
+	// 反向验证：还原回 Shanghai 时区应得到原始时间
+	got := time.UnixMilli(ms).In(shanghai)
+	if got.Hour() != 10 || got.Minute() != 0 || got.Second() != 0 {
+		t.Errorf("restored time = %v, want 10:00:00", got)
+	}
+}

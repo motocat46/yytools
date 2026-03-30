@@ -49,11 +49,16 @@ expireAt := time.Now().Add(expireDuration)
 
 ---
 
-## Parse / ParseUnixMilli — 日期时间字符串解析
+## Parse / ParseInLoc — 日期时间字符串解析
+
+### `ParseInLoc(s string, loc *time.Location) (time.Time, error)`
+
+解析日期或日期时间字符串，以 `loc` 指定的时区返回 `time.Time`。
+用于服务器时区与业务时区不一致的场景（如服务器在 UTC+0，业务使用 Asia/Shanghai）。
 
 ### `Parse(s string) (time.Time, error)`
 
-解析日期或日期时间字符串，返回 `time.Time`（时区为 `time.Local`）。
+解析同 `ParseInLoc`，时区为 `time.Local`。语义见 `ParseInLoc`。
 
 **支持的格式：**
 
@@ -68,31 +73,36 @@ expireAt := time.Now().Add(expireDuration)
 - 月、日、时、分、秒可省略前导零（只能 1 位或 2 位）
 - 输入前后空白和中间多余空白自动处理
 - 省略秒时默认为 `0`
-- 返回时区为 `time.Local`；需要 UTC 时由调用方用 `t.UTC()` 转换
+
+### `ParseUnixMilliInLoc(s string, loc *time.Location) (int64, error)`
+
+解析同 `ParseInLoc`，成功时返回 Unix 毫秒时间戳。语义见 `ParseInLoc`。
 
 ### `ParseUnixMilli(s string) (int64, error)`
 
-与 `Parse` 相同，成功时返回 Unix 毫秒时间戳（`int64`）。非法输入返回 `0, err`。
+解析同 `Parse`，成功时返回 Unix 毫秒时间戳。非法输入返回 `0, err`。
 
 ### 使用示例
 
 ```go
-import "github.com/motocat46/yytools/pkg/infra/timeutil"
+import (
+    "time"
+    "github.com/motocat46/yytools/pkg/infra/timeutil"
+)
 
-// 纯日期
-t, err := timeutil.Parse("2024-1-5")         // 2024-01-05 00:00:00 Local
-t, err  = timeutil.Parse("2024/01/05")       // 同上
+// 业务时区（如服务器在 UTC+0，业务使用上海时区）
+shanghai, _ := time.LoadLocation("Asia/Shanghai")
+t, err := timeutil.ParseInLoc("2024-03-15 10:00:00", shanghai)
+// → 2024-03-15 10:00:00 CST（UTC 02:00:00）
 
-// 日期时间
-t, err  = timeutil.Parse("2024-1-5 9:5:3")  // 2024-01-05 09:05:03 Local
-t, err  = timeutil.Parse("2024-01-05 9:5")  // 2024-01-05 09:05:00 Local
+// 默认 time.Local
+t, err = timeutil.Parse("2024-1-5")         // 2024-01-05 00:00:00 Local
+t, err = timeutil.Parse("2024-1-5 9:5:3")  // 2024-01-05 09:05:03 Local
+t, err = timeutil.Parse("2024-01-05 9:5")  // 2024-01-05 09:05:00 Local
 
 // 毫秒时间戳
 ms, err := timeutil.ParseUnixMilli("2024-01-05 09:05:03")
-
-// 需要 UTC 时由调用方转换
-t, err = timeutil.Parse("2024-01-05")
-utc   := t.UTC()
+ms, err  = timeutil.ParseUnixMilliInLoc("2024-01-05 09:05:03", shanghai)
 ```
 
 **不支持：** 纯时间字符串（`"09:05:03"`）、非年月日顺序、毫秒/微秒精度。

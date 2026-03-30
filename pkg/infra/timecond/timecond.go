@@ -68,27 +68,28 @@ type TimeCondition struct {
 // Op 暴露条件的运算符类型，供调用方在日志、序列化或调试时使用。
 func (c *TimeCondition) Op() Op { return c.op }
 
-// Parse 解析 (op, value) 配置，返回可复用的 TimeCondition。
+// ParseInLoc 解析 (op, value) 配置，以 loc 指定的时区解释绝对时间字符串，返回可复用的 TimeCondition。
+// 用于服务器时区与业务时区不一致的场景（如服务器在 UTC+0，业务使用 Asia/Shanghai）。
 // op 不在已知枚举范围内，或 value 格式不符合对应 Op 的要求时，返回非 nil error。
 //
 // value 格式：
 //   - OpAlways：忽略，传空字符串即可
-//   - OpLT / OpGE：时间字符串，格式同 timeutil.Parse（如 "2024-03-15 10:00:00"）
+//   - OpLT / OpGE：时间字符串，格式同 timeutil.ParseInLoc（如 "2024-03-15 10:00:00"）
 //   - OpWithin：两个时间字符串用英文逗号分隔（如 "2024-03-15 10:00:00,2024-03-20 10:00:00"），
 //     自动排序，语义为左闭右开 [t1, t2)
-//   - OpRelLT / OpRelGE：时长字符串，格式同 timeutil.ParseDuration（如 "7d"、"24h30m"）
-func Parse(op Op, value string) (*TimeCondition, error) {
+//   - OpRelLT / OpRelGE：时长字符串，格式同 timeutil.ParseDuration（如 "7d"、"24h30m"）；loc 对此类 Op 无影响
+func ParseInLoc(op Op, value string, loc *time.Location) (*TimeCondition, error) {
 	switch op {
 	case OpAlways:
 		return &TimeCondition{op: op}, nil
 	case OpLT, OpGE:
-		ms, err := parseAbsMs(value)
+		ms, err := parseAbsMs(value, loc)
 		if err != nil {
 			return nil, err
 		}
 		return &TimeCondition{op: op, absTs: ms}, nil
 	case OpWithin:
-		lo, hi, err := parseAbsRange(value)
+		lo, hi, err := parseAbsRange(value, loc)
 		if err != nil {
 			return nil, err
 		}
@@ -102,6 +103,11 @@ func Parse(op Op, value string) (*TimeCondition, error) {
 	default:
 		return nil, fmt.Errorf("timecond: unsupported %s", op)
 	}
+}
+
+// Parse 解析同 ParseInLoc，以 time.Local 解释绝对时间字符串。语义见 ParseInLoc。
+func Parse(op Op, value string) (*TimeCondition, error) {
+	return ParseInLoc(op, value, time.Local)
 }
 
 // Check 以 nowMs 作为当前时间判断 subjectMs 是否满足条件，满足返回 true。
@@ -137,27 +143,27 @@ func (c *TimeCondition) CheckNow(subjectMs int64) bool {
 	return c.Check(subjectMs, time.Now().UnixMilli())
 }
 
-// parseAbsMs 将时间字符串解析为 Unix 毫秒时间戳。
-func parseAbsMs(value string) (int64, error) {
-	t, err := timeutil.Parse(value)
+// parseAbsMs 将时间字符串以 loc 时区解析为 Unix 毫秒时间戳。
+func parseAbsMs(value string, loc *time.Location) (int64, error) {
+	t, err := timeutil.ParseInLoc(value, loc)
 	if err != nil {
 		return 0, fmt.Errorf("timecond: parse time %q: %w", value, err)
 	}
 	return t.UnixMilli(), nil
 }
 
-// parseAbsRange 将 "t1,t2" 格式解析为左闭右开区间 [lo, hi)，lo > hi 时自动交换。
+// parseAbsRange 将 "t1,t2" 格式以 loc 时区解析为左闭右开区间 [lo, hi)，lo > hi 时自动交换。
 // 用 SplitN(..., 2) 强制只拆成两段，保证格式为恰好一个逗号分隔的两个时间。
-func parseAbsRange(value string) (lo, hi int64, err error) {
+func parseAbsRange(value string, loc *time.Location) (lo, hi int64, err error) {
 	parts := strings.SplitN(value, ",", 2)
 	if len(parts) != 2 {
 		return 0, 0, fmt.Errorf("timecond: OpWithin expects \"t1,t2\", got %q", value)
 	}
-	lo, err = parseAbsMs(strings.TrimSpace(parts[0]))
+	lo, err = parseAbsMs(strings.TrimSpace(parts[0]), loc)
 	if err != nil {
 		return 0, 0, err
 	}
-	hi, err = parseAbsMs(strings.TrimSpace(parts[1]))
+	hi, err = parseAbsMs(strings.TrimSpace(parts[1]), loc)
 	if err != nil {
 		return 0, 0, err
 	}
