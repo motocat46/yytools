@@ -8,8 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
+
 	"github.com/motocat46/yytools/pkg/infra/timer/timingwheel"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 // TestStartStop_BasicFire 验证 Start 后 one-shot timer 触发，Stop 等待完成
 func TestStartStop_BasicFire(t *testing.T) {
@@ -209,7 +215,7 @@ func TestStop_DrainsAllPendingCallbacks(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	tw.Stop()
 
-	if got := int(count.Load()); got < 1 {
-		t.Errorf("Stop 后 count=%d，预期至少 1", got)
+	if got := int(count.Load()); got != n {
+		t.Errorf("Stop 后 count=%d，预期 %d（Stop 应排水所有已投递回调）", got, n)
 	}
 }

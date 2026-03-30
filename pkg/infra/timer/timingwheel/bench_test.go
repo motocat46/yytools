@@ -28,11 +28,13 @@ func BenchmarkAfterFunc_Sequential(b *testing.B) {
 
 			// 维持规模 n：取消一个，加一个
 			idx := 0
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				timers[idx%n].Cancel()
 				newT, _ := tw.AfterFunc(time.Duration(n+i+1)*time.Millisecond, func() {})
 				timers[idx%n] = newT
 				idx++
+				i++
 			}
 		})
 	}
@@ -78,17 +80,19 @@ func BenchmarkCancel_Sequential(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			idx := 0
-			for i := 0; i < b.N; i++ {
+			i := 0
+			for b.Loop() {
 				timers[idx%n].Cancel()
 				newT, _ := tw.AfterFunc(time.Duration(n+i+1)*time.Hour, func() {})
 				timers[idx%n] = newT
 				idx++
+				i++
 			}
 		})
 	}
 }
 
-// BenchmarkMixed_AddCancel 混合负载：70% Add，30% Cancel（模拟游戏业务）
+// BenchmarkMixed_AddCancel 混合负载：70% 纯 Add，30% Add+Cancel（模拟游戏业务）
 func BenchmarkMixed_AddCancel(b *testing.B) {
 	for _, n := range []int{1000, 10_000, 100_000, 1_000_000} {
 		b.Run(fmt.Sprintf("n=%d", n), func(b *testing.B) {
@@ -105,17 +109,18 @@ func BenchmarkMixed_AddCancel(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 			idx := 0
-			for i := 0; i < b.N; i++ {
+			i := 0
+			// 70% 纯 Add（不 Cancel），30% Add+Cancel（淘汰旧 timer，维持规模 n）
+			for b.Loop() {
 				if i%10 < 7 {
+					tw.AfterFunc(time.Duration(n+i+1)*time.Millisecond, func() {})
+				} else {
 					timers[idx%n].Cancel()
 					newT, _ := tw.AfterFunc(time.Duration(n+i+1)*time.Millisecond, func() {})
 					timers[idx%n] = newT
 					idx++
-				} else {
-					timers[i%n].Cancel()
-					newT, _ := tw.AfterFunc(time.Duration(n+i+1)*time.Millisecond, func() {})
-					timers[i%n] = newT
 				}
+				i++
 			}
 		})
 	}

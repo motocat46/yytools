@@ -8,8 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
+
 	"github.com/motocat46/yytools/pkg/infra/timer/delayqueue"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 type testItem struct{ exp int64 }
 

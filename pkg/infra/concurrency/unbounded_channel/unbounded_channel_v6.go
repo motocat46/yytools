@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	
+
 	"github.com/motocat46/yytools/pkg/common/assert"
 	"github.com/motocat46/yytools/pkg/common/cpu"
 	"github.com/motocat46/yytools/pkg/ds/queue"
@@ -46,7 +46,7 @@ type UnboundedChannelV6[T any] struct {
 	// 用 CacheLinePad 将其隔离，避免伪共享（false sharing）。
 	bufferLen atomic.Int32
 	_         cpu.CacheLinePad
-	
+
 	// ── 其余字段（慢路径 + 控制字段）────────────────────────────────────
 	// activeSenders 记录当前正在执行 Send() 的 goroutine 数量。
 	// 语义上等价于 RWMutex 的读计数：Send() 持有"读锁"，worker 关闭通道前必须等待计数归零。
@@ -62,6 +62,7 @@ type UnboundedChannelV6[T any] struct {
 	condSendWaiter *sync.Cond
 	limit          int32         // 缓冲区数据数量上限
 	notify         chan struct{} // 事件信号通道，cap=1，多余信号自动合并
+	workerDone     chan struct{} // worker goroutine 完全退出后关闭
 }
 
 // NewUnboundedChannelV6 创建一个无界通道。
@@ -73,10 +74,11 @@ func NewUnboundedChannelV6[T any](chanSize int, limit int) *UnboundedChannelV6[T
 	assert.Assert(chanSize > 0, "chanSize should be > 0", chanSize)
 	assert.Assert(limit > 0, "limit should be > 0", limit)
 	uc := &UnboundedChannelV6[T]{
-		buffer:  queue.NewQueueWithSize[T](32), // 设置为2的幂，方便go runtime的内存分配器分配大小合适的内存
-		channel: make(chan T, chanSize),
-		notify:  make(chan struct{}, 1),
-		limit:   int32(limit),
+		buffer:     queue.NewQueueWithSize[T](32), // 设置为2的幂，方便go runtime的内存分配器分配大小合适的内存
+		channel:    make(chan T, chanSize),
+		notify:     make(chan struct{}, 1),
+		limit:      int32(limit),
+		workerDone: make(chan struct{}),
 	}
 	uc.condSendWaiter = sync.NewCond(&uc.mutex)
 	uc.worker()
@@ -132,7 +134,7 @@ func (uc *UnboundedChannelV6[T]) sendSlow(msg T) {
 	// 必须在发送到通道后解锁，因为发送数据到通道后，通道就可能满
 	// 必须要保证上面的是否满的判断和添加元素的操作为原子性操作。
 	defer uc.mutex.Unlock()
-	
+
 	// ── 阶段一：channel 是否已满 ──────────────────────────────────────
 	if len(uc.channel) == cap(uc.channel) {
 		// 通道满了，暂存 buffer，直接返回。
@@ -141,7 +143,7 @@ func (uc *UnboundedChannelV6[T]) sendSlow(msg T) {
 		uc.bufferEnqueue(msg)
 		return
 	}
-	
+
 	// ── 阶段二：channel 有空位，检查 buffer 积压 ─────────────────────
 	// 若 buffer 非空，当前 msg 必须排在 buffer 末尾，保证 FIFO 顺序。
 	if uc.buffer.Len() != 0 {
@@ -186,12 +188,12 @@ func (uc *UnboundedChannelV6[T]) Send(msg T) bool {
 	// 后续的 closed.Load() 检查保证我们不会触碰已关闭的 channel。
 	uc.activeSenders.Add(1)
 	defer uc.activeSenders.Add(-1)
-	
+
 	// 第二步：检查关闭状态（必须在 activeSenders.Add(1) 之后）
 	if uc.closed.Load() {
 		return false
 	}
-	
+
 	// 第三步：背压检测 buffer 超过理论上允许的上限限则阻塞，避免内存无限增长
 	if uc.senderShouldWait() {
 		uc.mutex.Lock()
@@ -204,7 +206,7 @@ func (uc *UnboundedChannelV6[T]) Send(msg T) bool {
 			return false
 		}
 	}
-	
+
 	// 最后投递数据
 	// 快速路径.负载较低时，缓冲区大概率没数据
 	// 1.缓冲区无数据；且
@@ -257,7 +259,7 @@ func (uc *UnboundedChannelV6[T]) transfer() {
 	// movedCount 可能为 0：调用时 channel 看似有空位，但快速路径的并发 Send() 可能在
 	// transfer() 执行前将 channel 填满，导致循环条件一开始就不成立。
 	// 此时 percent=0，wakenCount=1，发出一次虚假唤醒，无害。
-	
+
 	// ── 死锁防护：buffer 已完全排空 ──────────────────────────────────────
 	// 若 buffer 排空后仍有生产者在 condSendWaiter 上阻塞，此后不会再有任何唤醒源：
 	//   - buffer.Len()==0 → Receive() 不发 signal → worker 不再调用 transfer()
@@ -266,7 +268,7 @@ func (uc *UnboundedChannelV6[T]) transfer() {
 		uc.condSendWaiter.Broadcast()
 		return
 	}
-	
+
 	// buffer 未排空（channel 已满）：按搬运量占 limit 的百分比保守唤醒，避免雪崩效应。
 	// 1% 对应唤醒 1 个阻塞的生产者；≥50% 时广播（所有生产者均可继续）。
 	// 注意：当 limit 较大时（如 100万）,百分比通常远低于 1%，实际唤醒数为 1，Broadcast 分支仅对极小 limit 生效。
@@ -278,7 +280,7 @@ func (uc *UnboundedChannelV6[T]) transfer() {
 		uc.condSendWaiter.Broadcast()
 		return
 	}
-	
+
 	// 按百分比计算需要唤醒的goroutine数量
 	wakenCount := max(1, int(percent))
 	for i := 0; i < wakenCount; i++ {
@@ -309,6 +311,7 @@ func (uc *UnboundedChannelV6[T]) skipCheck() bool {
 //   - V6：阻塞在select等待信号，空闲时零CPU；ticker作为安全兜底
 func (uc *UnboundedChannelV6[T]) worker() {
 	go func() {
+		defer close(uc.workerDone) // worker 完全退出时通知等待方
 		ticker := time.NewTicker(time.Millisecond)
 		defer ticker.Stop()
 		for {
@@ -324,7 +327,7 @@ func (uc *UnboundedChannelV6[T]) worker() {
 					continue
 				}
 			}
-			
+
 			uc.mutex.Lock()
 			if uc.canClose() {
 				// 真正关闭底层通道
@@ -370,4 +373,10 @@ func (uc *UnboundedChannelV6[T]) Close() {
 	// It is allowed but not required for the caller to hold c.L
 	// during the call.
 	uc.condSendWaiter.Broadcast()
+}
+
+// WaitDone 阻塞直到内部 worker goroutine 完全退出。
+// 通常在 Close() 之后调用，用于需要 goroutine 零泄漏验证的场景（如 goleak）。
+func (uc *UnboundedChannelV6[T]) WaitDone() {
+	<-uc.workerDone
 }

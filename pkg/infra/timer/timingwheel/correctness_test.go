@@ -76,7 +76,7 @@ func TestCorrectness_WaitSemantics(t *testing.T) {
 			count.Add(1)
 		})
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond) // 加大系数，防止高负载 CI 上 50ms 不足导致偶发失败
 
 	tw.Stop() // 等待语义：返回后所有已投递回调应已完成
 

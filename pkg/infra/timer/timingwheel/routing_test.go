@@ -14,7 +14,7 @@ func TestAddInternal_RoutesToCorrectLayer(t *testing.T) {
 		{"L1 slot=255", l1Interval - 1, 0, int(l1Interval - 1)},
 		{"L2 slot=1", l1Interval, 1, 1},     // (256 >> 8) & 63 = 1
 		{"L2 slot=2", l1Interval * 2, 1, 2}, // (512 >> 8) & 63 = 2
-		{"L3 首槽", l2Interval, 2, 1},        // (16384 >> 14) & 63 = 1
+		{"L3 首槽", l2Interval, 2, 1},         // (16384 >> 14) & 63 = 1
 		{"L4 首槽", l3Interval, 3, 1},
 		{"L5 首槽", l4Interval, 4, 1},
 		{"overflow", l5Interval, -2, 0},
@@ -23,6 +23,7 @@ func TestAddInternal_RoutesToCorrectLayer(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tw := New()
+			t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 			tw.currentTime = 0
 
 			timer := &Timer{expireAt: tc.expireAt}
@@ -54,6 +55,7 @@ func TestAddInternal_RoutesToCorrectLayer(t *testing.T) {
 // TestAdvanceClock_UpdatesCurrentTime 验证时钟推进后 currentTime 更新
 func TestAdvanceClock_UpdatesCurrentTime(t *testing.T) {
 	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 	tw.currentTime = 0
 	tw.advanceClock(100)
 	if tw.currentTime != 100 {
@@ -69,6 +71,7 @@ func TestAdvanceClock_UpdatesCurrentTime(t *testing.T) {
 // TestAdvanceClock_PromotesOverflowTimer 验证进入调度窗口的 overflow timer 被提升
 func TestAdvanceClock_PromotesOverflowTimer(t *testing.T) {
 	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 	tw.currentTime = 0
 
 	// expireAt = l5Interval-1：当 currentTime=1，expireAt < 1+l5Interval → 应被提升
@@ -85,6 +88,7 @@ func TestAdvanceClock_PromotesOverflowTimer(t *testing.T) {
 // TestAdvanceClock_DoesNotPromoteFarTimer 验证未进入调度窗口的 timer 留在 overflow
 func TestAdvanceClock_DoesNotPromoteFarTimer(t *testing.T) {
 	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 	tw.currentTime = 0
 
 	// expireAt = l5Interval：currentTime=1 时，l5Interval < 1+l5Interval → 会被提升
@@ -102,6 +106,7 @@ func TestAdvanceClock_DoesNotPromoteFarTimer(t *testing.T) {
 // TestCancel_RemovesFromBucket 验证 Cancel 从 bucket 摘除 timer
 func TestCancel_RemovesFromBucket(t *testing.T) {
 	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 	tw.currentTime = 0
 
 	timer := &Timer{expireAt: 100}
@@ -123,6 +128,7 @@ func TestCancel_RemovesFromBucket(t *testing.T) {
 // TestCancel_Idempotent 验证重复 Cancel 不 panic
 func TestCancel_Idempotent(t *testing.T) {
 	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
 	tw.currentTime = 0
 
 	timer := &Timer{expireAt: 100}
