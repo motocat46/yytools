@@ -105,20 +105,30 @@ func (q *DelayQueue[T]) Poll(ctx context.Context) (T, bool) {
 			q.mu.Unlock()
 			return item, true
 		}
-		// 计算到下一个元素到期的等待时间（队列为空时 sleepC==nil，永久阻塞于 select）
+		// 计算到下一个元素到期的等待时间（队列为空时 sleepC==nil，永久阻塞于 select）。
+		// 使用 time.NewTimer 而非 time.After：在 wakeC 或 ctx.Done() 先触发时显式 Stop()，
+		// 避免 timer 在 d 到期前长期占用（高频循环时减少 GC 压力）。
 		var sleepC <-chan time.Time
+		var sleepTimer *time.Timer
 		if len(q.items) > 0 {
 			d := time.Duration(q.items[0].ExpireAt()-now) * time.Millisecond
-			sleepC = time.After(d)
+			sleepTimer = time.NewTimer(d)
+			sleepC = sleepTimer.C
 		}
 		q.mu.Unlock()
 
 		select {
 		case <-ctx.Done():
+			if sleepTimer != nil {
+				sleepTimer.Stop()
+			}
 			var zero T
 			return zero, false
 		case <-sleepC: // 到期，重新检查
 		case <-q.wakeC: // 有更早的元素入队，重新计算
+			if sleepTimer != nil {
+				sleepTimer.Stop()
+			}
 		}
 	}
 }
