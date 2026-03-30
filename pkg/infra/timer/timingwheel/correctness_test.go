@@ -76,7 +76,12 @@ func TestCorrectness_WaitSemantics(t *testing.T) {
 			count.Add(1)
 		})
 	}
-	time.Sleep(200 * time.Millisecond) // 加大系数，防止高负载 CI 上 50ms 不足导致偶发失败
+	// 等待所有 n 个 1ms timer 到期并入队 taskQueue。
+	// taskExecutor 单 goroutine 串行，每回调 sleep 2ms，200ms 内仅能执行 ~100 个，
+	// 剩余回调留在 taskQueue 中——Stop() 的排水语义正是在此条件下被验证。
+	// 为什么 200ms 够用：1ms timer 到期时间 ≤ 1ms × 调度抖动；200ms >> 1ms，
+	// 即使 CI 负载极高，所有 timer 均应在此前入队。
+	time.Sleep(200 * time.Millisecond)
 
 	tw.Stop() // 等待语义：返回后所有已投递回调应已完成
 

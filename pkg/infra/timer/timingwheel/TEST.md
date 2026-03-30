@@ -19,12 +19,35 @@ go test -race -short ./pkg/infra/timer/timingwheel/
 go test -bench=. -count=3 -benchtime=3s -benchmem ./pkg/infra/timer/timingwheel/
 ```
 
-## 性能基线（Apple M4，2026-03-30）
+## 性能基线（Apple M4，2026-03-30，`-count=3 -benchtime=3s`）
 
 ```
-BenchmarkAfterFunc_Sequential/n=1000    ~39 ns/op    64 B/op    1 allocs/op
-BenchmarkAfterFunc_Sequential/n=10000   ~44 ns/op    64 B/op    1 allocs/op
-BenchmarkAfterFunc_Sequential/n=100000  ~42 ns/op    64 B/op    1 allocs/op
+# BenchmarkAfterFunc_Sequential：单调用方 Add（稳定规模，duration 循环于 [1h, n*h]）
+BenchmarkAfterFunc_Sequential/n=100        ~38 ns/op     64 B/op    1 allocs/op
+BenchmarkAfterFunc_Sequential/n=1000       ~36 ns/op     64 B/op    1 allocs/op
+BenchmarkAfterFunc_Sequential/n=10000      ~49 ns/op    100 B/op    1 allocs/op
+BenchmarkAfterFunc_Sequential/n=100000     ~49 ns/op    107 B/op    1 allocs/op
+BenchmarkAfterFunc_Sequential/n=1000000    ~53 ns/op    109 B/op    1 allocs/op
+
+# BenchmarkAfterFunc_Concurrent：多调用方并发 Add/Cancel（工作集 n=100,000）
+# p=1 vs p=64 差距极小（~183 ns vs ~171 ns），说明锁竞争可控
+BenchmarkAfterFunc_Concurrent/p=1          ~187 ns/op   106 B/op    1 allocs/op
+BenchmarkAfterFunc_Concurrent/p=4          ~175 ns/op   112 B/op    1 allocs/op
+BenchmarkAfterFunc_Concurrent/p=16         ~168 ns/op   111 B/op    1 allocs/op
+BenchmarkAfterFunc_Concurrent/p=64         ~170 ns/op   108 B/op    1 allocs/op
+
+# BenchmarkCancel_Sequential：O(1) Cancel（稳定规模，duration 循环于 [1h, n*h]）
+BenchmarkCancel_Sequential/n=1000          ~41 ns/op     64 B/op    1 allocs/op
+BenchmarkCancel_Sequential/n=10000         ~49 ns/op    104 B/op    1 allocs/op
+BenchmarkCancel_Sequential/n=100000        ~53 ns/op    107 B/op    1 allocs/op
+BenchmarkCancel_Sequential/n=1000000       ~54 ns/op    107 B/op    1 allocs/op
+
+# BenchmarkMixed_AddCancel：混合负载（70% 纯 Add / 30% Add+Cancel）
+# n 越大，ns/op 越低：大 n 时 timer 层级更高，路由开销更均匀
+BenchmarkMixed_AddCancel/n=1000            ~160 ns/op   110 B/op    1 allocs/op
+BenchmarkMixed_AddCancel/n=10000           ~121 ns/op    97 B/op    1 allocs/op
+BenchmarkMixed_AddCancel/n=100000           ~52 ns/op    65 B/op    1 allocs/op
+BenchmarkMixed_AddCancel/n=1000000          ~48 ns/op    64 B/op    1 allocs/op
 ```
 
 ## 测试文件
