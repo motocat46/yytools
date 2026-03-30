@@ -1,6 +1,6 @@
 # timecond
 
-基于配置的时间条件判断：解析 `(Op, value)` 字符串，返回可复用的 `TimeCondition`，调用 `Check` 判断给定时间戳是否满足条件。
+基于配置的时间条件判断：解析 `(Op, value)` 字符串，返回可复用的 `TimeCondition`，调用 `CheckNow` 判断给定时间戳是否满足条件。
 
 ## 快速上手
 
@@ -9,9 +9,13 @@
 cond, err := timecond.Parse(timecond.OpGE, "2024-03-15 10:00:00")
 if err != nil { ... }
 
-// 2. 运行时判断
-now := time.Now().UnixMilli()
-if cond.Check(playerRegisterTs, now) {
+// 2. 运行时判断（生产代码）
+if cond.CheckNow(playerRegisterTs) {
+    // 满足条件
+}
+
+// 3. 测试中精确控制当前时间
+if cond.Check(playerRegisterTs, fixedNowMs) {
     // 满足条件
 }
 ```
@@ -33,12 +37,15 @@ if cond.Check(playerRegisterTs, now) {
 
 解析配置字符串，返回可复用的条件对象。通常在服务启动或配置加载时调用一次，之后多次复用。
 
+### `(*TimeCondition).CheckNow(subjectMs int64) bool`
+
+以当前系统时间判断 `subjectMs` 是否满足条件。生产代码的首选调用方式。
+
 ### `(*TimeCondition).Check(subjectMs, nowMs int64) bool`
 
-判断 `subjectMs` 是否满足条件。
+以指定的 `nowMs` 判断 `subjectMs` 是否满足条件。用于测试或需要精确控制当前时间的场景。
 
-- `subjectMs`：被判断的时间戳（如注册时间、开服时间），单位毫秒
-- `nowMs`：当前时间戳，单位毫秒；仅 `OpRelLT` / `OpRelGE` 使用，其他 Op 忽略
+- `nowMs`：仅 `OpRelLT` / `OpRelGE` 使用，其他 Op 忽略
 
 ### `(*TimeCondition).Op() Op`
 

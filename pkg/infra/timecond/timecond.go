@@ -104,7 +104,8 @@ func Parse(op Op, value string) (*TimeCondition, error) {
 	}
 }
 
-// Check 判断 subjectMs 是否满足条件，满足返回 true。
+// Check 以 nowMs 作为当前时间判断 subjectMs 是否满足条件，满足返回 true。
+// 用于测试或需要精确控制当前时间的场景；生产代码通常使用 CheckNow。
 //
 //   - subjectMs：被判断的时间戳（如注册时间、开服时间），单位毫秒
 //   - nowMs：当前时间戳，单位毫秒；仅 OpRelLT / OpRelGE 使用，其他 Op 忽略
@@ -128,6 +129,12 @@ func (c *TimeCondition) Check(subjectMs, nowMs int64) bool {
 	default:
 		panic(fmt.Sprintf("timecond: unknown %s", c.op))
 	}
+}
+
+// CheckNow 以当前系统时间判断 subjectMs 是否满足条件，满足返回 true。
+// 语义见 Check。
+func (c *TimeCondition) CheckNow(subjectMs int64) bool {
+	return c.Check(subjectMs, time.Now().UnixMilli())
 }
 
 // parseAbsMs 将时间字符串解析为 Unix 毫秒时间戳。
