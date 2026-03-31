@@ -24,18 +24,21 @@ import (
 	"github.com/motocat46/yytools/pkg/common/base"
 )
 
+// Fibonacci 是带备忘录的动态斐波那契计算器。
+// 内部缓存已计算过的值，重复查询无需重新计算。
+// 非 goroutine 安全，并发使用需由调用方加锁。
 type Fibonacci[T base.Integer] struct {
 	mem []T
 }
 
+// NewFibMem 创建一个新的带备忘录斐波那契计算器，预置 F(1)=1, F(2)=1。
 func NewFibMem[T base.Integer]() *Fibonacci[T] {
 	// 默认构造2个斐波那契数
 	return &Fibonacci[T]{mem: []T{0, 1}}
 }
 
-// 计算斐波那契数（并将斐波那契数列保存到备忘录中）
-// 该方法需要传入初始为空的备忘录
-// n 必须 >= 1 且不超过类型 T 可表示的最大斐波那契下标（可用 FibNMax[T]() 查询）
+// Calculate 返回第 n 个斐波那契数（F(1)=1, F(2)=1, F(3)=2, ...），并缓存中间结果。
+// n 必须 >= 1 且不超过类型 T 可表示的最大斐波那契下标（可用 FibNMax[T]() 查询），否则 panic。
 func (a *Fibonacci[T]) Calculate(n T) T {
 	assert.Assert(n >= 1)
 	if int(n) > FibNMax[T]()+1 {

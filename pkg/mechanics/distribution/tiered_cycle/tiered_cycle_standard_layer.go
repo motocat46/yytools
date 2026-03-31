@@ -41,6 +41,7 @@ type StandardLayer struct {
 	weight Weight
 }
 
+// newStandardLayer 以权重配置创建普通层。
 func newStandardLayer(w Weight) StandardLayer {
 	return StandardLayer{weight: w}
 }

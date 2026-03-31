@@ -21,11 +21,13 @@ import (
     "github.com/motocat46/yytools/pkg/common/base"
 )
 
+// InsertionSort 对整数切片原地升序排序，时间复杂度 O(n²)。
+// 适用于数据量较小的场景；内部作为快速排序小分区的优化子程序。
 func InsertionSort[T base.Integer](arr []T) {
 	insertionSort(arr, 0, len(arr))
 }
 
-// 插入排序 默认按升序排列
+// insertionSort 对 arr[start, end) 原地升序排序，线性扫描找插入位置并整体右移。
 func insertionSort[T base.Integer](arr []T, start, end int) {
 	for i := start + 1; i < end; i++ {
 		// 理论上这里的遍历查找可以优化成用二分搜索
@@ -46,11 +48,12 @@ func insertionSort[T base.Integer](arr []T, start, end int) {
 	}
 }
 
+// InsertionSortDesc 对整数切片原地降序排序，语义见 InsertionSort。
 func InsertionSortDesc[T base.Integer](arr []T) {
 	insertionSortDesc(arr, 0, len(arr))
 }
 
-// 插入排序 默认按降序排序
+// insertionSortDesc 对 arr[start, end) 原地降序排序，机制同 insertionSort。
 func insertionSortDesc[T base.Integer](arr []T, start, end int) {
 	for i := start + 1; i < end; i++ {
 		for j := start; j < i; j++ {

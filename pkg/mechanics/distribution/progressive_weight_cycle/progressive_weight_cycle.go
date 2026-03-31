@@ -41,12 +41,14 @@ type Layer struct {
 	TotalQuota int32 // 所有项目的总配额
 }
 
+// NewWeightCycleLayer 创建特殊层，计算并缓存 items 的总配额。
 func NewWeightCycleLayer(items []Item) *Layer {
 	layer := &Layer{Items: items}
 	layer.TotalQuota = TotalQuota(items)
 	return layer
 }
 
+// NewState 创建空的特殊层运行时状态（动态权重机和已解锁集合均为空）。
 func NewState() *State {
 	return &State{
 		Dw:       newEmptyDW(),
@@ -54,12 +56,13 @@ func NewState() *State {
 	}
 }
 
-// Generate 执行特殊层抽取（算法在此，可独立替换）
+// Generate 执行一次特殊层抽取，返回命中的 items 下标；occIdx 为当前周期内第几次特殊抽（0-based）。
+// 所有候选项权重耗尽时返回 (-1, error)。
 func (l *Layer) Generate(state *State, occIdx int32) (int, error) {
 	return specialCycleCoreV2(state.Unlocked, occIdx, l.Items, state.Dw)
 }
 
-// Reset 重置特殊层状态，并生成新的周期计划
+// Reset 重置特殊层状态以开始新的一轮周期，清空动态权重机和已解锁记录。
 func (s *State) Reset() {
 	s.Dw = newEmptyDW()
 	s.Unlocked = make(map[int]bool)
@@ -74,10 +77,12 @@ func TotalQuota(items []Item) int32 {
 	return n
 }
 
+// newEmptyDW 创建初始为空的动态权重机，供 NewState 和 Reset 使用。
 func newEmptyDW() *pd.DynamicWeights[int, int32] {
 	return pd.NewDynamicWeightsProgressive[int, int32]()
 }
 
+// checkSpecialCycleCoreParams 校验 specialCycleCore V1 的入参合法性。
 func checkSpecialCycleCoreParams(used map[int32]int32, specialOccIdx int32, items []Item) error {
 	if used == nil {
 		return fmt.Errorf("invalid used map(nil)")

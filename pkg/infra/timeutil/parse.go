@@ -41,9 +41,9 @@ func Parse(s string) (time.Time, error) {
 // ParseInLoc 解析同 Parse，以 loc 指定的时区解释日期时间字符串。
 // 用于服务器时区与业务时区不一致的场景（如服务器在 UTC+0，业务使用 Asia/Shanghai）。
 //
-// 示例（loc = Asia/Shanghai）：
+// 示例（loc = Asia/Shanghai，UTC+8）：
 //
-//	"2024-03-15 10:00:00" → 2024-03-15 10:00:00 CST（= UTC+8 的 02:00:00 UTC）
+//	"2024-03-15 10:00:00" → 2024-03-15 10:00:00 CST（对应 UTC 时刻 2024-03-15 02:00:00）
 func ParseInLoc(s string, loc *time.Location) (time.Time, error) {
 	orig := s
 	s = strings.TrimSpace(s)
@@ -82,6 +82,7 @@ func ParseUnixMilliInLoc(s string, loc *time.Location) (int64, error) {
 
 // ── 内部实现 ──────────────────────────────────────────────────────────────────
 
+// parseDate 对日期字符串规范化后用 loc 解析，格式见 normalizeDate。
 func parseDate(s string, loc *time.Location) (time.Time, error) {
 	normalized, err := normalizeDate(s)
 	if err != nil {
@@ -94,6 +95,7 @@ func parseDate(s string, loc *time.Location) (time.Time, error) {
 	return t, nil
 }
 
+// parseDateTime 将日期段和时间段分别规范化后合并解析，格式见 normalizeDate / normalizeTime。
 func parseDateTime(datePart, timePart string, loc *time.Location) (time.Time, error) {
 	orig := datePart + " " + timePart
 	normDate, err := normalizeDate(datePart)

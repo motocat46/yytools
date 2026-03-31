@@ -26,8 +26,9 @@ import (
 	"github.com/motocat46/yytools/pkg/common/base"
 )
 
-// 计算a*b，并判断是否越界
-// 返回值1：a*b的结果，返回值2：true->越界，false->未越界
+// MulInt 返回 a*b 及是否溢出（补码规则）。
+// 两个同号数乘积超出正数最大值、或异号数乘积低于负数最小值时视为溢出。
+// 返回值2：true 表示溢出，false 表示未溢出。
 func MulInt[T base.Signed](a, b T) (T, bool) {
 	// 0和任何数的乘积都为0
 	if a == 0 || b == 0 {
@@ -75,16 +76,16 @@ func MulInt[T base.Signed](a, b T) (T, bool) {
 	return res, false
 }
 
-// 计算a*b，并进行越界断言
+// MulIntAssert 计算 a*b，溢出时触发 assert，语义见 MulInt。
 func MulIntAssert[T base.Signed](a, b T) T {
 	res, overflow := MulInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
 }
 
-// 计算a/b，并判断是否越界
-// 整数除法唯一的溢出情形是 MinT / -1（数学结果超出正数最大值）
-// 返回值1：a/b的结果，返回值2：true->越界，false->未越界
+// DivInt 返回 a/b 及是否溢出（补码规则）。
+// 整数除法唯一的溢出情形是 MinT / -1，数学结果超出正数最大值，补码运算回绕。
+// 返回值2：true 表示溢出，false 表示未溢出。
 func DivInt[T base.Signed](a, b T) (T, bool) {
 	// 本身go语言会在除以0时，调用panic，这里不再判断
 	bits := uint(unsafe.Sizeof(a)) * 8
@@ -97,15 +98,16 @@ func DivInt[T base.Signed](a, b T) (T, bool) {
 	return a / b, false
 }
 
-// 计算a/b，并进行越界断言
+// DivIntAssert 计算 a/b，溢出时触发 assert，语义见 DivInt。
 func DivIntAssert[T base.Signed](a, b T) T {
 	res, overflow := DivInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
 }
 
-// 根据补码规则，对加法是否越界进行判断
-// 如果越界返回true，否则返回false
+// AddInt 返回 a+b 及是否溢出（补码规则）。
+// 两个非负数相加结果为负，或两个负数相加结果为非负时视为溢出；异号相加不会溢出。
+// 返回值2：true 表示溢出，false 表示未溢出。
 func AddInt[T base.Signed](a T, b T) (T, bool) {
 	sum := a + b
 	// 当a为非负数，b为非负数，此时a+b小于0，则越界
@@ -119,14 +121,16 @@ func AddInt[T base.Signed](a T, b T) (T, bool) {
 	return sum, false
 }
 
+// AddIntAssert 计算 a+b，溢出时触发 assert，语义见 AddInt。
 func AddIntAssert[T base.Signed](a T, b T) T {
 	res, overflow := AddInt(a, b)
 	assert.Assert(!overflow, a, b, res)
 	return res
 }
 
-// 根据补码规则，对减法是否越界进行判断
-// 如果越界返回true，否则返回false
+// SubInt 返回 a-b 及是否溢出（补码规则）。
+// 负数减正数结果为非负，或非负数减负数结果为负时视为溢出；同号相减不会溢出。
+// 返回值2：true 表示溢出，false 表示未溢出。
 func SubInt[T base.Signed](a T, b T) (T, bool) {
 	// 当a为负数，b为整数，此时a-b大于等于0的话，就会越界
 	res := a - b
@@ -141,6 +145,7 @@ func SubInt[T base.Signed](a T, b T) (T, bool) {
 	return res, false
 }
 
+// SubIntAssert 计算 a-b，溢出时触发 assert，语义见 SubInt。
 func SubIntAssert[T base.Signed](a T, b T) T {
 	res, overflow := SubInt(a, b)
 	assert.Assert(!overflow, a, b, res)

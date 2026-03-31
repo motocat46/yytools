@@ -24,22 +24,26 @@ import (
 	weight_cycle "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
+// Config 是 Engine 的完整配置，由基础参数、普通层配置和特殊层配置组合而成。
 type Config struct {
 	ConfigBase
 	ConfigStandard
 	ConfigSpecial
 }
 
+// ConfigBase 是所有层共用的基础参数。
 type ConfigBase struct {
 	// R 随机源，仅用于每轮周期的特殊分布计划生成；标准分布使用全局随机源
 	R        *rand.Rand
 	CycleLen int32 // 一个循环大周期分布数量
 }
 
+// ConfigStandard 是普通层配置。
 type ConfigStandard struct {
 	Weight Weight // 普通分布的权重结构
 }
 
+// ConfigSpecial 是特殊层配置。
 type ConfigSpecial struct {
 	MinInterval int32               // 两个特殊位置之间的最小间隔（0 表示不限）
 	Items       []weight_cycle.Item // 各特殊结果配置，长度即特殊分布数量
@@ -67,12 +71,13 @@ func (s *State) Plan() []int32 {
 	return s.special.plan
 }
 
+// DistributionType 标识每次抽取结果属于哪个层。
 type DistributionType int
 
 const (
-	Invalid  DistributionType = -1
-	Standard DistributionType = 0
-	Special  DistributionType = 1
+	Invalid  DistributionType = -1 // 无效（通常伴随 error）
+	Standard DistributionType = 0  // 普通层结果
+	Special  DistributionType = 1  // 特殊层结果
 )
 
 // Engine 持有不可变规则，纯调度；非线程安全（因 rand），多 goroutine 使用需加锁
@@ -110,16 +115,20 @@ func New(cfg Config) (*Engine, error) {
 	}, nil
 }
 
+// Init 初始化 state 以开始第一个周期，等价于 ResetCycle。
 func (e *Engine) Init(state *State) {
 	e.ResetCycle(state)
 }
 
+// Result 是单次抽取的结果。
+// Index 为命中的奖励下标；Type 标识来自哪一层；CycleEnd 为 true 时表示当前周期已结束。
 type Result struct {
 	Index    int
 	Type     DistributionType
 	CycleEnd bool
 }
 
+// NextAutoReset 执行一次抽取，语义见 Next；周期结束时自动调用 ResetCycle 开始新周期。
 func (e *Engine) NextAutoReset(state *State) (Result, error) {
 	res, err := e.Next(state)
 	if res.CycleEnd {
@@ -128,6 +137,9 @@ func (e *Engine) NextAutoReset(state *State) (Result, error) {
 	return res, err
 }
 
+// Next 执行一次抽取，返回命中结果和 error（特殊层无候选时 error 非 nil）。
+// 无论是否出错，位置都会前进，防止调用方陷入同一特殊位置的无限重试。
+// 周期结束时 Result.CycleEnd 为 true，调用方可选择手动调用 ResetCycle 或改用 NextAutoReset。
 func (e *Engine) Next(state *State) (Result, error) {
 	res := Result{Index: -1, Type: Invalid}
 	var err error
@@ -153,6 +165,7 @@ func (e *Engine) Next(state *State) (Result, error) {
 	return res, err
 }
 
+// ResetCycle 重置 state 以开始新的一轮周期，重新生成特殊分布计划。
 func (e *Engine) ResetCycle(state *State) {
 	state.posInCycle = 0
 	e.standard.Reset(&state.standard)

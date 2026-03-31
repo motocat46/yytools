@@ -57,8 +57,14 @@ func SampleKDistinctFloyd[T base.Integer](lo, hi T, k int, r *rand.Rand) []T {
 	return out
 }
 
-// SampleWithMinGap 从 [L..R] 中采样 k 个值，相邻值之间间隔至少 gap。
-// 返回有序切片，时间复杂度 O(k log k)，空间复杂度 O(k)。
+// SampleWithMinGap 从 [L..R] 中采样 k 个值，保证任意相邻两值之间间隔至少 gap，返回升序切片。
+// gap=0 时退化为普通不重复采样；k=0 时返回 nil。
+// 可用空间不足（N-(k-1)*gap < k）时触发 assert。
+// 时间复杂度 O(k log k)，空间复杂度 O(k)。
+//
+// 示例（gap=2）：
+//
+//	SampleWithMinGap(1, 10, 3, 2, r) 可能返回 [1, 3, 5]，相邻间隔均 >= 2
 func SampleWithMinGap[T base.Integer](L, R T, k, gap int, r *rand.Rand) []T {
 	if k <= 0 {
 		return nil

@@ -23,6 +23,8 @@ import (
     "github.com/motocat46/yytools/pkg/common/assert"
 )
 
+// IStack 是泛型 LIFO 栈的公开操作接口。
+// Pop / Top 在栈为空时 panic，调用前应先检查 Empty()。
 type IStack[T any] interface {
 	Length() int // 栈的长度
 	Empty() bool // 判断栈是否为空
@@ -31,6 +33,8 @@ type IStack[T any] interface {
 	Top() T      // 获取栈首元素(不出栈)
 }
 
+// Stack 是基于动态数组的泛型 LIFO 栈，元素数量降至容量 1/4 以下时自动缩容，
+// 最低不低于 DEFAULT_STACK_SIZE。
 type Stack[T any] struct {
 	Items []T
 }
@@ -38,10 +42,12 @@ type Stack[T any] struct {
 // 默认栈大小
 const DEFAULT_STACK_SIZE = 16
 
+// NewStack 创建一个默认初始容量（16）的空栈。
 func NewStack[T any]() *Stack[T] {
 	return NewStackWithSize[T](DEFAULT_STACK_SIZE)
 }
 
+// NewStackWithSize 创建指定初始容量的空栈，size 须 >= 0。
 func NewStackWithSize[T any](size int) *Stack[T] {
 	assert.Assert(size >= 0, "size must greater than or equl to 0,size:", size)
 	items := make([]T, 0, size)

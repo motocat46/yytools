@@ -61,6 +61,7 @@ func NewWorkerPoolMutex(workers, queueSize int) *WorkerPool {
 	return newWorkerPool(workers, queueSize, &mutexLocker{})
 }
 
+// newWorkerPool 注入 locker 并创建 worker pool，启动 workers 个 goroutine 消费任务队列。
 func newWorkerPool(workers, queueSize int, locker submitLocker) *WorkerPool {
 	assert.Assert(workers > 0, "workerpool: workers 必须大于 0")
 	assert.Assert(queueSize >= 0, "workerpool: queueSize 不能为负数")

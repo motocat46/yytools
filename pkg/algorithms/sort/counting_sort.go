@@ -21,14 +21,13 @@ import (
     "github.com/motocat46/yytools/pkg/common/base"
 )
 
-// 计数排序 时间复杂度O(n+k)
-// 排序的效率非常高，但使用的场景受限:
-// 最小值和最大值的差值不能过大(差值和额外申请的内存大小成正比);
-// 适用于元素数量很多，但是其数值集中在一定范围内的情况
-// 适用于:
-// 1.负数的数组;
-// 2.有负数有正数的数组;
-// 3.正数的数组;
+// CountingSort 对整数切片原地升序排序，时间复杂度 O(n+k)，k = max-min+1。
+// 适用于元素数量多、但数值集中在较小范围内的场景；支持负数、混合正负数和纯正数数组。
+// 当 max-min 超过 1e7 时 panic，请改用 QuickSort。
+//
+// 示例：
+//
+//	CountingSort([]int{-3, 1, 0, -1, 2}) → [-3, -1, 0, 1, 2]
 func CountingSort[T base.Integer](array []T) {
 	if len(array) < 2 {
 		return

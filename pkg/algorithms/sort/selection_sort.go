@@ -21,11 +21,13 @@ import (
     "github.com/motocat46/yytools/pkg/common/base"
 )
 
+// SelectionSort 对整数切片原地升序排序，时间复杂度 O(n²)。
+// 每轮从未排序区间选出最小值换到队首，交换次数最多为 n-1 次。
 func SelectionSort[T base.Integer](arr []T) {
 	selectionSort(arr, 0, len(arr))
 }
 
-// 选择排序 默认按升序排列
+// selectionSort 对 arr[start, end) 原地升序排序，每轮线性扫描找最小值并交换到区间头部。
 func selectionSort[T base.Integer](arr []T, start, end int) {
 	for i := start + 1; i < end; i++ {
 		head := i - 1
@@ -45,11 +47,12 @@ func selectionSort[T base.Integer](arr []T, start, end int) {
 	}
 }
 
+// SelectionSortDesc 对整数切片原地降序排序，语义见 SelectionSort。
 func SelectionSortDesc[T base.Integer](arr []T) {
 	selectionSortDesc(arr, 0, len(arr))
 }
 
-// 选择排序 默认按降序排序
+// selectionSortDesc 对 arr[start, end) 原地降序排序，机制同 selectionSort。
 func selectionSortDesc[T base.Integer](arr []T, start, end int) {
 	for i := start + 1; i < end; i++ {
 		head := i - 1

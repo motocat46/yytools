@@ -65,6 +65,7 @@ func GcdI[T base.Integer](x, y T) T {
 	}
 }
 
+// Gcd 返回两个非负整数 x 和 y 的最大公约数，语义见 GcdI。
 func Gcd[T base.Integer](x, y T) T {
 	// 遍历(GcdI)比递归(GcdR)效率更高
 	// 这里采用遍历实现的方式获得最大公约数

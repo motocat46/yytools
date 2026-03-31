@@ -29,6 +29,7 @@ type Item[T any] struct {
 	Weight int // 权重值（决定堆元素的顺序）
 }
 
+// InterfaceHeap 是最小堆的公开操作接口。
 type InterfaceHeap[T any] interface {
 	Length() int
 	PushItem(item *Item[T])
@@ -36,17 +37,13 @@ type InterfaceHeap[T any] interface {
 	PeekItem() *Item[T]
 }
 
-/*
-	堆(最小堆)
-	本质上是个数组
-	利用二叉堆的性质
-	通过golang提供的堆的接口和实现的方法
-*/
+// Heap 基于 container/heap 实现的最小堆，Weight 越小越靠前。
+// 不可直接调用 Push/Pop（用于实现 heap.Interface），应使用 PushItem/PopItem。
 type Heap[T any] struct {
 	Items []*Item[T]
 }
 
-// NewHeap new heap
+// NewHeap 创建一个空的最小堆。
 func NewHeap[T any]() *Heap[T] {
 	return &Heap[T]{}
 }
@@ -90,15 +87,18 @@ func (this *Heap[T]) Pop() interface{} {
 	使用者应该使用PushItem和PopItem替代
 */
 
+// Length 返回堆中的元素数量。
 func (this *Heap[T]) Length() int {
 	return this.Len()
 }
 
+// PushItem 将 item 压入堆，item 不可为 nil。
 func (this *Heap[T]) PushItem(item *Item[T]) {
 	assert.Assert(item != nil)
 	heap.Push(this, item)
 }
 
+// PopItem 弹出并返回堆顶（Weight 最小）的元素；堆为空时返回 nil。
 func (this *Heap[T]) PopItem() *Item[T] {
 	if this.Len() == 0 {
 		return nil
@@ -106,6 +106,7 @@ func (this *Heap[T]) PopItem() *Item[T] {
 	return heap.Pop(this).(*Item[T])
 }
 
+// PeekItem 返回堆顶（Weight 最小）的元素但不移除；堆为空时返回 nil。
 func (this *Heap[T]) PeekItem() *Item[T] {
 	if this.Len() == 0 {
 		return nil

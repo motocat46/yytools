@@ -38,6 +38,8 @@ func IsFileExist(file string) (bool, error) {
 	return false, err
 }
 
+// IsFileNormalStat 返回路径是否可正常 Stat；只要 os.Stat 成功就返回 (true, nil)，否则返回 (false, err)。
+// 与 IsFileExist 的区别：不区分"不存在"与其他错误，任何 Stat 失败都作为错误返回。
 func IsFileNormalStat(file string) (bool, error) {
 	_, err := os.Stat(file)
 	if err == nil {
@@ -46,9 +48,13 @@ func IsFileNormalStat(file string) (bool, error) {
 	return false, err
 }
 
-// 备份指定路径文件
-// 重命名原文件(添加日期时间后缀)
-// 例如 ~/work/test.go -> ~/work/test.go_202306071537010001
+// BackupFile 将 file 重命名为带日期时间后缀的备份文件，格式为 "<file>_YYYYMMDDHHMMSSnnnn"。
+// 文件存在时备份成功返回 (true, nil)；文件不存在或 Stat 报错时返回 (false, err)。
+// 序号从 1 开始递增，最多尝试 9999 次；若所有序号均已存在则返回 (false, os.ErrExist)。
+//
+// 示例：
+//
+//	~/work/test.go → ~/work/test.go_202306071537010001
 func BackupFile(file string) (bool, error) {
 	ok, err := IsFileNormalStat(file)
 	if ok {

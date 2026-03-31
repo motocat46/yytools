@@ -29,6 +29,8 @@ import (
 *   区别于 probability_distribution.go里的方法
  */
 
+// IDynamicProbDistr 是动态权重概率分布生成器的接口。
+// 与 IProbDist 的区别：每次 Generate 后被命中 key 的权重会减少，直到耗尽。
 type IDynamicProbDistr[K comparable, T base.Signed] interface {
 	CanGenerate() bool
 	Generate() K
@@ -43,11 +45,13 @@ type DynamicWeights[K comparable, T base.Signed] struct {
 	Reduce  T        // 权重减少的值
 }
 
-// 一般而言reduce为1,表示减去一个单位的权重
+// NewDynamicWeights 创建初始权重固定（每次命中减少 1）的动态分布器，语义见 NewDynamicWeightsWithReduce。
 func NewDynamicWeights[K comparable, T base.Signed](weights map[K]T) *DynamicWeights[K, T] {
 	return NewDynamicWeightsWithReduce[K, T](weights, 1)
 }
 
+// NewDynamicWeightsWithReduce 创建动态分布器，每次命中后将对应 key 的权重减少 reduce。
+// weights 所有权重必须 > 0，reduce 必须 > 0；某 key 权重降至 <= 0 时自动从候选集中移除。
 func NewDynamicWeightsWithReduce[K comparable, T base.Signed](weights map[K]T, reduce T) *DynamicWeights[K, T] {
 	assert.Assert(len(weights) > 0)
 	assert.Assert(reduce > 0)
@@ -74,11 +78,13 @@ func NewDynamicWeightsProgressive[K comparable, T base.Signed]() *DynamicWeights
 	}
 }
 
-// 判断是否可以继续获得
+// CanGenerate 返回当前总权重是否大于 0，即是否还能继续生成。
+// Generate 前应先调用此方法确认，总权重为 0 时调用 Generate 会触发 assert。
 func (this *DynamicWeights[K, T]) CanGenerate() bool {
 	return this.TtlWght > 0
 }
 
+// SetReduce 设置每次命中后权重的减少量。
 func (this *DynamicWeights[K, T]) SetReduce(reduce T) {
 	this.Reduce = reduce
 }

@@ -32,7 +32,9 @@ func Assert(condition bool, list ...interface{}) {
 	}
 }
 
-// AssertFast 快速断言，不附带额外信息。
+// AssertFast 断言 cond 为真，否则 panic，语义见 Assert。
+// 与 Assert 的区别：不接受附加消息，panic 信息固定为 "assertion failed"；
+// 适合内层热路径——调用约定已在外层注释中说明、无需额外上下文的场合。
 func AssertFast(cond bool) {
 	if !cond {
 		panic("assertion failed")

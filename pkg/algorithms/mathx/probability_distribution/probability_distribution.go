@@ -29,8 +29,9 @@ import (
 *   静态指：元素的概率和权重值不会改变(不会因为算法的进行而改变)
  */
 
-// 遍历查找
-// 时间复杂度O(n)
+// CalcIndexByWeight 按权重随机返回 weightList 中命中区间的下标，范围 [0, len(weightList)-1]。
+// totalWeight 必须等于 weightList 所有权重之和且大于 0，否则触发 assert。
+// 遍历查找，时间复杂度 O(n)。
 func CalcIndexByWeight[T Signed](weightList []T, totalWeight T) int {
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := T(0)
@@ -49,8 +50,9 @@ func CalcIndexByWeight[T Signed](weightList []T, totalWeight T) int {
 	return -1
 }
 
-// 遍历查找(在map中根据权重查找)
-// 时间复杂度O(n)
+// CalcKeyByWeight 按权重随机返回 weightMap 中命中区间的 key。
+// totalWeight 必须等于 weightMap 所有权重之和且大于 0，否则触发 assert。
+// 遍历查找，时间复杂度 O(n)。
 func CalcKeyByWeight[K comparable, V Signed](weightMap map[K]V, totalWeight V) K {
 	assert.Assert(totalWeight > 0, "总权重需要大于0：", totalWeight)
 	traverse := V(0)
@@ -70,22 +72,19 @@ func CalcKeyByWeight[K comparable, V Signed](weightMap map[K]V, totalWeight V) K
 	return k
 }
 
-// 概率分布生成接口
-// 返回权重数组对应权重的下标
+// IProbDist 是静态概率分布生成器的接口，Generate 返回权重数组中随机命中的下标。
+// 静态指权重在构建后不会随生成而改变。
 type IProbDist interface {
 	Generate() int
 }
 
-/*
-		普通实现 离散分布(利用二分搜索对查找进行优化)
-	 	构建时间复杂度:O(n),空间复杂度O(n)
-		生成时间复杂度:O(logn)
-		比起vose's alias method效率要低一些（但实现要简单很多，也更容易理解）
-*/
+// NormalMethod 是基于前缀和 + 二分搜索的静态离散概率分布。
+// 构建 O(n)，生成 O(log n)，比 VoseAliasMethod 实现更简单但生成略慢。
 type NormalMethod[T Signed] struct {
 	WeightsSum []T // 权重和数组
 }
 
+// NewNormalMethod 构建 NormalMethod，weights 长度须 > 0，每个权重须 >= 0。
 func NewNormalMethod[T Signed](weights []T) *NormalMethod[T] {
 	weightsSum := make([]T, 0, len(weights))
 	var totalWeight T
@@ -120,8 +119,7 @@ func (this *NormalMethod[T]) Generate() int {
 	return index
 }
 
-// 二分搜索
-// 查找左边界(区别普通二分查找)
+// searchLeftBound 在前缀和数组 weightsSum 中二分查找满足 weightsSum[i] >= target 的最小下标；未找到返回 -1。
 func searchLeftBound[T Integer](weightsSum []T, target T) int {
 	left := 0
 	right := len(weightsSum) - 1
@@ -245,16 +243,15 @@ func (this *VoseAliasMethod) Generate() int {
 	}
 }
 
-/*
-工厂模式 可以更方便使用概率分布方法
-*/
+// MethodType 标识概率分布算法的实现类型。
 type MethodType int32
 
 const (
-	Normal    MethodType = iota // 0 普通方法
-	VoseAlias                   // 1 vose的别名方法
+	Normal    MethodType = iota // 普通方法：前缀和 + 二分搜索，生成 O(log n)
+	VoseAlias                   // Vose 别名方法：生成 O(1)
 )
 
+// ProbFactory 根据 typ 创建对应的静态概率分布生成器，调用 Generate() 得到随机命中的权重下标。
 func ProbFactory[T Signed](typ MethodType, weights []T) IProbDist {
 	switch typ {
 	case Normal:

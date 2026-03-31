@@ -46,30 +46,33 @@ package base
 
 import "cmp"
 
-// 有符号的整数
+// Signed 约束底层类型为有符号整数的类型，包含 int、int8、int16、int32、int64
+// 及其底层类型相同的自定义类型（如 type MyInt int）。
 type Signed interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64
 }
 
-// 无符号整数
+// Unsigned 约束底层类型为无符号整数的类型，包含 uint、uint8、uint16、uint32、uint64、uintptr
+// 及其底层类型相同的自定义类型。
 type Unsigned interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
 }
 
-// 整数(包含有符号和无符号)
+// Integer 约束底层类型为任意整数（有符号或无符号）的类型，是 Signed 与 Unsigned 的联合。
 type Integer interface {
 	Signed | Unsigned
 }
 
-// 浮点数
+// Float 约束底层类型为浮点数的类型，包含 float32、float64 及其底层类型相同的自定义类型。
 type Float interface {
 	~float32 | ~float64
 }
 
-// 数字（包含整数和浮点数）
+// Number 约束底层类型为任意数值（整数或浮点数）的类型，是 Integer 与 Float 的联合。
 type Number interface {
 	Integer | Float
 }
 
-// go标准库已经定义有Ordered这里直接复用
+// Ordered 是 cmp.Ordered 的别名，约束支持 <、<=、>、>= 运算符的类型，
+// 包含所有有符号整数、无符号整数、浮点数及 string。
 type Ordered = cmp.Ordered

@@ -225,6 +225,8 @@ func (uc *UnboundedChannelV6[T]) Send(msg T) bool {
 	return true
 }
 
+// channelSend 尝试直接将 msg 投递到 channel；channel 满时改存 buffer。
+// 必须在 mutex 保护下调用。
 func (uc *UnboundedChannelV6[T]) channelSend(msg T) {
 	// 投递消息到通道
 	select {
@@ -240,7 +242,9 @@ func (uc *UnboundedChannelV6[T]) channelSend(msg T) {
 	}
 }
 
-// transfer()是临界区，是必须在锁的保护下进行的。
+// transfer 将 buffer 中的消息依次搬运到 channel，直到 channel 满或 buffer 空；
+// buffer 排空后广播唤醒阻塞生产者，否则按搬运量比例保守唤醒。
+// 必须在 mutex 保护下调用。
 func (uc *UnboundedChannelV6[T]) transfer() {
 	movedCount := 0
 	for len(uc.channel) < cap(uc.channel) && uc.buffer.Len() != 0 {
@@ -288,6 +292,8 @@ func (uc *UnboundedChannelV6[T]) transfer() {
 	}
 }
 
+// canClose 判断是否满足关闭底层 channel 的四个条件：
+// 关闭标志已设置、无活跃发送者、buffer 为空、channel 为空。
 func (uc *UnboundedChannelV6[T]) canClose() bool {
 	// 1.关闭标志已设置; 且
 	// 2.没有正在执行的 Send()（activeSenders==0）; 且
@@ -363,6 +369,9 @@ func (uc *UnboundedChannelV6[T]) Out() <-chan T {
 	return uc.channel
 }
 
+// Close 标记通道为关闭状态，唤醒所有阻塞的生产者并通知 worker 尽快感知。
+// 幂等：多次调用安全；Close 返回后通道已标记关闭，但 worker goroutine 会在消息排空后才退出。
+// 如需等待 worker 完全退出，请调用 WaitDone。
 func (uc *UnboundedChannelV6[T]) Close() {
 	uc.closed.Store(true)
 	// 确保worker能及时感知关闭，不必等待下次ticker

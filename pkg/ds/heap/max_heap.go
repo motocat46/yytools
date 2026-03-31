@@ -28,6 +28,7 @@ type MaxHeap[T any] struct {
 	Heap[T]
 }
 
+// NewMaxHeap 创建一个空的最大堆（Weight 越大越靠前）。
 func NewMaxHeap[T any]() *MaxHeap[T] {
 	return &MaxHeap[T]{
 		Heap: *NewHeap[T](),
@@ -38,11 +39,13 @@ func (this *MaxHeap[T]) Less(i, j int) bool {
 	return this.Items[i].Weight > this.Items[j].Weight
 }
 
+// PushItem 将 item 压入最大堆，item 不可为 nil。
 func (this *MaxHeap[T]) PushItem(item *Item[T]) {
 	assert.Assert(item != nil)
 	heap.Push(this, item)
 }
 
+// PopItem 弹出并返回堆顶（Weight 最大）的元素；堆为空时返回 nil。
 func (this *MaxHeap[T]) PopItem() *Item[T] {
 	if this.Len() == 0 {
 		return nil

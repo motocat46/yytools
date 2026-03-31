@@ -26,6 +26,7 @@ import (
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
+// InterfacePriorityQueue 是基于最大堆的优先级队列接口，Priority 越大越先出队。
 type InterfacePriorityQueue[T any] interface {
 	PushItem(item *PriorityItem[T])
 	PopItem() *PriorityItem[T]
@@ -46,6 +47,7 @@ type PriorityQueue[T any] struct {
 	Items []*PriorityItem[T]
 }
 
+// NewPriorityQueue 创建一个空的优先级队列（最大堆）。
 func NewPriorityQueue[T any]() *PriorityQueue[T] {
 	return &PriorityQueue[T]{}
 }
@@ -80,11 +82,13 @@ func (this *PriorityQueue[T]) Pop() interface{} {
 	return item
 }
 
+// PushItem 将 item 压入优先级队列，item 不可为 nil。
 func (this *PriorityQueue[T]) PushItem(item *PriorityItem[T]) {
 	assert.Assert(item != nil)
 	heap.Push(this, item)
 }
 
+// PopItem 弹出并返回优先级最高的元素；队列为空时返回 nil。
 func (this *PriorityQueue[T]) PopItem() *PriorityItem[T] {
 	if this.Len() == 0 {
 		return nil
@@ -92,6 +96,7 @@ func (this *PriorityQueue[T]) PopItem() *PriorityItem[T] {
 	return heap.Pop(this).(*PriorityItem[T])
 }
 
+// PeekItem 返回优先级最高的元素但不移除；队列为空时返回 nil。
 func (this *PriorityQueue[T]) PeekItem() *PriorityItem[T] {
 	if this.Len() == 0 {
 		return nil
@@ -99,6 +104,8 @@ func (this *PriorityQueue[T]) PeekItem() *PriorityItem[T] {
 	return this.Items[0]
 }
 
+// UpdatePriority 修改 item 的优先级为 newPriority 并重新调整堆。
+// item 必须是当前队列中存在的元素，否则触发 assert。
 func (this *PriorityQueue[T]) UpdatePriority(item *PriorityItem[T], newPriority int) {
 	assert.Assert(item != nil)
 	assert.Assert(item.Index >= 0 && item.Index < this.Len(), "out of range:", item.Index)

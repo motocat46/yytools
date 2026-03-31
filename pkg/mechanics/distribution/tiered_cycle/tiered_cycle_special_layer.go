@@ -37,12 +37,14 @@ type SpecialLayer struct {
 	*weight_cycle.Layer
 }
 
+// newSpecialLayer 以 items 和最小间隔创建特殊层。
 func newSpecialLayer(items []weight_cycle.Item, minInterval int32) SpecialLayer {
 	layer := SpecialLayer{minInterval: minInterval}
 	layer.Layer = weight_cycle.NewWeightCycleLayer(items)
 	return layer
 }
 
+// NewState 创建空的特殊层运行时状态（plan 为空切片，weight_cycle.State 为初始状态）。
 func (l *SpecialLayer) NewState() SpecialLayerState {
 	state := SpecialLayerState{
 		plan: make([]int32, 0),

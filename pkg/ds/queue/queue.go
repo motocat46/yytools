@@ -21,6 +21,8 @@ import (
     "github.com/motocat46/yytools/pkg/common/assert"
 )
 
+// IQueue 是泛型 FIFO 队列的公开操作接口。
+// Dequeue / Peek 在队列为空时 panic，调用前应先检查 Empty()。
 type IQueue[T any] interface {
 	Len() int                 // 队列的长度
 	Empty() bool              // 判断队列是否为空
@@ -29,6 +31,8 @@ type IQueue[T any] interface {
 	Peek() T                  // 获取队首元素(不出队列)
 }
 
+// Queue 是基于环形缓冲区的泛型 FIFO 队列，容量不足时自动扩容（翻倍），
+// 元素数量降至容量 1/4 以下时自动缩容，最低不低于 DEFAULT_QUEUE_SIZE。
 type Queue[T any] struct {
 	Items []T            //队列容量(队列中元素的最大数量是len(Items)-1, 因为Tail始终指向下一个可以入队的位置)
 	Length int           // 队列中的元素数量
@@ -39,10 +43,12 @@ type Queue[T any] struct {
 // 默认队列大小
 const DEFAULT_QUEUE_SIZE = 16
 
+// NewQueue 创建一个默认初始容量（16）的空队列。
 func NewQueue[T any]() *Queue[T] {
 	return NewQueueWithSize[T](DEFAULT_QUEUE_SIZE)
 }
 
+// NewQueueWithSize 创建指定初始容量的空队列，size 必须 > 0。
 func NewQueueWithSize[T any](size int) *Queue[T] {
 	assert.Assert(size > 0, "size must > 0,size:", size)
 	items := make([]T, size)
@@ -147,6 +153,7 @@ func (this *Queue[T]) tryExpand() {
 	}
 }
 
+// Enqueue 将 item 加入队尾；队列满时自动扩容。
 func (this *Queue[T]) Enqueue(item T) {
 	// 判断是否需要扩容
 	this.tryExpand()
@@ -201,7 +208,7 @@ func (this *Queue[T]) Peek() T {
 	return this.Items[this.Head]
 }
 
-// 从头遍历到尾
+// Range 从队首到队尾依次对每个元素调用 f，队列为空时直接返回。
 func (this *Queue[T]) Range(f func(T)) {
 	if this.Empty() {
 		return

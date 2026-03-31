@@ -59,7 +59,7 @@ func (b *bucket) Add(t *Timer) (isFirst bool) {
 	return
 }
 
-// detach 从链表摘除 t（调用方必须持有 b.mu）。
+// detach 从链表摘除 t，并将 t 的前后指针置 nil 以避免悬挂引用（调用方必须持有 b.mu）。
 func (b *bucket) detach(t *Timer) {
 	t.prev.next = t.next
 	t.next.prev = t.prev

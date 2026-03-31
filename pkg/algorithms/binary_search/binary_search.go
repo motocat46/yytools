@@ -27,7 +27,15 @@ import (
 // 正确执行的条件: 数组是有序的(允许重复的元素出现)
 // nums必须是非降序(即排除重复元素的话，就是升序)
 
-// 经典实现一: 在有序数组里查找指定的元素
+// BinarySearch 在非降序数组 nums 中查找 target，返回其任意一个匹配下标；不存在则返回 -1。
+// 有重复元素时，返回的不保证是最左或最右位置，如需确定边界请用 LeftBound / RightBound。
+// nums 必须非降序，否则结果未定义。
+//
+// 示例：
+//
+//	BinarySearch([]int{1,2,2,3}, 2) → 1 或 2（实现相关，不保证固定）
+//	BinarySearch([]int{1,2,3}, 4)   → -1
+//
 // 可以用力扣题目验证方法的正确性: https://leetcode.cn/problems/binary-search/submissions/
 func BinarySearch[T base.Integer](nums []T, target T) int {
 	// 左右均为闭区间
@@ -62,7 +70,13 @@ func BinarySearch[T base.Integer](nums []T, target T) int {
 	return -1
 }
 
-// 经典实现二(一): (当有重复元素时)查找其左边界
+// LeftBound 返回 target 在非降序数组 nums 中最左侧的下标；target 不存在则返回 -1。
+// nums 为空或 target 不在数组中均返回 -1，不 panic。
+//
+// 示例：
+//
+//	LeftBound([]int{1,2,2,2,3}, 2) → 1
+//	LeftBound([]int{1,2,3}, 4)     → -1
 func LeftBound[T base.Integer](nums []T, target T) int {
 	left := 0
 	right := len(nums) - 1
@@ -106,11 +120,18 @@ func LeftBound[T base.Integer](nums []T, target T) int {
 	return -1
 }
 
-// 经典实现二(二): (当有重复元素时)查找其右边界
+// RightBound 返回 target 在非降序数组 nums 中最右侧的下标；target 不存在则返回 -1。
+// nums 为空或 target 不在数组中均返回 -1，不 panic。
+//
+// 示例：
+//
+//	RightBound([]int{1,2,2,2,3}, 2) → 3
+//	RightBound([]int{1,2,3}, 4)     → -1
 func RightBound[T base.Integer](nums []T, target T) int {
 	return rightBound(nums, target, 0, len(nums)-1)
 }
 
+// rightBound 在 nums[left..right] 闭区间内查找 target 的最右下标，与 RightBound 逻辑相同但支持自定义搜索区间。
 func rightBound[T base.Integer](nums []T, target T, left int, right int) int {
 	for left <= right {
 		mid := left + (right-left)/2
@@ -151,7 +172,13 @@ func rightBound[T base.Integer](nums []T, target T, left int, right int) int {
 
 }
 
-// 查找元素的左右边界
+// SearchBound 返回 target 在非降序数组 nums 中的 (左边界, 右边界)；target 不存在则返回 (-1, -1)。
+//
+// 示例：
+//
+//	SearchBound([]int{1,2,2,2,3}, 2) → (1, 3)
+//	SearchBound([]int{1,2,3}, 4)     → (-1, -1)
+//
 // 可以用力扣题目验证方法的正确性: https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/submissions/
 func SearchBound[T base.Integer](nums []T, target T) (int, int) {
 	left := LeftBound(nums, target)
@@ -165,7 +192,7 @@ func SearchBound[T base.Integer](nums []T, target T) (int, int) {
 	return left, right
 }
 
-// 优化
+// SearchBoundOpt 语义同 SearchBound，但找到左边界后将右边界搜索范围收缩至 [left, len-1]，减少比较次数。
 func SearchBoundOpt[T base.Integer](nums []T, target T) (int, int) {
 	left := LeftBound(nums, target)
 	if left == -1 {

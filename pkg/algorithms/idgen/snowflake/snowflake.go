@@ -26,13 +26,13 @@ import (
 // ---- 默认位布局常量（41+10+12，个人项目默认值）----
 
 const (
-	TimestampBits = 41
-	NodeIDBits    = 10
-	SequenceBits  = 12
-	
-	MaxTimestamp = int64((1 << TimestampBits) - 1) // 2199023255551
-	MaxNodeID    = int64((1 << NodeIDBits) - 1)    // 1023
-	MaxSequence  = int64((1 << SequenceBits) - 1)  // 4095
+	TimestampBits = 41 // 时间戳位数：支持约 69 年（相对自定义纪元）
+	NodeIDBits    = 10 // 节点 ID 位数：最多 1024 个节点
+	SequenceBits  = 12 // 序列号位数：每毫秒每节点最多 4096 个 ID
+
+	MaxTimestamp = int64((1 << TimestampBits) - 1) // 最大时间戳偏移量（ms），约 69 年
+	MaxNodeID    = int64((1 << NodeIDBits) - 1)    // 最大节点 ID（含）：1023
+	MaxSequence  = int64((1 << SequenceBits) - 1)  // 每毫秒最大序列号（含）：4095
 	
 	// Epoch 自定义纪元：2025-01-01 00:00:00.000 UTC（毫秒）
 	Epoch = int64(1735689600000)
@@ -76,7 +76,8 @@ type IDParts struct {
 	Sequence  int64     // 序列号
 }
 
-// Generator 无锁线程安全的雪花 ID 生成器
+// Generator 是无锁并发安全的雪花 ID 生成器，使用 CAS 原子操作替代互斥锁。
+// 同一进程内使用相同 nodeID 创建多个实例会产生重复 ID，调用方须保证 nodeID 全局唯一。
 type Generator struct {
 	// state 原子变量：打包存储 (lastMs << nodeIDShift) | sequence
 	// 41 + 12 = 53 位（默认布局），完全在 int64 范围内
@@ -94,6 +95,7 @@ type Generator struct {
 
 // ---- Generator 实例方法（使用实例 Layout 字段，支持任意位布局）----
 
+// currentMillis 返回当前时刻相对 epoch 的毫秒偏移量；系统时钟早于 epoch 或偏移量超出最大值时 panic。
 func (g *Generator) currentMillis() int64 {
 	ms := time.Now().UnixMilli() - g.epoch
 	if ms < 0 {
@@ -105,10 +107,12 @@ func (g *Generator) currentMillis() int64 {
 	return ms
 }
 
+// packState 将毫秒时间戳和序列号打包为单个 int64 原子状态（不含 nodeID）。
 func (g *Generator) packState(ms, seq int64) int64 {
 	return (ms << g.nodeIDShift) | seq
 }
 
+// unpackState 从原子状态中解包毫秒时间戳和序列号，与 packState 互为逆操作。
 func (g *Generator) unpackState(state int64) (ms, seq int64) {
 	return state >> g.nodeIDShift, state & g.maxSequence
 }

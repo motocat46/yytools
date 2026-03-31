@@ -23,12 +23,18 @@ import (
 	"github.com/motocat46/yytools/pkg/ds/stack"
 )
 
+// maxInsertion 是触发插入排序优化的分区规模阈值；元素数 ≤ maxInsertion 时改用插入排序。
 const maxInsertion = 12
 
+// QuickSort 对整数切片原地升序排序，平均时间复杂度 O(n log n)。
+// 采用随机三路划分（荷兰国旗算法），大量重复元素时性能从 O(n²) 提升到 O(n)。
+// 小分区（≤12 个元素）自动切换为插入排序以减少递归开销。
 func QuickSort[T base.Integer](arr []T) {
 	quickSort(arr, 0, len(arr))
 }
 
+// QuickSortTraversal 对整数切片原地升序排序，语义见 QuickSort。
+// 用显式栈替代递归，避免极端输入下的调用栈溢出。
 func QuickSortTraversal[T base.Integer](arr []T) {
 	length := len(arr)
 	if length < 2 {
@@ -37,6 +43,7 @@ func QuickSortTraversal[T base.Integer](arr []T) {
 	quickSortTraversal(arr, 0, length)
 }
 
+// StackData 保存待排序分区的左右边界，供 QuickSortTraversal / QuickSortDescTraversal 的显式栈使用。
 type StackData struct {
 	Start int
 	End   int
@@ -105,10 +112,12 @@ func partition3way[T base.Integer](arr []T, start, end int) (lt, gt int) {
 	return lt, gt + 1 // 返回 gt+1 使调用方直接用作切片右边界
 }
 
+// QuickSortDesc 对整数切片原地降序排序，语义见 QuickSort。
 func QuickSortDesc[T base.Integer](arr []T) {
 	quickSortDesc(arr, 0, len(arr))
 }
 
+// QuickSortDescTraversal 对整数切片原地降序排序，语义见 QuickSortTraversal。
 func QuickSortDescTraversal[T base.Integer](arr []T) {
 	length := len(arr)
 	if length < 2 {

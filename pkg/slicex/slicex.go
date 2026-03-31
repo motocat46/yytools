@@ -22,8 +22,8 @@ import (
 	"github.com/motocat46/yytools/pkg/common/base"
 )
 
-// 与 slices.Min 不同，本函数额外返回最小值的下标
-// 保证稳定查找在切片中第一个最小的元素
+// MinInSlice 返回切片 s 中第一个最小值的下标和值；切片为空时触发 assert。
+// 与 slices.Min 不同，本函数额外返回下标，且保证稳定（多个并列最小值时取第一个）。
 // ⚠️ 若 T 包含浮点类型且切片中存在 NaN，则结果不满足全序语义（与 Go 的 <、> 比较规则一致）
 func MinInSlice[T base.Ordered](s []T) (int, T) {
 	idx, v, ok := MinInSliceOK[T](s)
@@ -31,8 +31,8 @@ func MinInSlice[T base.Ordered](s []T) (int, T) {
 	return idx, v
 }
 
-// 与 slices.Max 不同，本函数额外返回最大值的下标
-// 保证稳定查找在切片中第一个最大的元素
+// MaxInSlice 返回切片 s 中第一个最大值的下标和值；切片为空时触发 assert。
+// 与 slices.Max 不同，本函数额外返回下标，且保证稳定（多个并列最大值时取第一个）。
 // ⚠️ 若 T 包含浮点类型且切片中存在 NaN，则结果不满足全序语义（与 Go 的 <、> 比较规则一致）
 func MaxInSlice[T base.Ordered](s []T) (int, T) {
 	idx, v, ok := MaxInSliceOK[T](s)
@@ -96,13 +96,12 @@ func MaxByOK[T any](s []T, better func(a, b T) bool) (int, T, bool) {
 	return opInSliceByOK(s, better)
 }
 
-// 特化版本，元素本身可比较
+// opInSliceFuncOK 是 opInSliceByOK 的特化版本，限制元素类型为 Ordered，compare 直接用 < 或 > 比较。
 func opInSliceFuncOK[T base.Ordered](s []T, compare func(a T, b T) bool) (int, T, bool) {
 	return opInSliceByOK(s, compare)
 }
 
-// 在切片中查找的通用模式(一定会遍历所有元素)，元素的比较规则由传入的better函数决定
-// better函数的第一个参数为被遍历的元素，第二个参数为当前最优值
+// opInSliceByOK 线性遍历切片，以 better(candidate, current) 决定是否更新最优值；切片为空时返回 ok=false。
 func opInSliceByOK[T any](s []T, better func(a, b T) bool) (int, T, bool) {
 	if len(s) == 0 {
 		var zero T

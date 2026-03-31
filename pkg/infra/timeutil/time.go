@@ -15,7 +15,8 @@
 
 // Package timeutil 提供时间工具函数，扩展标准库 time 包：
 //   - ParseDuration：支持 'd'（天）单位的时长解析
-//   - Parse / ParseUnixMilli：宽松格式的日期时间字符串解析
+//   - ParseInLoc / Parse：宽松格式的日期时间字符串解析（显式时区 / time.Local）
+//   - ParseUnixMilliInLoc / ParseUnixMilli：同上，返回 Unix 毫秒时间戳
 //   - 日历边界计算：StartOfDay、StartOfWeekday、StartOfNextMonthDay 等
 //   - 时间比较：IsSameDay、IsSameWeek、DaysBetween 等
 //
@@ -32,8 +33,8 @@ import (
 	"github.com/motocat46/yytools/pkg/algorithms/mathx/overflow"
 )
 
-// 在标准库基础上，支持更大的日期单位——d（日）
-// 最大时长近似290年（int64 纳秒上限）。
+// ParseDuration 解析时长字符串，在标准库基础上额外支持 'd'（天）单位。
+// 最大时长近似 290 年（int64 纳秒上限）。
 //
 // 支持负数："-2d1h30m" 表示向前推 2 天 1 小时 30 分钟（即 -49.5 小时）。
 // '-' 只允许出现在字符串开头；不支持 '+' 前缀（正数直接省略符号）；中间位置不允许出现 '+' 或 '-'。

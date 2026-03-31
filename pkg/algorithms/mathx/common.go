@@ -19,9 +19,9 @@ package mathx
 
 import "github.com/motocat46/yytools/pkg/common/base"
 
-// 计算整数绝对值(abs)
-// 注意一种情况：当a是最小的整数时，-a仍然等于a
-// 对最小有符号整数会发生溢出，行为与 Go 内置运算一致
+// Abs 返回整数 a 的绝对值。
+// 当 a 为该类型的最小有符号整数（如 int8(-128)）时，-a 发生溢出回绕，
+// 结果仍为最小值本身，行为与 Go 内置取负运算一致。
 func Abs[T base.Integer](a T) T {
 	if a < 0 {
 		return -a
