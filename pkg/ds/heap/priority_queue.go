@@ -22,7 +22,8 @@ package heap
 
 import (
 	"container/heap"
-
+	"slices"
+	
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
@@ -77,8 +78,7 @@ func (this *PriorityQueue[T]) Pop() interface{} {
 	length := this.Len()
 	item := this.Items[length-1]
 	item.Index = -1
-	this.Items[length-1] = nil
-	this.Items = this.Items[:length-1]
+	this.Items = slices.Delete(this.Items, length-1, length)
 	return item
 }
 

@@ -15,7 +15,10 @@
 // 创建日期: 2026-03-28
 package timingwheel
 
-import "container/heap"
+import (
+	"container/heap"
+	"slices"
+)
 
 // timerHeap 是 *Timer 的 min-heap（按 expireAt 升序），实现 container/heap.Interface。
 // 由 TimingWheel.overflowMu 保护并发写；advanceClock（writeLock 下）读不需要 overflowMu。
@@ -29,8 +32,7 @@ func (h *timerHeap) Pop() any {
 	old := *h
 	n := len(old)
 	t := old[n-1]
-	old[n-1] = nil // 避免 GC 泄漏
-	*h = old[:n-1]
+	*h = slices.Delete(old, n-1, n)
 	return t
 }
 

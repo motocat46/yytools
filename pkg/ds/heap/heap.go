@@ -19,6 +19,7 @@ package heap
 
 import (
 	"container/heap"
+	"slices"
 	
 	"github.com/motocat46/yytools/pkg/common/assert"
 )
@@ -70,10 +71,9 @@ func (this *Heap[T]) Push(x interface{}) {
 
 // 根据堆的原理，首位的元素会被交换到最后一位
 func (this *Heap[T]) Pop() interface{} {
-	length := len(this.Items)          // 获取堆长度
-	item := this.Items[length-1]       // 取最后一个元素
-	this.Items[length-1] = nil         // 避免内存泄露
-	this.Items = this.Items[:length-1] // 堆的长度减一
+	length := len(this.Items)    // 获取堆长度
+	item := this.Items[length-1] // 取最后一个元素
+	this.Items = slices.Delete(this.Items, length-1, length)
 	return item
 }
 

@@ -20,7 +20,9 @@
 package stack
 
 import (
-    "github.com/motocat46/yytools/pkg/common/assert"
+	"slices"
+
+	"github.com/motocat46/yytools/pkg/common/assert"
 )
 
 // IStack 是泛型 LIFO 栈的公开操作接口。
@@ -91,13 +93,9 @@ func (this *Stack[T]) Pop() T {
 	length := this.Length()
 	assert.Assert(length > 0, "栈空了，无法出栈!")
 	item := this.Items[length-1]
-	var defaultVal T
-	this.Items[length-1] = defaultVal // 为了安全（避免内存泄露）
-	// 切面赋值的效率如何？手动决定何时缩容呢？
-	// 效率很高相当于直接操作数组下标 但是其切片的容量是不会减小的
-	// 也就是说当pop足够多元素后,切片所对应的cap是不会减小的，就会浪费很多空间
-	// 这时就需要手动实现缩容了
-	this.Items = this.Items[:length-1]
+	// slices.Delete 保证尾部元素置零（避免 GC 泄漏），语义等价于手动 zero + 缩短
+	// 切片容量不会因此缩小，缩容由下方 tryShrink 负责
+	this.Items = slices.Delete(this.Items, length-1, length)
 	// 尝试缩容
 	this.tryShrink()
 	return item

@@ -21,6 +21,7 @@ import (
 	"container/heap"
 	"context"
 	"math"
+	"slices"
 	"sync"
 	"time"
 )
@@ -57,9 +58,7 @@ func (q *DelayQueue[T]) Push(x any)         { q.items = append(q.items, x.(T)) }
 func (q *DelayQueue[T]) Pop() any {
 	n := len(q.items)
 	x := q.items[n-1]
-	var zero T
-	q.items[n-1] = zero // 避免 GC 泄漏
-	q.items = q.items[:n-1]
+	q.items = slices.Delete(q.items, n-1, n)
 	return x
 }
 
