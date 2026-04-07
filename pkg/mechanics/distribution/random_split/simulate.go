@@ -26,7 +26,6 @@ import (
 type PositionStat struct {
 	Position int   // 0-indexed
 	count    int64 // 采样次数（== rounds）
-	sum      int64 // 所有值之和
 	mean     float64
 	m2       float64 // Welford 方差累积量
 	Min, Max int64
@@ -35,7 +34,6 @@ type PositionStat struct {
 // update 用 Welford 在线算法更新统计量（每轮调用一次）。
 func (s *PositionStat) update(x int64) {
 	s.count++
-	s.sum += x
 	delta := float64(x) - s.mean
 	s.mean += delta / float64(s.count)
 	delta2 := float64(x) - s.mean
@@ -82,7 +80,7 @@ type SimResult struct {
 func (r *SimResult) CheckConservation() error {
 	for i, s := range r.roundSums {
 		if s != r.State.RemainAmount {
-			return fmt.Errorf("第%d轮 sum=%d，期望 %d（守恒性违反）", i, s, r.State.RemainAmount)
+			return fmt.Errorf("第%d轮 sum=%d，期望 %d（守恒性违反）", i+1, s, r.State.RemainAmount)
 		}
 	}
 	return nil

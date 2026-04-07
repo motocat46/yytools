@@ -16,6 +16,7 @@ package random_split
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 )
 
@@ -28,9 +29,10 @@ type State struct {
 
 // Validate 验证 State 是否合法，失败时返回包装了 ErrInvalidState 的错误。
 //
-// 三条规则：
+// 四条规则：
 //   - RemainCount > 0
 //   - MinPerPart >= 1
+//   - RemainCount * MinPerPart 不溢出 int64
 //   - RemainAmount >= RemainCount * MinPerPart
 func (s State) Validate() error {
 	if s.RemainCount <= 0 {
@@ -38,6 +40,10 @@ func (s State) Validate() error {
 	}
 	if s.MinPerPart < 1 {
 		return fmt.Errorf("MinPerPart=%d must be >= 1: %w", s.MinPerPart, ErrInvalidState)
+	}
+	if s.RemainCount > math.MaxInt64/s.MinPerPart {
+		return fmt.Errorf("RemainCount*MinPerPart overflows int64 (RemainCount=%d, MinPerPart=%d): %w",
+			s.RemainCount, s.MinPerPart, ErrInvalidState)
 	}
 	if s.RemainAmount < s.RemainCount*s.MinPerPart {
 		return fmt.Errorf("RemainAmount=%d < RemainCount*MinPerPart=%d: %w",
@@ -55,6 +61,7 @@ func (s State) Validate() error {
 //   - 内置策略在合法 state 下永远返回 nil error
 //   - 自定义策略仅在无法生成合法值时返回 error（如依赖外部资源失败）
 //     Next() 遇到 SampleFunc 返回 error 时立即透传，不更新内部状态
+//   - 违反返回值约束时 Distributor 不做运行时检测，守恒性和合法性由实现方负责保证
 type SampleFunc func(state State, rng *rand.Rand) (int64, error)
 
 // Distributor 按序管理分配过程，非线程安全。

@@ -75,10 +75,10 @@ func (d *Distributor) Done() bool
 |------|---------|
 | `ErrDone` | `Done()==true` 后调用 `Next()` |
 | `ErrInvalidState` | `State.Validate()` 失败（由 `New()` 返回） |
-| `ErrInvalidParam` | `MeanBounded(m<1.0)`、`New(fn=nil)`、`Simulate(rounds<=0)` |
+| `ErrInvalidParam` | `MeanBounded(m<1.0)`、`New(fn=nil)`、`Simulate(fn=nil)`、`Simulate(rounds<=0)` |
 | `ErrAlreadyStarted` | `Allocate()` 在非全新 Distributor 上调用 |
 
-所有错误均以 `fmt.Errorf("...: %w", ErrXxx)` 包装，可用 `errors.Is` 识别。
+`ErrInvalidState`、`ErrInvalidParam` 以 `fmt.Errorf("...: %w", ErrXxx)` 包装；`ErrDone`、`ErrAlreadyStarted` 直接返回哨兵值。均可用 `errors.Is` 识别。
 
 ## 并发使用
 

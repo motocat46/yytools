@@ -6,4 +6,4 @@
 
 | 包 | 简介 |
 |----|------|
-| [distribution](distribution/README.md) | 游戏分布机制：渐进式权重周期、双层保底抽卡引擎 |
+| [distribution](distribution/README.md) | 游戏分布机制：渐进式权重周期、双层保底抽卡引擎、通用随机份额分配 |

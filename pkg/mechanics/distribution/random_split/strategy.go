@@ -63,7 +63,15 @@ func MeanBounded(multiplier float64) (SampleFunc, error) {
 	return func(state State, rng *rand.Rand) (int64, error) {
 		avg := state.RemainAmount / state.RemainCount
 		safeUpper := state.RemainAmount - (state.RemainCount-1)*state.MinPerPart
-		upper := min(safeUpper, int64(math.Floor(multiplier*float64(avg))))
+		// multiplier 极大时 multiplier*float64(avg) 可能溢出为 +Inf；
+		// int64(+Inf) 是未定义行为，显式检测后直接使用 safeUpper。
+		floatUpper := multiplier * float64(avg)
+		var upper int64
+		if math.IsInf(floatUpper, 1) || floatUpper >= float64(math.MaxInt64) {
+			upper = safeUpper
+		} else {
+			upper = min(safeUpper, int64(math.Floor(floatUpper)))
+		}
 		// 理论上 upper >= MinPerPart（合法 state + multiplier>=1.0 保证），
 		// 此处防御极端浮点情形。
 		if upper < state.MinPerPart {

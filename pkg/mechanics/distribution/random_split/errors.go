@@ -20,13 +20,14 @@ var (
 	// ErrDone 在 Done()==true 后调用 Next() 时返回。
 	ErrDone = errors.New("random_split: allocation already done")
 
-	// ErrInvalidState 由 New() 返回，当 State.Validate() 失败时。
+	// ErrInvalidState 由 New()、Simulate() 返回，当 State.Validate() 失败时。
 	// 始终以 fmt.Errorf("...: %w", ErrInvalidState) 包装，调用方可用 errors.Is 检查。
 	ErrInvalidState = errors.New("random_split: invalid state")
 
 	// ErrInvalidParam 参数非法，以下情形触发：
 	//   - MeanBounded(multiplier<1.0)
 	//   - New(fn=nil)
+	//   - Simulate(fn=nil)
 	//   - Simulate(rounds<=0)
 	// 同样以 %w 包装。
 	ErrInvalidParam = errors.New("random_split: invalid parameter")

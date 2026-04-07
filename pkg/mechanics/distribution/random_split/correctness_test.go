@@ -107,7 +107,7 @@ func TestCorrectness_Boundedness(t *testing.T) {
 		cur := d.Remaining()
 		for !d.Done() {
 			if cur.RemainCount == 1 {
-				d.Next() //nolint：最后一份不受 SampleFunc 约束
+				d.Next() //nolint:errcheck — 最后一份不受 SampleFunc 约束，error 必为 nil
 				break
 			}
 			avg := cur.RemainAmount / cur.RemainCount

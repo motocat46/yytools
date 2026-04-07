@@ -40,6 +40,7 @@ func TestState_Validate(t *testing.T) {
 		{"非法 amount<count*min", State{9, 5, 2}, true},
 		{"非法 count负数", State{10, -1, 1}, true},
 		{"非法 min负数", State{10, 5, -1}, true},
+		{"非法 count*min 溢出", State{math.MaxInt64, math.MaxInt64, 2}, true},
 	}
 
 	for _, tc := range cases {
@@ -110,11 +111,11 @@ func TestDone_AfterAllAllocated(t *testing.T) {
 	if d.Done() {
 		t.Fatal("初始 Done() 应为 false")
 	}
-	d.Next() //nolint
+	d.Next() //nolint:errcheck
 	if d.Done() {
 		t.Fatal("分配 1/2 份后 Done() 仍应为 false")
 	}
-	d.Next() //nolint
+	d.Next() //nolint:errcheck
 	if !d.Done() {
 		t.Fatal("分配完所有份后 Done() 应为 true")
 	}
@@ -165,7 +166,7 @@ func TestNext_NormalSequence(t *testing.T) {
 func TestNext_AfterDone_ReturnsErrDone(t *testing.T) {
 	fn := Fixed()
 	d, _ := New(State{5, 1, 1}, fn, nil)
-	d.Next() //nolint
+	d.Next() //nolint:errcheck
 	if !d.Done() {
 		t.Fatal("应已 Done")
 	}
@@ -242,7 +243,7 @@ func TestAllocate_LengthAndConservation(t *testing.T) {
 func TestAllocate_AfterNext_ReturnsErrAlreadyStarted(t *testing.T) {
 	fn := Fixed()
 	d, _ := New(State{10, 3, 1}, fn, nil)
-	d.Next() //nolint
+	d.Next() //nolint:errcheck
 	_, err := d.Allocate()
 	if !errors.Is(err, ErrAlreadyStarted) {
 		t.Fatalf("调用过 Next() 后 Allocate() 应返回 ErrAlreadyStarted，got: %v", err)
@@ -327,6 +328,26 @@ func TestMeanBounded_Multiplier1_IsLegal(t *testing.T) {
 	}
 	if fn == nil {
 		t.Fatal("MeanBounded(1.0) 返回 nil SampleFunc")
+	}
+}
+
+func TestMeanBounded_HugeMultiplier_NoOverflow(t *testing.T) {
+	// multiplier 极大时 floor(m*avg) 溢出 int64，防御守卫应将 upper 截回 safeUpper 或 MinPerPart
+	fn, err := MeanBounded(1e18)
+	if err != nil {
+		t.Fatalf("MeanBounded(1e18) 应合法，got: %v", err)
+	}
+	state := State{RemainAmount: 100, RemainCount: 5, MinPerPart: 1}
+	rng := rand.New(rand.NewPCG(42, 0))
+	safeUpper := state.RemainAmount - (state.RemainCount-1)*state.MinPerPart
+	for i := range 1000 {
+		v, err := fn(state, rng)
+		if err != nil {
+			t.Fatalf("第%d次调用错误: %v", i, err)
+		}
+		if v < state.MinPerPart || v > safeUpper {
+			t.Fatalf("第%d次 v=%d 超出合法范围 [%d,%d]", i, v, state.MinPerPart, safeUpper)
+		}
 	}
 }
 
@@ -440,7 +461,7 @@ func TestErrorsIs(t *testing.T) {
 
 	t.Run("ErrDone via Next after Done", func(t *testing.T) {
 		d, _ := New(State{1, 1, 1}, Fixed(), nil)
-		d.Next() //nolint
+		d.Next() //nolint:errcheck
 		_, err := d.Next()
 		if !errors.Is(err, ErrDone) {
 			t.Errorf("errors.Is(err, ErrDone) 应为 true，got: %v", err)
@@ -449,10 +470,37 @@ func TestErrorsIs(t *testing.T) {
 
 	t.Run("ErrAlreadyStarted via Allocate after Next", func(t *testing.T) {
 		d, _ := New(State{10, 3, 1}, Fixed(), nil)
-		d.Next() //nolint
+		d.Next() //nolint:errcheck
 		_, err := d.Allocate()
 		if !errors.Is(err, ErrAlreadyStarted) {
 			t.Errorf("errors.Is(err, ErrAlreadyStarted) 应为 true，got: %v", err)
+		}
+	})
+}
+
+// ────────────────────────────────────────────────────────
+// Simulate 错误路径
+// ────────────────────────────────────────────────────────
+
+func TestSimulate_ErrorPaths(t *testing.T) {
+	t.Run("非法 State 返回 ErrInvalidState", func(t *testing.T) {
+		_, err := Simulate(State{0, 0, 0}, DoubleMean(), 10, 42)
+		if !errors.Is(err, ErrInvalidState) {
+			t.Errorf("非法 State 期望 ErrInvalidState，got: %v", err)
+		}
+	})
+
+	t.Run("nil SampleFunc 返回 ErrInvalidParam", func(t *testing.T) {
+		_, err := Simulate(State{100, 10, 1}, nil, 10, 42)
+		if !errors.Is(err, ErrInvalidParam) {
+			t.Errorf("fn=nil 期望 ErrInvalidParam，got: %v", err)
+		}
+	})
+
+	t.Run("rounds<=0 返回 ErrInvalidParam", func(t *testing.T) {
+		_, err := Simulate(State{100, 10, 1}, DoubleMean(), 0, 42)
+		if !errors.Is(err, ErrInvalidParam) {
+			t.Errorf("rounds=0 期望 ErrInvalidParam，got: %v", err)
 		}
 	})
 }
@@ -570,8 +618,6 @@ func BenchmarkAllocate(b *testing.B) {
 	}
 	for stratName, fn := range strategies {
 		for _, n := range benchNSizes {
-			fn := fn
-			n := n
 			b.Run(fmt.Sprintf("strategy=%s/n=%d", stratName, n), func(b *testing.B) {
 				state := State{
 					RemainAmount: int64(n) * 100,
@@ -581,9 +627,9 @@ func BenchmarkAllocate(b *testing.B) {
 				rng := rand.New(rand.NewPCG(42, 0))
 				b.ResetTimer()
 				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					d, _ := New(state, fn, rng)
-					d.Allocate() //nolint
+					d.Allocate() //nolint:errcheck
 				}
 			})
 		}
@@ -596,8 +642,8 @@ func BenchmarkSimulate(b *testing.B) {
 		fn := DoubleMean()
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			Simulate(state, fn, 100_000, 42) //nolint
+		for b.Loop() {
+			Simulate(state, fn, 100_000, 42) //nolint:errcheck
 		}
 	})
 }
