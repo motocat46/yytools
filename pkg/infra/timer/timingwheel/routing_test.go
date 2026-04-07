@@ -68,7 +68,7 @@ func TestAdvanceClock_UpdatesCurrentTime(t *testing.T) {
 	}
 }
 
-// TestAdvanceClock_PromotesOverflowTimer 验证进入调度窗口的 overflow timer 被提升
+// TestAdvanceClock_PromotesOverflowTimer 验证进入调度窗口的 overflow timer 被提升到时间轮 bucket
 func TestAdvanceClock_PromotesOverflowTimer(t *testing.T) {
 	tw := New()
 	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
@@ -82,6 +82,10 @@ func TestAdvanceClock_PromotesOverflowTimer(t *testing.T) {
 
 	if tw.overflow.Len() != 0 {
 		t.Error("overflow timer 应被提升，heap 应为空")
+	}
+	// 提升后 timer 应路由到时间轮某个 bucket，而非直接入 taskQueue 或被丢弃
+	if timer.bucket.Load() == nil {
+		t.Error("promoted overflow timer 应在时间轮某个 bucket 中（bucket 指针不应为 nil）")
 	}
 }
 
@@ -138,12 +142,35 @@ func TestCancel_Idempotent(t *testing.T) {
 	timer.Cancel() // 不 panic
 }
 
-// TestCancel_OverflowTimer 验证 overflow heap 中的 timer 通过 cancelled 标志取消
+// TestCancel_OverflowTimer 验证实际在 overflow heap 中的 timer 被 Cancel 后，
+// advanceClock 提升时跳过该 timer（不路由到任何 bucket）。
 func TestCancel_OverflowTimer(t *testing.T) {
+	tw := New()
+	t.Cleanup(func() { tw.taskQueue.Close(); tw.taskQueue.WaitDone() })
+	tw.currentTime = 0
+
+	// 将 timer 实际插入 overflow heap
 	timer := &Timer{expireAt: l5Interval + 100}
-	// bucket==nil（overflow 中），直接设 cancelled
+	tw.addInternal(timer)
+	if tw.overflow.Len() != 1 {
+		t.Fatalf("expireAt=l5Interval+100 应路由到 overflow heap，Len=%d", tw.overflow.Len())
+	}
+
+	// Cancel：bucket==nil（overflow 中），设置 cancelled 标志
 	timer.Cancel()
 	if !timer.cancelled.Load() {
 		t.Error("overflow timer Cancel 后 cancelled 应为 true")
+	}
+
+	// 推进时钟使 timer 进入调度窗口，advanceClock 应弹出 timer 后跳过（因为 cancelled）
+	// currentTime=l5Interval+1, expireAt=l5Interval+100 < currentTime+l5Interval → 触发提升逻辑
+	tw.advanceClock(l5Interval + 1)
+
+	if tw.overflow.Len() != 0 {
+		t.Error("已弹出的 overflow timer 不应留在 heap 中")
+	}
+	// cancelled timer 提升时应被丢弃（continue 跳过 addInternal），不入任何 bucket
+	if timer.bucket.Load() != nil {
+		t.Error("cancelled overflow timer 提升后不应入 bucket（应被 advanceClock 丢弃）")
 	}
 }

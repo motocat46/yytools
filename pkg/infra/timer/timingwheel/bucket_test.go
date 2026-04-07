@@ -52,9 +52,29 @@ func TestBucket_Flush_BucketNilBeforeFn(t *testing.T) {
 	b.Add(timer)
 	b.expireAt.Store(100)
 
-	b.Flush(func(t *Timer) {
-		if t.bucket.Load() != nil {
-			panic("fn 调用时 timer.bucket 应已为 nil")
+	var bucketNotNil bool
+	b.Flush(func(ti *Timer) {
+		if ti.bucket.Load() != nil {
+			bucketNotNil = true
 		}
 	})
+	if bucketNotNil {
+		t.Error("Flush 调用 fn 时 timer.bucket 应已为 nil（Flush 应在 mu 内先清除 bucket 指针再释放锁调用 fn）")
+	}
+}
+
+// TestBucket_Flush_Empty 验证空 bucket Flush 不调用 fn，expireAt 重置为 -1
+func TestBucket_Flush_Empty(t *testing.T) {
+	b := newBucket()
+	b.expireAt.Store(100)
+
+	var called bool
+	b.Flush(func(_ *Timer) { called = true })
+
+	if called {
+		t.Error("空 bucket Flush 不应调用 fn")
+	}
+	if b.expireAt.Load() != -1 {
+		t.Errorf("空 bucket Flush 后 expireAt=%d，预期 -1", b.expireAt.Load())
+	}
 }
