@@ -8,8 +8,10 @@
 |----|-----------|
 | [progressive_weight_cycle](./progressive_weight_cycle/) | 渐进式解锁权重周期——奖励随进度逐步解锁，配额约束下的动态权重随机 |
 | [tiered_cycle](./tiered_cycle/) | 双层周期引擎——普通层 + 特殊保底层，自动排期保底位置，支持 MinInterval 约束 |
+| [random_split](./random_split/) | 通用随机份额分配引擎——守恒性 + 合法性 + 可配置随机策略，适用于红包、掉落奖励分配 |
 
 ## 选择指南
 
 - **只需渐进式奖励随机**（无普通层、无自动排期）→ `progressive_weight_cycle`
 - **完整抽卡/保底系统**（普通抽 + 特殊保底双层）→ `tiered_cycle`（内部使用 `progressive_weight_cycle`）
+- **随机份额分配**（红包拆分、掉落奖励按份分配）→ `random_split`
