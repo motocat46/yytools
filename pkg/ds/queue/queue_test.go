@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -285,49 +286,107 @@ func TestQueue_WithPointer(t *testing.T) {
 	}
 }
 
+var queueBenchSizes = []int{100, 1_000, 10_000, 100_000}
+
+// BenchmarkQueue_Enqueue 入队基准，集合维持在 size 规模（Enqueue+Dequeue 配对）。
 func BenchmarkQueue_Enqueue(b *testing.B) {
-	queue := NewQueue[int]()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
+	for _, size := range queueBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			q := NewQueue[int]()
+			for i := range size {
+				q.Enqueue(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				q.Enqueue(i)
+				q.Dequeue() // 保持规模稳定
+				i++
+			}
+		})
 	}
 }
 
+// BenchmarkQueue_Dequeue 出队基准，集合维持在 size 规模（Dequeue+Enqueue 配对）。
 func BenchmarkQueue_Dequeue(b *testing.B) {
-	queue := NewQueue[int]()
-	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if !queue.Empty() {
-			queue.Dequeue()
-		}
+	for _, size := range queueBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			q := NewQueue[int]()
+			for i := range size {
+				q.Enqueue(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				q.Dequeue()
+				q.Enqueue(i) // 保持规模稳定
+				i++
+			}
+		})
 	}
 }
 
+// BenchmarkQueue_Peek 队首窥视基准（只读，无副作用）。
 func BenchmarkQueue_Peek(b *testing.B) {
-	queue := NewQueue[int]()
-	queue.Enqueue(1)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		queue.Peek()
+	for _, size := range queueBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			q := NewQueue[int]()
+			for i := range size {
+				q.Enqueue(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				q.Peek()
+			}
+		})
 	}
 }
 
+// BenchmarkQueue_Range 遍历基准，固定 size 规模。
 func BenchmarkQueue_Range(b *testing.B) {
-	queue := NewQueue[int]()
-	for i := 0; i < 100; i++ {
-		queue.Enqueue(i)
+	for _, size := range queueBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			q := NewQueue[int]()
+			for i := range size {
+				q.Enqueue(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				q.Range(func(item int) {
+					_ = item
+				})
+			}
+		})
 	}
+}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		queue.Range(func(item int) {
-			_ = item
+// BenchmarkQueue_Mixed 混合负载基准：50% Enqueue + 50% Dequeue，模拟稳态生产消费。
+func BenchmarkQueue_Mixed(b *testing.B) {
+	for _, size := range queueBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			q := NewQueue[int]()
+			for i := range size {
+				q.Enqueue(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			op := 0
+			for b.Loop() {
+				if op%2 == 0 {
+					q.Enqueue(i)
+					i++
+				} else {
+					q.Dequeue()
+					q.Enqueue(i) // 防止队列耗尽
+					i++
+				}
+				op++
+			}
 		})
 	}
 }
