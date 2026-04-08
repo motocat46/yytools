@@ -1,6 +1,7 @@
 // 正确性命题测试 — LRUCache
 // 验证核心不变量：LRU 淘汰顺序、TTL 惰性过期、容量不变量、Peek 不影响顺序、
-// 随机混合操作与参考模型一致（ttl=0，10 万次）、并发安全（Len ≤ capacity）。
+// 随机混合操作与参考模型一致（ttl=0，10 万次）、并发安全（Len ≤ capacity）、
+// 并发读写值正确性、Peek double-check 路径并发安全。
 //
 // 运行命令：
 //
@@ -289,34 +290,43 @@ func TestCorrectness_Concurrent(t *testing.T) {
 	wg.Wait()
 }
 
-// ─── 命题 7：并发写后读值正确性 ──────────────────────────────────────────────
+// ─── 命题 7：并发读写值正确性 ──────────────────────────────────────────────
 //
-// TestCorrectness_LRU_ConcurrentReadWriteValues 命题7：并发写后读值正确性。
-// 先顺序写入 N 个 key→value（value = key*2），然后 goroutine 并发读取，
-// 验证每个 Get 要么命中并返回正确值，要么 miss（因 TTL 过期或被淘汰）。
-// 重点：不允许命中后返回错误的值。
+// TestCorrectness_LRU_ConcurrentReadWriteValues 命题7：并发读写值正确性。
+// 10 个 writer goroutine 持续并发 Put(k, k*2)，
+// 10 个 reader goroutine 持续并发 Get(k)，命中时验证 v==k*2。
+// 重点：不允许命中后返回错误的值（读写交叉时值不能被破坏）。
 func TestCorrectness_LRU_ConcurrentReadWriteValues(t *testing.T) {
 	const capacity = 500
-	const keys = 1000 // 故意多于 capacity，会发生淘汰
-	const goroutines = 20
-	const readsPerGoroutine = 5000
+	const keys = 1000     // 故意多于 capacity，会发生淘汰
+	const goroutines = 10 // 10 writers + 10 readers
+	const opsPerGoroutine = 5000
 
 	c := lru.New[int, int](capacity, 0)
-
-	// 顺序写入 keys 个确定性键值对：key i → value i*2
-	for i := range keys {
-		c.Put(i, i*2)
-	}
 
 	var wg sync.WaitGroup
 	errCount := atomic.Int64{}
 
-	wg.Add(goroutines)
-	for range goroutines {
-		go func() {
+	// 10 个 writer
+	for g := range goroutines {
+		wg.Add(1)
+		go func(id int) {
 			defer wg.Done()
-			r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0))
-			for range readsPerGoroutine {
+			r := rand.New(rand.NewPCG(uint64(id), 0))
+			for range opsPerGoroutine {
+				k := int(r.IntN(keys))
+				c.Put(k, k*2)
+			}
+		}(g)
+	}
+
+	// 10 个 reader
+	for g := range goroutines {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(id+goroutines), 0))
+			for range opsPerGoroutine {
 				k := int(r.IntN(keys))
 				v, ok := c.Get(k)
 				if ok && v != k*2 {
@@ -324,8 +334,9 @@ func TestCorrectness_LRU_ConcurrentReadWriteValues(t *testing.T) {
 					errCount.Add(1)
 				}
 			}
-		}()
+		}(g)
 	}
+
 	wg.Wait()
 
 	if errCount.Load() > 0 {
@@ -366,7 +377,10 @@ func TestCorrectness_LRU_PeekDoubleCheckRace(t *testing.T) {
 	}
 	wg.Wait()
 
-	if l := c.Len(); l > capacity {
-		t.Errorf("命题8失败：Peek 并发后 Len=%d > capacity=%d", l, capacity)
+	// 所有 key 已过期，并发 Peek 会触发 double-check 升级锁删除过期节点。
+	// 断言：所有过期节点均已被惰性删除，Len 为 0。
+	// 本测试同时依赖 -race 检测 double-check 路径中可能的数据竞争。
+	if l := c.Len(); l != 0 {
+		t.Errorf("命题8失败：并发 Peek 后 Len=%d，期望 0（所有过期节点应已被删除）", l)
 	}
 }
