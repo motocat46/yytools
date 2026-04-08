@@ -17,6 +17,7 @@
 package trie_test
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -222,5 +223,118 @@ func TestCorrectness_Concurrent(t *testing.T) {
 	if got := int64(tr.Len()); got != want {
 		t.Errorf("并发结束后 Len(): got %d, want %d (initial=%d +inserts=%d -deletes=%d)",
 			got, want, initialLen, insertCount.Load(), deleteCount.Load())
+	}
+}
+
+// TestCorrectness_Trie_ConcurrentReadWriteSearch 命题3：并发读写时 Search 值正确性。
+// 先插入 1000 个已知词（fixedWords），之后 writer goroutine 仅操作独立的随机词池，
+// reader goroutine 持续 Search 已知词，验证命中时返回 true（已知词不被删除）。
+func TestCorrectness_Trie_ConcurrentReadWriteSearch(t *testing.T) {
+	const fixedCount = 1000
+	const poolSize = 100  // writer 操作的词池，与 fixedWords 不重叠
+	const goroutines = 10 // 10 writers + 10 readers
+	const opsPerGoroutine = 5000
+
+	tr := trie.New()
+
+	// 顺序插入 fixedWords
+	fixedWords := make([]string, fixedCount)
+	for i := range fixedCount {
+		fixedWords[i] = fmt.Sprintf("fixed%d", i)
+		tr.Insert(fixedWords[i])
+	}
+
+	// writer 操作的词池：以 "rw" 开头，与 "fixed" 开头的词不重叠
+	pool := make([]string, poolSize)
+	for i := range poolSize {
+		pool[i] = fmt.Sprintf("rw%d", i)
+	}
+
+	var wg sync.WaitGroup
+	errCount := atomic.Int64{}
+
+	// 10 个 writer：只操作 pool，不碰 fixedWords
+	for g := range goroutines {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(id), 0))
+			for range opsPerGoroutine {
+				w := pool[r.IntN(poolSize)]
+				if r.IntN(2) == 0 {
+					tr.Insert(w)
+				} else {
+					tr.Delete(w)
+				}
+			}
+		}(g)
+	}
+
+	// 10 个 reader：只搜索 fixedWords，这些词不会被 writer 删除
+	for g := range goroutines {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(id+goroutines), 0))
+			for range opsPerGoroutine {
+				w := fixedWords[r.IntN(fixedCount)]
+				if !tr.Search(w) {
+					// fixedWords 没有被删除，Search 必须返回 true
+					errCount.Add(1)
+				}
+			}
+		}(g)
+	}
+
+	wg.Wait()
+
+	if errCount.Load() > 0 {
+		t.Errorf("命题3失败：%d 次 Search(fixedWord) 返回 false（fixedWord 不应被删除）", errCount.Load())
+	}
+}
+
+// TestCorrectness_Trie_ConcurrentPanic 命题4：并发 Insert/Delete/Search 不触发 panic。
+// goroutine 随机执行三种操作，验证在任意交叉下不产生 panic 或数据竞争。
+func TestCorrectness_Trie_ConcurrentPanic(t *testing.T) {
+	const rounds = 50_000
+	const goroutines = 6
+
+	tr := trie.New()
+
+	pool := make([]string, 200)
+	for i := range pool {
+		pool[i] = fmt.Sprintf("w%d", i)
+	}
+
+	var wg sync.WaitGroup
+	panicked := atomic.Bool{}
+
+	for g := range goroutines {
+		wg.Add(1)
+		go func(id int) {
+			defer func() {
+				if r := recover(); r != nil {
+					panicked.Store(true)
+				}
+			}()
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(id), 0))
+			for range rounds {
+				w := pool[r.IntN(len(pool))]
+				switch r.IntN(3) {
+				case 0:
+					tr.Insert(w)
+				case 1:
+					tr.Delete(w)
+				case 2:
+					tr.Search(w)
+				}
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	if panicked.Load() {
+		t.Error("命题4失败：并发 Insert/Delete/Search 触发了 panic")
 	}
 }
