@@ -1,6 +1,7 @@
 package stack
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -226,35 +227,88 @@ func TestStack_WithPointer(t *testing.T) {
 	}
 }
 
+var stackBenchSizes = []int{100, 1_000, 10_000, 100_000}
+
+// BenchmarkStack_Push 入栈基准，集合维持在 size 规模（Push+Pop 配对）。
 func BenchmarkStack_Push(b *testing.B) {
-	stack := NewStack[int]()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		stack.Push(i)
+	for _, size := range stackBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			s := NewStack[int]()
+			for i := range size {
+				s.Push(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				s.Push(i)
+				s.Pop() // 保持规模稳定
+				i++
+			}
+		})
 	}
 }
 
+// BenchmarkStack_Pop 出栈基准，集合维持在 size 规模（Pop+Push 配对）。
 func BenchmarkStack_Pop(b *testing.B) {
-	stack := NewStack[int]()
-	for i := 0; i < b.N; i++ {
-		stack.Push(i)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if !stack.Empty() {
-			stack.Pop()
-		}
+	for _, size := range stackBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			s := NewStack[int]()
+			for i := range size {
+				s.Push(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				s.Pop()
+				s.Push(i) // 保持规模稳定
+				i++
+			}
+		})
 	}
 }
 
+// BenchmarkStack_Top 栈顶查看基准（只读，无副作用）。
 func BenchmarkStack_Top(b *testing.B) {
-	stack := NewStack[int]()
-	stack.Push(1)
+	for _, size := range stackBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			s := NewStack[int]()
+			for i := range size {
+				s.Push(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				s.Top()
+			}
+		})
+	}
+}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		stack.Top()
+// BenchmarkStack_Mixed 混合负载基准：70% Push + 30% Pop，模拟典型栈使用模式。
+func BenchmarkStack_Mixed(b *testing.B) {
+	for _, size := range stackBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			s := NewStack[int]()
+			for i := range size {
+				s.Push(i)
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			op := 0
+			for b.Loop() {
+				if op%10 < 7 {
+					s.Push(i)
+					i++
+				} else {
+					if !s.Empty() {
+						s.Pop()
+					}
+				}
+				op++
+			}
+		})
 	}
 }
