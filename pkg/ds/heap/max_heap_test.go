@@ -16,6 +16,7 @@
 package heap
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -146,23 +147,69 @@ func TestMaxHeap_LargeDataset(t *testing.T) {
 	}
 }
 
-func BenchmarkMaxHeapPush(b *testing.B) {
-	h := NewMaxHeap[int]()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		h.PushItem(&Item[int]{Data: i, Weight: i % 100})
+// BenchmarkMaxHeap_Push 最大堆 Push 基准，集合维持在 size 规模（Push+Pop 配对）。
+func BenchmarkMaxHeap_Push(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewMaxHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+				h.PopItem()
+				i++
+			}
+		})
 	}
 }
 
-func BenchmarkMaxHeapPop(b *testing.B) {
-	h := NewMaxHeap[int]()
-	for i := 0; i < b.N; i++ {
-		h.PushItem(&Item[int]{Data: i, Weight: i % 100})
+// BenchmarkMaxHeap_Pop 最大堆 Pop 基准，集合维持在 size 规模（Pop+Push 配对）。
+func BenchmarkMaxHeap_Pop(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewMaxHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				h.PopItem()
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+				i++
+			}
+		})
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if h.Length() > 0 {
-			h.PopItem()
-		}
+}
+
+// BenchmarkMaxHeap_Mixed 最大堆混合负载基准：70% Push + 30% Pop。
+func BenchmarkMaxHeap_Mixed(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewMaxHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			op := 0
+			for b.Loop() {
+				if op%10 < 7 {
+					h.PushItem(&Item[int]{Data: i, Weight: i})
+					i++
+				} else {
+					if h.Length() > 0 {
+						h.PopItem()
+					}
+				}
+				op++
+			}
+		})
 	}
 }

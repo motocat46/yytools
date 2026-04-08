@@ -16,6 +16,7 @@
 package heap
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -150,23 +151,96 @@ func TestPriorityQueue_IndexTracking(t *testing.T) {
 	}
 }
 
-func BenchmarkPriorityQueuePush(b *testing.B) {
-	pq := NewPriorityQueue[int]()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		pq.PushItem(&PriorityItem[int]{Data: i, Priority: i % 100})
+// BenchmarkPriorityQueue_Push PriorityQueue Push 基准，集合维持在 size 规模。
+func BenchmarkPriorityQueue_Push(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			pq := NewPriorityQueue[int]()
+			for i := range size {
+				pq.PushItem(&PriorityItem[int]{Data: i, Priority: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				pq.PushItem(&PriorityItem[int]{Data: i, Priority: i})
+				pq.PopItem()
+				i++
+			}
+		})
 	}
 }
 
-func BenchmarkPriorityQueuePop(b *testing.B) {
-	pq := NewPriorityQueue[int]()
-	for i := 0; i < b.N; i++ {
-		pq.PushItem(&PriorityItem[int]{Data: i, Priority: i % 100})
+// BenchmarkPriorityQueue_Pop PriorityQueue Pop 基准，集合维持在 size 规模。
+func BenchmarkPriorityQueue_Pop(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			pq := NewPriorityQueue[int]()
+			for i := range size {
+				pq.PushItem(&PriorityItem[int]{Data: i, Priority: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				pq.PopItem()
+				pq.PushItem(&PriorityItem[int]{Data: i, Priority: i})
+				i++
+			}
+		})
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if pq.Length() > 0 {
-			pq.PopItem()
-		}
+}
+
+// BenchmarkPriorityQueue_UpdatePriority UpdatePriority 基准，模拟动态优先级调整场景。
+func BenchmarkPriorityQueue_UpdatePriority(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			pq := NewPriorityQueue[int]()
+			items := make([]*PriorityItem[int], size)
+			for i := range size {
+				items[i] = &PriorityItem[int]{Data: i, Priority: i}
+				pq.PushItem(items[i])
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := 0
+			for b.Loop() {
+				pq.UpdatePriority(items[i%size], (i+size)%size)
+				i++
+			}
+		})
+	}
+}
+
+// BenchmarkPriorityQueue_Mixed PriorityQueue 混合负载：50% Push/Pop + 50% UpdatePriority。
+func BenchmarkPriorityQueue_Mixed(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			pq := NewPriorityQueue[int]()
+			items := make([]*PriorityItem[int], size)
+			for i := range size {
+				items[i] = &PriorityItem[int]{Data: i, Priority: i}
+				pq.PushItem(items[i])
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			op := 0
+			for b.Loop() {
+				if op%2 == 0 {
+					newItem := &PriorityItem[int]{Data: i, Priority: i % size}
+					pq.PushItem(newItem)
+					pq.PopItem()
+					i++
+				} else {
+					// 只对仍在队列中的 item 调用 UpdatePriority（Index >= 0）
+					item := items[op%size]
+					if item.Index >= 0 {
+						pq.UpdatePriority(item, (op+1)%size)
+					}
+				}
+				op++
+			}
+		})
 	}
 }

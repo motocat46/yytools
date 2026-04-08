@@ -1,6 +1,7 @@
 package heap
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -198,35 +199,88 @@ func TestHeap_LargeDataset(t *testing.T) {
 	}
 }
 
-func BenchmarkHeap_PushItem(b *testing.B) {
-	heap := NewHeap[int]()
-	b.ResetTimer()
+var heapBenchSizes = []int{100, 1_000, 10_000, 100_000}
 
-	for i := 0; i < b.N; i++ {
-		heap.PushItem(&Item[int]{Data: i, Weight: i % 100})
+// BenchmarkHeap_Push 最小堆 Push 基准，集合维持在 size 规模（Push+Pop 配对）。
+func BenchmarkHeap_Push(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+				h.PopItem() // 保持集合规模稳定
+				i++
+			}
+		})
 	}
 }
 
-func BenchmarkHeap_PopItem(b *testing.B) {
-	heap := NewHeap[int]()
-	for i := 0; i < b.N; i++ {
-		heap.PushItem(&Item[int]{Data: i, Weight: i % 100})
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if heap.Length() > 0 {
-			heap.PopItem()
-		}
+// BenchmarkHeap_Pop 最小堆 Pop 基准，集合维持在 size 规模（Pop+Push 配对）。
+func BenchmarkHeap_Pop(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			for b.Loop() {
+				h.PopItem()
+				h.PushItem(&Item[int]{Data: i, Weight: i}) // 保持集合规模稳定
+				i++
+			}
+		})
 	}
 }
 
-func BenchmarkHeap_PeekItem(b *testing.B) {
-	heap := NewHeap[int]()
-	heap.PushItem(&Item[int]{Data: 1, Weight: 1})
+// BenchmarkHeap_Peek 最小堆 Peek 基准（只读，无副作用）。
+func BenchmarkHeap_Peek(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				h.PeekItem()
+			}
+		})
+	}
+}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		heap.PeekItem()
+// BenchmarkHeap_Mixed 混合负载基准：70% Push + 30% Pop，模拟优先级队列真实使用比例。
+func BenchmarkHeap_Mixed(b *testing.B) {
+	for _, size := range heapBenchSizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			h := NewHeap[int]()
+			for i := range size {
+				h.PushItem(&Item[int]{Data: i, Weight: i})
+			}
+			b.ResetTimer()
+			b.ReportAllocs()
+			i := size
+			op := 0
+			for b.Loop() {
+				if op%10 < 7 { // 70% Push
+					h.PushItem(&Item[int]{Data: i, Weight: i})
+					i++
+				} else { // 30% Pop（若非空）
+					if h.Length() > 0 {
+						h.PopItem()
+					}
+				}
+				op++
+			}
+		})
 	}
 }
