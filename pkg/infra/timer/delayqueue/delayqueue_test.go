@@ -182,3 +182,54 @@ func TestDelayQueue_Concurrent_NoLostNoDuplicate(t *testing.T) {
 		t.Errorf("消费 %d 个元素，预期 %d（producers=%d perProd=%d）", got, total, producers, perProd)
 	}
 }
+
+// TestDelayQueue_Concurrent_OrderPreserved 多生产者并发 Offer 后，
+// TryPoll 出队顺序仍然按 expireAt 严格升序（min-heap 语义在并发下不被破坏）。
+func TestDelayQueue_Concurrent_OrderPreserved(t *testing.T) {
+	const (
+		producers        = 10
+		itemsPerProducer = 1000
+		total            = producers * itemsPerProducer
+	)
+
+	// 使用虚拟时钟，固定在一个足够大的值，让所有元素都立刻到期
+	const virtualNow = int64(100_000)
+	q := delayqueue.New[*testItem](func() int64 { return virtualNow })
+
+	// 多生产者并发 Offer，每个生产者写入随机 expireAt（范围 [1, 50000]）
+	var wg sync.WaitGroup
+	wg.Add(producers)
+	for p := range producers {
+		go func(pid int) {
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(pid), 0))
+			for range itemsPerProducer {
+				exp := int64(r.IntN(50_000) + 1)
+				q.Offer(&testItem{exp: exp})
+			}
+		}(p)
+	}
+	wg.Wait()
+
+	// 单消费者 TryPoll 全部取出（时钟固定在 100_000，所有元素均已到期）
+	results := make([]int64, 0, total)
+	for {
+		item, ok := q.TryPoll()
+		if !ok {
+			break
+		}
+		results = append(results, item.exp)
+	}
+
+	if len(results) != total {
+		t.Fatalf("出队数量不对：got %d, want %d", len(results), total)
+	}
+
+	// 验证严格升序（expireAt 不减）
+	for i := 1; i < len(results); i++ {
+		if results[i] < results[i-1] {
+			t.Fatalf("出队顺序不是升序：results[%d]=%d < results[%d]=%d",
+				i, results[i], i-1, results[i-1])
+		}
+	}
+}
