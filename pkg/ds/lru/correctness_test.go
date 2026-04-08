@@ -11,6 +11,7 @@ import (
 	"container/list"
 	"math/rand/v2"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 type refLRU struct {
 	cap   int
 	items map[int]int
-	order *list.List          // front = MRU，back = LRU
+	order *list.List // front = MRU，back = LRU
 	elems map[int]*list.Element
 }
 
@@ -286,4 +287,86 @@ func TestCorrectness_Concurrent(t *testing.T) {
 		}(g)
 	}
 	wg.Wait()
+}
+
+// ─── 命题 7：并发写后读值正确性 ──────────────────────────────────────────────
+//
+// TestCorrectness_LRU_ConcurrentReadWriteValues 命题7：并发写后读值正确性。
+// 先顺序写入 N 个 key→value（value = key*2），然后 goroutine 并发读取，
+// 验证每个 Get 要么命中并返回正确值，要么 miss（因 TTL 过期或被淘汰）。
+// 重点：不允许命中后返回错误的值。
+func TestCorrectness_LRU_ConcurrentReadWriteValues(t *testing.T) {
+	const capacity = 500
+	const keys = 1000 // 故意多于 capacity，会发生淘汰
+	const goroutines = 20
+	const readsPerGoroutine = 5000
+
+	c := lru.New[int, int](capacity, 0)
+
+	// 顺序写入 keys 个确定性键值对：key i → value i*2
+	for i := range keys {
+		c.Put(i, i*2)
+	}
+
+	var wg sync.WaitGroup
+	errCount := atomic.Int64{}
+
+	wg.Add(goroutines)
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0))
+			for range readsPerGoroutine {
+				k := int(r.IntN(keys))
+				v, ok := c.Get(k)
+				if ok && v != k*2 {
+					// 命中但值不正确：并发安全 bug
+					errCount.Add(1)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	if errCount.Load() > 0 {
+		t.Errorf("命题7失败：%d 次 Get 命中但返回了错误值", errCount.Load())
+	}
+}
+
+// ─── 命题 8：Peek double-check 升级锁路径并发安全 ────────────────────────────
+//
+// TestCorrectness_LRU_PeekDoubleCheckRace 命题8：Peek double-check 升级锁路径并发安全。
+// 多个 goroutine 并发 Peek 同一批即将过期的 key，验证不会 panic（双重删除导致 nil 解引用），
+// 且 Peek 后 Len 仍然 ≤ capacity。
+func TestCorrectness_LRU_PeekDoubleCheckRace(t *testing.T) {
+	const capacity = 100
+	const ttl = 20 * time.Millisecond
+	const goroutines = 20
+
+	c := lru.New[int, int](capacity, ttl)
+
+	// 写入 capacity 个 key
+	for i := range capacity {
+		c.Put(i, i)
+	}
+
+	// 等待所有 key 过期
+	time.Sleep(30 * time.Millisecond)
+
+	// 多 goroutine 并发 Peek 同一批过期 key
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			for i := range capacity {
+				c.Peek(i) // 触发 double-check 升级锁删除过期节点
+			}
+		}()
+	}
+	wg.Wait()
+
+	if l := c.Len(); l > capacity {
+		t.Errorf("命题8失败：Peek 并发后 Len=%d > capacity=%d", l, capacity)
+	}
 }
