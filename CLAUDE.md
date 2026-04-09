@@ -44,10 +44,10 @@ yytools is a Go utilities library providing algorithms, data structures, and com
     - `timeutil/`: Time utility functions (package: `timeutil`)
     - `timecond/`: Time condition utilities
     - `os/`: OS utility wrappers
-    - `concurrency/unbounded_channel/`: Unbounded channel implementation with multiple variants
-    - `concurrency/workerpool/`: Goroutine worker pool with pipeline support
-    - `timer/timingwheel/`: Time wheel based timer
-    - `timer/delayqueue/`: Delay queue implementation
+    - `concurrency/unbounded_channel/`: Unbounded channel implementation with multiple variants（机制层，调用方负责生命周期管理）
+    - `concurrency/workerpool/`: Goroutine worker pool with pipeline support（机制层，调用方负责生命周期管理；内部业务项目须通过工程基础层 TaskExecutor 使用）
+    - `timer/timingwheel/`: Time wheel based timer（机制层，调用方负责 Start/Stop；内部业务项目须通过工程基础层 AppScheduler 使用）
+    - `timer/delayqueue/`: Delay queue implementation（机制层，同上）
 
 - `internal/bench/`: Benchmark/demo runner functions (not for external use)
   - `heap/`, `queue/`, `stack/`, `sort/`, `sorted_set/`, `mathx/`, `probability_distribution/`
@@ -215,3 +215,17 @@ item := stack.Pop()
 通过工程基础层统一封装，业务代码不直接导入。接口命名面向系统语义，不透传第三方参数签名，外部类型不泄漏到业务层。
 
 **Wrapper 最低要求**：封装必须收回系统语义控制权，不只是改名字——只改名不收回控制权的 wrapper 没有价值。
+
+### 内部访问控制（公司内部业务项目）
+
+yytools 作为公开库不设访问限制。公司内部业务项目须在 CI 中配置 `depguard`，禁止直接导入以下路径，必须通过工程基础层对应封装使用：
+
+| 禁止直接导入 | 应通过 |
+|-------------|--------|
+| `yytools/pkg/infra/concurrency/workerpool` | 工程基础层 `TaskExecutor` |
+| `yytools/pkg/infra/concurrency/unbounded_channel` | 工程基础层对应封装 |
+| `yytools/pkg/infra/timer/timingwheel` | 工程基础层 `AppScheduler` |
+| `yytools/pkg/infra/timer/delayqueue` | 工程基础层 `AppScheduler` |
+| `yytools/pkg/infra/safeexec` | 工程基础层 panic 上报集成 |
+
+以下路径业务项目可直接使用，无约束：`algorithms/*`、`ds/*`、`mechanics/*`、`infra/timeutil`、`infra/timecond`、`infra/os`。
