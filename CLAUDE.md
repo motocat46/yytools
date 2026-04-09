@@ -24,21 +24,30 @@ yytools is a Go utilities library providing algorithms, data structures, and com
       - `probability_distribution/`: Probability distribution utilities
       - `random/`: Random number generation
     - `sort/`: Multiple sorting algorithm implementations
+    - `idgen/`: ID generation utilities
+      - `snowflake/`: Snowflake algorithm based distributed ID generator
   - `slicex/`: Slice utility functions (MinInSlice, MaxInSlice, MinBy, MaxBy, etc.)
   - `common/`: Minimal common utilities
-    - `assert/`: Runtime assertion framework that can be toggled on/off
+    - `assert/`: Runtime assertion framework (always enabled, cannot be disabled)
     - `base/`: Type definitions and constraints for generics (Integer, Ordered, etc.)
+    - `cpu/`: CPU architecture detection utilities
   - `numconst/`: Numeric and time constants (千/万/亿, time unit constants)
   - `ds/`: Data structure implementations
     - `heap/`: Min-heap and max-heap implementations
     - `queue/`: Ring-buffer queue with auto expand/shrink
     - `stack/`: Stack implementation
     - `sorted_set/`: Skip-list based sorted set (similar to Redis ZADD)
+    - `lru/`: LRU cache with TTL
+    - `trie/`: Trie (prefix tree) implementation
   - `infra/`: Infrastructure utilities
-    - `safeexec/`: panic-safe function execution wrappers (Safe, SafeCall, SafeExecWithError, etc.)
+    - `safeexec/`: panic-safe function execution wrappers (Safe, SafeExec, SafeExecErr, SafeExecVal[T])
     - `timeutil/`: Time utility functions (package: `timeutil`)
+    - `timecond/`: Time condition utilities
     - `os/`: OS utility wrappers
     - `concurrency/unbounded_channel/`: Unbounded channel implementation with multiple variants
+    - `concurrency/workerpool/`: Goroutine worker pool with pipeline support
+    - `timer/timingwheel/`: Time wheel based timer
+    - `timer/delayqueue/`: Delay queue implementation
 
 - `internal/bench/`: Benchmark/demo runner functions (not for external use)
   - `heap/`, `queue/`, `stack/`, `sort/`, `sorted_set/`, `mathx/`, `probability_distribution/`
@@ -50,28 +59,28 @@ yytools is a Go utilities library providing algorithms, data structures, and com
 ### Building and Running
 ```bash
 # Build the project
-go build
+go build ./...
 
-# Run specific functionality tests
-go run . <command> <iterations>
+# Run specific functionality tests (entry: cmd/demo/)
+go run ./cmd/demo <command> <iterations>
 
 # Available commands (get help)
-go run . help
+go run ./cmd/demo help
 ```
 
 ### Testing Individual Components
 ```bash
 # Test heap operations (5 iterations)
-go run . heap 5
+go run ./cmd/demo heap 5
 
-# Test sorting algorithms (10 iterations)  
-go run . sort 10
+# Test sorting algorithms (10 iterations)
+go run ./cmd/demo sort 10
 
 # Test all components (3 iterations)
-go run . all 3
+go run ./cmd/demo all 3
 
 # Start performance visualization server
-go run . http
+go run ./cmd/demo http
 ```
 
 ### Standard Go Commands
@@ -117,21 +126,20 @@ go vet ./...
 - 正确做法：调用前先用 `Empty()` 检查，空时操作直接 panic，迫使调用方写防御代码
 
 ```go
-// ✅ 正确
+// 正确
 if !stack.Empty() {
     item := stack.Pop()
     // ...
 }
 
-// ❌ 错误：0 可能是真实元素，也可能是空栈的静默返回
+// 错误：0 可能是真实元素，也可能是空栈的静默返回
 item := stack.Pop()
 ```
 
 ### Testing Strategy
 - Unit tests follow `*_test.go` naming convention
-- Custom test functions use `Test*` naming pattern (e.g., `HeapTest`, `SortTest`)
-- Test iterations are configurable via command line arguments
-- Performance testing includes visualization via go-echarts
+- Test files: `_test.go` suffix; correctness propositions in `correctness_test.go`; benchmarks in `bench_test.go`
+- Performance testing includes visualization via go-echarts at `http://localhost:8081`
 
 ### Assertion System
 - All code uses the custom assertion framework in `pkg/common/assert/`
@@ -152,7 +160,7 @@ item := stack.Pop()
 
 | 需求 | 检查位置 |
 |------|---------|
-| panic 恢复 / 安全执行 | `pkg/infra/safeexec/` |
+| panic 恢复 / 安全执行 | `pkg/infra/safeexec/` — `Safe`, `SafeExec`, `SafeExecErr`, `SafeExecVal[T]` |
 | 运行时断言 | `pkg/common/assert/` |
 | 时间解析 / 工具 | `pkg/infra/timeutil/` |
 | 数值 / 时间常量 | `pkg/numconst/` |

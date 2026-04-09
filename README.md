@@ -35,19 +35,26 @@ yytools/
 │   │   └── sort/              # 排序算法（快排、计数排序、基数排序等）
 │   ├── ds/                    # 数据结构
 │   │   ├── heap/              # 最小堆 / 最大堆 / 优先级队列
+│   │   ├── lru/               # LRU 缓存（参考实现，生产建议用 hashicorp/golang-lru v2）
 │   │   ├── queue/             # 环形队列（自动扩缩容）
 │   │   ├── stack/             # 栈
-│   │   └── sorted_set/        # 有序集合（跳表实现，类 Redis ZADD）
+│   │   ├── sorted_set/        # 有序集合（跳表实现，类 Redis ZADD）
+│   │   └── trie/              # 前缀树
 │   ├── infra/                 # 基础设施工具
 │   │   ├── concurrency/
 │   │   │   ├── unbounded_channel/  # 无大小限制的 Channel
 │   │   │   └── workerpool/         # 固定大小 goroutine 池 + 泛型 Pipeline
 │   │   ├── os/                # OS 工具封装
-│   │   ├── safeexec/          # panic 安全执行（Safe、SafeCall 等）
-│   │   └── timeutil/          # 时间工具函数
+│   │   ├── safeexec/          # panic 安全执行（Safe、SafeExec、SafeExecErr、SafeExecVal[T]）
+│   │   ├── timecond/          # 时间条件判断工具
+│   │   ├── timeutil/          # 时间工具函数
+│   │   └── timer/
+│   │       ├── timingwheel/   # 时间轮（带生命周期的通用并发定时原语）
+│   │       └── delayqueue/    # 延迟队列
 │   ├── common/
 │   │   ├── assert/            # 运行时断言框架（始终启用，正向条件语法糖）
-│   │   └── base/              # 泛型类型约束（Integer、Ordered 等）
+│   │   ├── base/              # 泛型类型约束（Integer、Ordered 等）
+│   │   └── cpu/               # CPU 特性检测（缓存行大小等）
 │   ├── numconst/              # 数字和时间常量（时间单位等）
 │   ├── mechanics/             # 规则机制（分布策略、调度策略等）
 │   └── slicex/                # 切片工具函数（MinBy、MaxBy 等）
@@ -93,10 +100,10 @@ go run ./cmd/demo http            # 启动排序性能可视化服务
 | 模块 | 功能简介 |
 |------|---------|
 | [pkg/algorithms](pkg/algorithms/README.md) | 排序、二分查找、数学工具、唯一 ID 生成 |
-| [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合 |
+| [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合、LRU 缓存、前缀树 |
 | [pkg/mechanics](pkg/mechanics/distribution/README.md) | 游戏规则机制：渐进式权重周期、双层保底抽卡引擎 |
-| [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、OS 封装、无界 Channel |
-| [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架 |
+| [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、时间条件判断、OS 封装、无界 Channel、时间轮、延迟队列 |
+| [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架、CPU 特性检测 |
 | [pkg/slicex](pkg/slicex/README.md) | 切片工具函数（MinBy、MaxBy 等） |
 | [pkg/numconst](pkg/numconst/README.md) | 常用数字常量（千/万/亿）和时间单位常量 |
 
