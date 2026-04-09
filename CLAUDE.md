@@ -171,3 +171,24 @@ item := stack.Pop()
 - Sorting algorithms include performance comparison with Go's standard library
 - Use `cmd/demo/graph.go` for performance visualization at `http://localhost:8081`
 - Counting sort and quick sort implementations are optimized for different data ranges
+
+### yytools 边界判断标准
+
+判断一个模块是否属于 yytools，依次回答三个问题：
+
+**Q1：是否无策略、无生命周期、低依赖？**
+- 无策略：不做系统级决策（不决定日志格式、重试次数、超时配置）
+- 无生命周期：不需要与应用启动/关闭钩子绑定（内部资源管理不算）
+- 低依赖：不引入重量级第三方依赖（不传递性污染调用方依赖图）
+
+全部满足 → 属于 yytools。有一项不满足 → 进 Q2。
+
+**Q2：是"机制"还是"集成"？**
+- 机制：提供算法或并发原语，调用方自己决定怎么用、何时启停
+- 集成：需要被绑定到系统入口，或依赖系统级上下文才能正确工作
+
+是机制 → 属于 yytools，文档明确"调用方负责生命周期管理"。是集成 → 属于工程基础层。
+
+**Q3：强制所有使用者依赖工程基础层才能用到此模块，代价是否可接受？**
+
+可接受 → 可考虑迁移到工程基础层。不可接受（工程基础层有重依赖或强约束）→ 保留在 yytools，靠 depguard 约束内部使用。
