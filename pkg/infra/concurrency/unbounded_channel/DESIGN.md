@@ -341,3 +341,33 @@ unbounded_channel/
     ├── ucv53.go                  # V53：自旋 + 固定 1ms sleep（去掉指数退避）
     └── pure_queue.go             # 早期纯队列实验
 ```
+
+---
+
+## 教训：WaitDone() 的增删经历（测试驱动 API 污染的反面案例）
+
+**经过：**
+1. 时间轮组件测试使用 `goleak.VerifyTestMain`，检测到 V6 的 worker goroutine 在 `Close()` 后短暂存活
+2. 为消除报警，给 V6 增加了公开方法 `WaitDone()`，并在时间轮 `Stop()` 中调用
+3. 分析后发现这是错误决策，将 `WaitDone()` 全部回退
+
+**问题根因：**
+
+goleak 检测到的是 worker goroutine 的**调度时序窗口**——`Close()` 发出信号到 worker 收到信号并退出之间需要一次调度，不是真实的资源泄漏。在正确使用下，worker 会在微秒内自然退出。
+
+**为什么 `WaitDone()` 是错误的 API：**
+
+- 暴露了内部实现细节（调用方不应感知 worker goroutine 的存在）
+- `Close()` 的语义类同 Go 原生 `close(ch)`——非阻塞，不等内部清理完成
+- `WaitDone()` 存在死锁风险：channel 未排干时调用会永久阻塞
+- 唯一用途是满足 goleak，没有独立的生产价值
+
+**正确处理方式：**
+
+时间轮测试改用 `goleak.IgnoreTopFunction(...)` 过滤 worker 的调度窗口；unbounded_channel 包不使用 `goleak.VerifyTestMain`（非阻塞 `Close()` 的 channel 原语与 `VerifyTestMain` 不兼容）。
+
+**教训：**
+
+测试工具报告问题时，先问：**这是真实的生产 bug，还是测试工具的配置问题？**
+
+禁止为了让测试工具满意而新增公开 API。测试基础设施应适应正确的生产代码，而不是反向污染接口设计。
