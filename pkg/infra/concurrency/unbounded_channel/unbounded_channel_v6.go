@@ -370,8 +370,8 @@ func (uc *UnboundedChannelV6[T]) Out() <-chan T {
 }
 
 // Close 标记通道为关闭状态，唤醒所有阻塞的生产者并通知 worker 尽快感知。
-// 幂等：多次调用安全；Close 返回后通道已标记关闭，但 worker goroutine 会在消息排空后才退出。
-// 如需等待 worker 完全退出，请调用 WaitDone。
+// 幂等：多次调用安全。
+// Close 返回后通道已标记关闭，producer 收到错误；worker 在 buffer 排空后退出，语义同 Go 原生 channel 的 close()。
 func (uc *UnboundedChannelV6[T]) Close() {
 	uc.closed.Store(true)
 	// 确保worker能及时感知关闭，不必等待下次ticker
@@ -382,10 +382,4 @@ func (uc *UnboundedChannelV6[T]) Close() {
 	// It is allowed but not required for the caller to hold c.L
 	// during the call.
 	uc.condSendWaiter.Broadcast()
-}
-
-// WaitDone 阻塞直到内部 worker goroutine 完全退出。
-// 通常在 Close() 之后调用，用于需要 goroutine 零泄漏验证的场景（如 goleak）。
-func (uc *UnboundedChannelV6[T]) WaitDone() {
-	<-uc.workerDone
 }

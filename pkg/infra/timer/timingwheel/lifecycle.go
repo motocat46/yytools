@@ -30,9 +30,8 @@ func (tw *TimingWheel) Start() {
 // Stop 停止时间轮，等待所有已投递回调执行完毕后返回。
 // 调用 Stop 后不得再调用 AfterFunc/EveryFunc。
 func (tw *TimingWheel) Stop() {
-	tw.cancel()             // 通知 reaper 退出
-	tw.wg.Wait()            // 等待 reaper 和 taskExecutor 均退出
-	tw.taskQueue.WaitDone() // 等待 taskQueue 内部 worker goroutine 完全退出
+	tw.cancel()  // 通知 reaper 退出
+	tw.wg.Wait() // 等待 reaper 和 taskExecutor 均退出
 }
 
 // reaper 是时钟推进 goroutine：从 DelayQueue 取到期 bucket，持 writeLock 推进时钟并 Flush。

@@ -14,7 +14,11 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
+	// taskQueue（UnboundedChannelV6）的 worker goroutine 在 Close() 后异步退出，
+	// 语义同 Go 原生 close(ch)——内部实现细节，不属于真实泄漏。
+	goleak.VerifyTestMain(m, goleak.IgnoreTopFunction(
+		"github.com/motocat46/yytools/pkg/infra/concurrency/unbounded_channel.(*UnboundedChannelV6[...]).worker.func1",
+	))
 }
 
 // TestStartStop_BasicFire 验证 Start 后 one-shot timer 触发，Stop 等待完成

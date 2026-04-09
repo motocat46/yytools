@@ -41,12 +41,13 @@ var ErrPoolClosed = errors.New("workerpool: pool is closed")
 //	}
 //	pool.Wait()
 type WorkerPool struct {
-	queue  chan func()
-	wg     sync.WaitGroup
-	locker submitLocker // 抽象锁，保护 closed 标志与 wg.Add 的原子性
-	closed bool
-	once   sync.Once
-	stop   chan struct{} // close 广播通知所有 worker 退出
+	queue    chan func()
+	wg       sync.WaitGroup
+	workerWg sync.WaitGroup // 追踪 worker goroutine 生命周期，Close 等它们真正退出
+	locker   submitLocker   // 抽象锁，保护 closed 标志与 wg.Add 的原子性
+	closed   bool
+	once     sync.Once
+	stop     chan struct{} // close 广播通知所有 worker 退出
 }
 
 // NewWorkerPool 创建固定大小的 worker pool，使用 RWMutex（默认）。
@@ -71,6 +72,7 @@ func newWorkerPool(workers, queueSize int, locker submitLocker) *WorkerPool {
 		locker: locker,
 	}
 	for range workers {
+		p.workerWg.Add(1)
 		go p.run()
 	}
 	return p
@@ -78,6 +80,7 @@ func newWorkerPool(workers, queueSize int, locker submitLocker) *WorkerPool {
 
 // run 是每个 worker goroutine 的主循环，从队列取任务执行，收到 stop 信号后退出。
 func (p *WorkerPool) run() {
+	defer p.workerWg.Done()
 	for {
 		select {
 		case task := <-p.queue:
@@ -128,7 +131,8 @@ func (p *WorkerPool) Close() {
 		p.locker.unlockClose()
 		// 等待所有已提交（wg.Add 已完成）的任务执行完毕。
 		p.wg.Wait()
-		// 所有任务已处理完毕，通知 worker 退出。
+		// 所有任务已处理完毕，通知 worker 退出，等待它们真正退出。
 		close(p.stop)
+		p.workerWg.Wait()
 	})
 }
