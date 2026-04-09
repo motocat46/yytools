@@ -12,3 +12,4 @@ pkg/infra/concurrency/.DS_Store
 pkg/ds/.DS_Store
 docs/superpowers/
 .worktrees/
+.DS_Store
