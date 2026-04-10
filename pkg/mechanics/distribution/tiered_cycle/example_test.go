@@ -43,7 +43,6 @@ func Example_gachaSystem() {
 	}
 	cfg := Config{
 		ConfigBase: ConfigBase{
-			R:        rand.New(rand.NewPCG(42, 0)),
 			CycleLen: 100,
 		},
 		ConfigStandard: ConfigStandard{
@@ -59,7 +58,7 @@ func Example_gachaSystem() {
 	if err != nil {
 		panic(err)
 	}
-	state := NewState()
+	state := eng.NewState(rand.New(rand.NewPCG(42, 0)))
 	eng.Init(state)
 
 	standardCount := 0
@@ -97,7 +96,6 @@ func Example_multipleStates() {
 	}
 	cfg := Config{
 		ConfigBase: ConfigBase{
-			R:        rand.New(rand.NewPCG(1, 0)),
 			CycleLen: 20,
 		},
 		ConfigStandard: ConfigStandard{
@@ -114,10 +112,10 @@ func Example_multipleStates() {
 		panic(err)
 	}
 
-	// 3 个玩家，独立进度
+	// 3 个玩家，独立进度，各自持有独立随机源
 	states := make([]*State, 3)
 	for i := range states {
-		states[i] = NewState()
+		states[i] = eng.NewState(rand.New(rand.NewPCG(uint64(i), 0)))
 		eng.Init(states[i])
 	}
 

@@ -84,7 +84,6 @@ func runTieredCycleSim() tieredSimResult {
 	}
 	cfg := tiered.Config{
 		ConfigBase: tiered.ConfigBase{
-			R:        rand.New(rand.NewPCG(42, 0)),
 			CycleLen: tieredCycleLen,
 		},
 		ConfigStandard: tiered.ConfigStandard{
@@ -96,7 +95,7 @@ func runTieredCycleSim() tieredSimResult {
 		},
 	}
 	eng, _ := tiered.New(cfg)
-	state := tiered.NewState()
+	state := eng.NewState(rand.New(rand.NewPCG(42, 0)))
 	eng.Init(state)
 
 	var res tieredSimResult

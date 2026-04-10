@@ -34,8 +34,6 @@ var stdWeight = NewWeight(map[int]int32{0: 1, 1: 1, 2: 1})
 
 // TestEngine_Config_Validation 验证各种非法 Config 返回 error
 func TestEngine_Config_Validation(t *testing.T) {
-	r := newTestRand(1)
-
 	cases := []struct {
 		name string
 		cfg  Config
@@ -43,30 +41,22 @@ func TestEngine_Config_Validation(t *testing.T) {
 		{
 			name: "CycleLen=0",
 			cfg: Config{
-				ConfigBase:     ConfigBase{CycleLen: 0, R: r},
+				ConfigBase:     ConfigBase{CycleLen: 0},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
 			},
 		},
 		{
 			name: "CycleLen<0",
 			cfg: Config{
-				ConfigBase:     ConfigBase{CycleLen: -1, R: r},
+				ConfigBase:     ConfigBase{CycleLen: -1},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
-			},
-		},
-		{
-			name: "Items非空但R为nil",
-			cfg: Config{
-				ConfigBase:     ConfigBase{CycleLen: 10},
-				ConfigStandard: ConfigStandard{Weight: stdWeight},
-				ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}}},
 			},
 		},
 		{
 			// sum(Quota)=3 > CycleLen=2
 			name: "sum(Quota)>CycleLen",
 			cfg: Config{
-				ConfigBase:     ConfigBase{CycleLen: 2, R: r},
+				ConfigBase:     ConfigBase{CycleLen: 2},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
 				ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 			},
@@ -75,7 +65,7 @@ func TestEngine_Config_Validation(t *testing.T) {
 			name: "MinInterval过大导致不可行",
 			// CycleLen=5, MinInterval=3, n=3: 5-3*(3-1)=5-6=-1 < 3
 			cfg: Config{
-				ConfigBase:     ConfigBase{CycleLen: 5, R: r},
+				ConfigBase:     ConfigBase{CycleLen: 5},
 				ConfigStandard: ConfigStandard{Weight: stdWeight},
 				ConfigSpecial:  ConfigSpecial{MinInterval: 3, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 			},
@@ -93,25 +83,47 @@ func TestEngine_Config_Validation(t *testing.T) {
 
 	// 合法配置应该成功
 	t.Run("合法配置", func(t *testing.T) {
-		_, err := New(Config{
-			ConfigBase:     ConfigBase{CycleLen: 10, R: newTestRand(1)},
+		eng, err := New(Config{
+			ConfigBase:     ConfigBase{CycleLen: 10},
 			ConfigStandard: ConfigStandard{Weight: stdWeight},
 			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 		})
 		if err != nil {
 			t.Errorf("合法配置不应返回 error: %v", err)
+			return
 		}
+		_ = eng.NewState(newTestRand(1)) // 有特殊层时须传非 nil rand
 	})
 
-	// 无特殊分布时 R 可以为 nil
-	t.Run("无Items时R可nil", func(t *testing.T) {
-		_, err := New(Config{
+	// 无特殊分布时 r 可以为 nil
+	t.Run("无Items时r可nil", func(t *testing.T) {
+		eng, err := New(Config{
 			ConfigBase:     ConfigBase{CycleLen: 10},
 			ConfigStandard: ConfigStandard{Weight: stdWeight},
 		})
 		if err != nil {
-			t.Errorf("无 Items 时 R=nil 应合法: %v", err)
+			t.Errorf("无 Items 时应合法: %v", err)
+			return
 		}
+		_ = eng.NewState(nil)
+	})
+
+	// 有特殊层但 r=nil 时 NewState 应 panic
+	t.Run("Items非空但r为nil时NewState应panic", func(t *testing.T) {
+		eng, err := New(Config{
+			ConfigBase:     ConfigBase{CycleLen: 10},
+			ConfigStandard: ConfigStandard{Weight: stdWeight},
+			ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}}},
+		})
+		if err != nil {
+			t.Fatalf("New 不应返回 error: %v", err)
+		}
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("Items 非空但 r=nil 时 NewState 应 panic")
+			}
+		}()
+		eng.NewState(nil)
 	})
 }
 
@@ -138,14 +150,14 @@ func TestEngine_FullCycle_PositionTypeMapping(t *testing.T) {
 		{Quota: 1, JoinAt: 0},
 	}
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: 10, R: newTestRand(42)},
+		ConfigBase:     ConfigBase{CycleLen: 10},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(42))
 	eng.Init(state)
 
 	// 记录特殊计划位置集合（Init 之后立刻获取，此时 posInCycle=0）
@@ -188,14 +200,14 @@ func TestEngine_FullCycle_JoinAtEnforced(t *testing.T) {
 		{Quota: 2, JoinAt: 4},
 	}
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: 20, R: newTestRand(7)},
+		ConfigBase:     ConfigBase{CycleLen: 20},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(7))
 	eng.Init(state)
 
 	for cycle := 0; cycle < 3; cycle++ {
@@ -226,14 +238,14 @@ func TestEngine_FullCycle_QuotaEnforced(t *testing.T) {
 		{Quota: 2, JoinAt: 0},
 	}
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: 20, R: newTestRand(99)},
+		ConfigBase:     ConfigBase{CycleLen: 20},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(99))
 	eng.Init(state)
 
 	counts := make([]int32, len(items))
@@ -261,14 +273,14 @@ func TestEngine_FullCycle_QuotaEnforced(t *testing.T) {
 func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 	const cycleLen = 8
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(1)},
+		ConfigBase:     ConfigBase{CycleLen: cycleLen},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{MinInterval: 2, Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}, {Quota: 1, JoinAt: 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(1))
 	eng.Init(state)
 
 	_, results, _ := runOneCycle(t, eng, state)
@@ -288,14 +300,14 @@ func TestEngine_FullCycle_CycleEnd(t *testing.T) {
 func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 	items := []weight_cycle.Item{{Quota: 1, JoinAt: 0}}
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(3)},
+		ConfigBase:     ConfigBase{CycleLen: 5},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{Items: items},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(3))
 	eng.Init(state)
 
 	// 跑几步推进 posInCycle 和特殊层状态
@@ -327,14 +339,14 @@ func TestEngine_ResetCycle_StateCleared(t *testing.T) {
 func TestEngine_NextAutoReset(t *testing.T) {
 	const cycleLen = 6
 	eng, err := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(5)},
+		ConfigBase:     ConfigBase{CycleLen: cycleLen},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{Items: []weight_cycle.Item{{Quota: 1, JoinAt: 0}}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(newTestRand(5))
 	eng.Init(state)
 
 	// 跑 2 个完整周期
@@ -361,12 +373,12 @@ func TestEngine_NoSpecials(t *testing.T) {
 	eng, err := New(Config{
 		ConfigBase:     ConfigBase{CycleLen: 10},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
-		// R=nil, Items=nil —— 合法：无特殊分布
+		// Items=nil —— 合法：无特殊分布
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := NewState()
+	state := eng.NewState(nil) // 无特殊层，r 可为 nil
 	eng.Init(state)
 
 	if len(state.Plan()) != 0 {
@@ -389,14 +401,14 @@ func TestEngine_SpecialNoCandidate(t *testing.T) {
 	// sum(quota)=1，plan 只有 1 个位置，该位置 occIdx 恒为 0，JoinAt=1 > 0 → 永远 no candidate
 	items2 := []weight_cycle.Item{{Quota: 1, JoinAt: 1}}
 	e2, err2 := New(Config{
-		ConfigBase:     ConfigBase{CycleLen: 5, R: newTestRand(42)},
+		ConfigBase:     ConfigBase{CycleLen: 5},
 		ConfigStandard: ConfigStandard{Weight: stdWeight},
 		ConfigSpecial:  ConfigSpecial{Items: items2},
 	})
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	s2 := NewState()
+	s2 := e2.NewState(newTestRand(42))
 	e2.Init(s2)
 
 	errCount := 0
@@ -431,14 +443,14 @@ func TestEngine_Replay(t *testing.T) {
 
 	getPlan := func() []int32 {
 		eng, err := New(Config{
-			ConfigBase:     ConfigBase{CycleLen: cycleLen, R: newTestRand(seed)},
+			ConfigBase:     ConfigBase{CycleLen: cycleLen},
 			ConfigStandard: ConfigStandard{Weight: stdWeight},
 			ConfigSpecial:  ConfigSpecial{MinInterval: 1, Items: items},
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		state := NewState()
+		state := eng.NewState(newTestRand(seed))
 		eng.Init(state)
 		plan := make([]int32, len(state.Plan()))
 		copy(plan, state.Plan())

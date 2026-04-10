@@ -20,7 +20,7 @@ package tiered_cycle
 import (
 	"fmt"
 	"math/rand/v2"
-	
+
 	weight_cycle "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
 )
 
@@ -33,8 +33,6 @@ type Config struct {
 
 // ConfigBase 是所有层共用的基础参数。
 type ConfigBase struct {
-	// R 随机源，仅用于每轮周期的特殊分布计划生成；标准分布使用全局随机源
-	R        *rand.Rand
 	CycleLen int32 // 一个循环大周期分布数量
 }
 
@@ -52,13 +50,9 @@ type ConfigSpecial struct {
 // State 每个玩家/对象的进度，持有各层的运行时状态
 type State struct {
 	posInCycle int32              // 当前分布位置，由 Engine 推进（周期内位置）
+	r          *rand.Rand         // 随机源，仅用于每轮周期的特殊分布计划生成
 	standard   StandardLayerState // 普通层状态
 	special    SpecialLayerState  // 特殊层状态
-}
-
-// NewState 创建一个新的空 State，调用 Engine.Init 后方可使用
-func NewState() *State {
-	return &State{}
 }
 
 // PosInCycle 返回当前周期内位置（只读）
@@ -80,12 +74,12 @@ const (
 	Special  DistributionType = 1  // 特殊层结果
 )
 
-// Engine 持有不可变规则，纯调度；非线程安全（因 rand），多 goroutine 使用需加锁
+// Engine 持有不可变规则，纯调度，goroutine-safe。
+//
 //	v1（当前）：固定两层 + 固定 state 形状，追求好用、稳定、易测
 //	v2（未来）：当出现需要不同 state 的 layer 时，引入可插拔 state 的 EngineV2（可以同仓库并存）
 type Engine struct {
 	cycleLen int32
-	r        *rand.Rand
 	standard StandardLayer
 	special  SpecialLayer
 }
@@ -95,9 +89,6 @@ type Engine struct {
 func New(cfg Config) (*Engine, error) {
 	if cfg.CycleLen <= 0 {
 		return nil, fmt.Errorf("CycleLen must be > 0, got %d", cfg.CycleLen)
-	}
-	if weight_cycle.TotalQuota(cfg.Items) > 0 && cfg.R == nil {
-		return nil, fmt.Errorf("R must not be nil when Items is non-empty")
 	}
 	n := weight_cycle.TotalQuota(cfg.Items)
 	if n > cfg.CycleLen {
@@ -109,10 +100,18 @@ func New(cfg Config) (*Engine, error) {
 	}
 	return &Engine{
 		cycleLen: cfg.CycleLen,
-		r:        cfg.R,
 		standard: newStandardLayer(cfg.Weight),
 		special:  newSpecialLayer(cfg.Items, cfg.MinInterval),
 	}, nil
+}
+
+// NewState 创建与本 Engine 关联的 State，调用 Engine.Init 后方可使用。
+// Engine 含特殊层（Items 非空）时 r 不可为 nil；无特殊层时 r 传 nil 即可。
+func (e *Engine) NewState(r *rand.Rand) *State {
+	if e.special.TotalQuota > 0 && r == nil {
+		panic("tiered_cycle: r must not be nil when Engine has special items")
+	}
+	return &State{r: r}
 }
 
 // Init 初始化 state 以开始第一个周期，等价于 ResetCycle。
@@ -143,7 +142,7 @@ func (e *Engine) NextAutoReset(state *State) (Result, error) {
 func (e *Engine) Next(state *State) (Result, error) {
 	res := Result{Index: -1, Type: Invalid}
 	var err error
-	
+
 	occIdx := e.special.GetOccIdx(&state.special, state.posInCycle)
 	if occIdx == -1 {
 		res.Index = e.standard.Generate(&state.standard)
@@ -156,7 +155,7 @@ func (e *Engine) Next(state *State) (Result, error) {
 			res.Type = Special
 		}
 	}
-	
+
 	// 状态推进：无论是否出错位置都前进，防止调用方陷入同一特殊位置的无限重试
 	state.posInCycle++
 	if state.posInCycle >= e.cycleLen {
@@ -169,5 +168,5 @@ func (e *Engine) Next(state *State) (Result, error) {
 func (e *Engine) ResetCycle(state *State) {
 	state.posInCycle = 0
 	e.standard.Reset(&state.standard)
-	e.special.Reset(&state.special, e.r, e.cycleLen)
+	e.special.Reset(&state.special, state.r, e.cycleLen)
 }
