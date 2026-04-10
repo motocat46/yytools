@@ -193,39 +193,3 @@ item := stack.Pop()
 
 可接受 → 可考虑迁移到工程基础层。不可接受（工程基础层有重依赖或强约束）→ 保留在 yytools，靠 depguard 约束内部使用。
 
-### 第三方库使用策略
-
-按库的性质分三类：
-
-**第一类：纯工具库（算法、数据结构）**
-> 例：`hashicorp/golang-lru`、`shopspring/decimal`、`google/btree`
-
-直接使用，不加适配层。这类库无 I/O、无副作用，加适配层是过度设计。接口层的合理性由替换场景的真实存在决定，而不是由"万一需要替换"决定。
-
-**第二类：基础设施库（数据库、缓存服务、消息队列、HTTP 客户端）**
-> 例：`gorm`、`go-redis`、`kafka-go`
-
-分两层处理：
-- 连接/客户端管理（连接池、超时、重试策略）→ 工程基础层统一负责
-- 业务域适配（repository 实现）→ 业务项目自己负责；接口由业务域（消费方）定义，不由工程基础层强加
-
-**第三类：横切关注点（日志、监控、重试、熔断）**
-> 例：`zap`、`opentelemetry`、`hystrix`
-
-通过工程基础层统一封装，业务代码不直接导入。接口命名面向系统语义，不透传第三方参数签名，外部类型不泄漏到业务层。
-
-**Wrapper 最低要求**：封装必须收回系统语义控制权，不只是改名字——只改名不收回控制权的 wrapper 没有价值。
-
-### 内部访问控制（公司内部业务项目）
-
-yytools 作为公开库不设访问限制。公司内部业务项目须在 CI 中配置 `depguard`，禁止直接导入以下路径，必须通过工程基础层对应封装使用：
-
-| 禁止直接导入 | 应通过 |
-|-------------|--------|
-| `yytools/pkg/infra/concurrency/workerpool` | 工程基础层 `TaskExecutor` |
-| `yytools/pkg/infra/concurrency/unbounded_channel` | 工程基础层对应封装 |
-| `yytools/pkg/infra/timer/timingwheel` | 工程基础层 `AppScheduler` |
-| `yytools/pkg/infra/timer/delayqueue` | 工程基础层 `AppScheduler` |
-| `yytools/pkg/infra/safeexec` | 工程基础层 panic 上报集成 |
-
-以下路径业务项目可直接使用，无约束：`algorithms/*`、`ds/*`、`mechanics/*`、`infra/timeutil`、`infra/timecond`、`infra/os`。
