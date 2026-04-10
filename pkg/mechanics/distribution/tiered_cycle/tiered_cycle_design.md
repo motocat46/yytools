@@ -267,3 +267,31 @@ tiered_cycle 当前版本选择：
 优先提供一个稳定好用的工具（v1），而不是过早设计可插拔框架。
 
 当真实需求出现时，再通过 EngineV2 引入更通用的架构。
+
+⸻
+
+## 九、rand 归属决策（2026-04）
+
+### 问题
+
+v1 原始设计将 `*rand.Rand` 存入 `Engine.r`，并在 `ConfigBase.R` 接收。
+`Engine` 的设计注释已声明"持有不可变规则"，但 `e.r` 是可变状态，与该不变量矛盾。
+多 goroutine 共享同一 `Engine` 并发调用 `ResetCycle` 时会产生 data race。
+
+### 决策
+
+**rand 移入 `State`，通过 `engine.NewState(r)` 工厂方法创建。**
+
+判断依据：
+
+- rand 用于生成"本玩家本轮特殊计划"，计划本身是玩家状态，生成工具（rand）也属于玩家状态
+- 每个玩家拥有独立随机序列，A 的运气不受 B 操作次数影响
+- Engine 彻底不持有可变状态，真正 goroutine-safe
+- State 自包含：PCG rand 的内部状态（两个 uint64）可序列化，便于存档
+
+### 影响
+
+- `ConfigBase.R` 字段删除（breaking change）
+- `NewState()` 独立函数删除，改为 `Engine.NewState(r *rand.Rand)` 工厂方法
+- nil rand 校验从 `New()` 移至 `NewState()`（nil rand + 有特殊层 → panic）
+- 现有调用方需将 rand 从 Config 移到 `eng.NewState(r)` 调用处
