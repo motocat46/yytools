@@ -20,8 +20,10 @@ package main
 import (
 	"fmt"
 	"math/rand/v2"
+	"net/http"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
 	pwc "github.com/motocat46/yytools/pkg/mechanics/distribution/progressive_weight_cycle"
@@ -227,4 +229,31 @@ func createPWCRewardBar() *charts.Bar {
 	bar.AddSeries("实际", intsToBarData(counts))
 	bar.AddSeries("期望", intsToBarData(expected))
 	return bar
+}
+
+func init() {
+	Register(VisEntry{
+		Pkg:    "pkg/mechanics",
+		SubPkg: "distribution/tiered_cycle/",
+		Title:  "分层周期引擎",
+		Desc:   "奖励分布 + 特殊位置散布（500 周期）",
+		Path:   "/dist/tiered",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			sim := runTieredCycleSim()
+			renderCharts(w,
+				func() components.Charter { return createTieredRewardBar(sim) },
+				func() components.Charter { return createTieredSpecialPosBar(sim) },
+			)
+		},
+	})
+	Register(VisEntry{
+		Pkg:    "pkg/mechanics",
+		SubPkg: "distribution/progressive_weight_cycle/",
+		Title:  "渐进权重周期",
+		Desc:   "奖励分布实际 vs 期望（1000 周期）",
+		Path:   "/dist/pwc",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			renderCharts(w, func() components.Charter { return createPWCRewardBar() })
+		},
+	})
 }

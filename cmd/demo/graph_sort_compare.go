@@ -19,9 +19,11 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/motocat46/yytools/pkg/algorithms/mathx/random"
 	sort2 "github.com/motocat46/yytools/pkg/algorithms/sort"
 )
@@ -123,4 +125,23 @@ func createSortCompareCharts() []*charts.Line {
 		createSortCompareChart("逆序", genReverse),
 		createSortCompareChart("大量重复（10 种值）", genManyDuplicates),
 	}
+}
+
+func init() {
+	Register(VisEntry{
+		Pkg:    "pkg/algorithms",
+		SubPkg: "sort/",
+		Title:  "快排 vs pdqsort",
+		Desc:   "5种输入场景（随机 / 近乎有序 / 有序 / 逆序 / 大量重复）",
+		Path:   "/sort/compare",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			page := components.NewPage()
+			for _, c := range createSortCompareCharts() {
+				page.AddCharts(c)
+			}
+			if err := page.Render(w); err != nil {
+				panic(err)
+			}
+		},
+	})
 }

@@ -200,46 +200,6 @@ func createProbDistBar() *charts.Bar {
 	return bar
 }
 
-// ---- HTTP 入口 ----
-
-const indexHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>yytools 可视化</title>
-  <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; }
-    h1   { font-size: 1.4em; margin-bottom: 0.4em; }
-    h2   { font-size: 1em; color: #555; margin: 1.6em 0 0.4em; }
-    ul   { list-style: none; padding: 0; }
-    li   { margin: 10px 0; }
-    a    { font-size: 1.05em; text-decoration: none; color: #1a73e8; }
-    a:hover { text-decoration: underline; }
-  </style>
-</head>
-<body>
-  <h1>yytools 可视化示例</h1>
-
-  <h2>排序算法</h2>
-  <ul>
-    <li><a href="/sort/efficient">高效排序对比（QuickSort / CountingSort / RadixSort / Go stdlib）</a></li>
-    <li><a href="/sort/simple">简单排序对比（SelectionSort / InsertionSort）</a></li>
-    <li><a href="/sort/compare">快排 vs pdqsort — 不同输入场景对比（随机 / 近乎有序 / 有序 / 逆序 / 大量重复）</a></li>
-  </ul>
-
-  <h2>概率分布</h2>
-  <ul>
-    <li><a href="/prob">概率分布对比（NormalMethod / VoseAliasMethod）</a></li>
-  </ul>
-
-  <h2>分布机制</h2>
-  <ul>
-    <li><a href="/dist/tiered">分层周期引擎（奖励分布 + 特殊位置散布）</a></li>
-    <li><a href="/dist/pwc">渐进权重周期（奖励分布实际 vs 期望）</a></li>
-  </ul>
-</body>
-</html>`
-
 func renderCharts(w http.ResponseWriter, chartFns ...func() components.Charter) {
 	page := components.NewPage()
 	for _, fn := range chartFns {
@@ -250,32 +210,35 @@ func renderCharts(w http.ResponseWriter, chartFns ...func() components.Charter) 
 	}
 }
 
-func graphHttpServer(w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
-	case "/sort/efficient":
-		renderCharts(w, func() components.Charter { return createEfficientSortLine() })
-	case "/sort/simple":
-		renderCharts(w, func() components.Charter { return createSimpleSortLine() })
-	case "/prob":
-		renderCharts(w, func() components.Charter { return createProbDistBar() })
-	case "/dist/tiered":
-		sim := runTieredCycleSim()
-		renderCharts(w,
-			func() components.Charter { return createTieredRewardBar(sim) },
-			func() components.Charter { return createTieredSpecialPosBar(sim) },
-		)
-	case "/dist/pwc":
-		renderCharts(w, func() components.Charter { return createPWCRewardBar() })
-	case "/sort/compare":
-		page := components.NewPage()
-		for _, c := range createSortCompareCharts() {
-			page.AddCharts(c)
-		}
-		if err := page.Render(w); err != nil {
-			panic(err)
-		}
-	default:
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, indexHTML)
-	}
+func init() {
+	Register(VisEntry{
+		Pkg:    "pkg/algorithms",
+		SubPkg: "sort/",
+		Title:  "高效排序对比",
+		Desc:   "QuickSort / CountingSort / RadixSort / stdlib（10万~100万）",
+		Path:   "/sort/efficient",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			renderCharts(w, func() components.Charter { return createEfficientSortLine() })
+		},
+	})
+	Register(VisEntry{
+		Pkg:    "pkg/algorithms",
+		SubPkg: "sort/",
+		Title:  "简单排序对比",
+		Desc:   "SelectionSort / InsertionSort（2千~2万）",
+		Path:   "/sort/simple",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			renderCharts(w, func() components.Charter { return createSimpleSortLine() })
+		},
+	})
+	Register(VisEntry{
+		Pkg:    "pkg/algorithms",
+		SubPkg: "mathx/probability_distribution/",
+		Title:  "概率分布对比",
+		Desc:   "NormalMethod vs VoseAliasMethod（100万次采样）",
+		Path:   "/prob",
+		Render: func(w http.ResponseWriter, r *http.Request) {
+			renderCharts(w, func() components.Charter { return createProbDistBar() })
+		},
+	})
 }

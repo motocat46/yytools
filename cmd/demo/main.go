@@ -73,7 +73,7 @@ func main() {
 		Short: "启动可视化 HTTP 服务（:8081）",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			http.HandleFunc("/", graphHttpServer)
+			http.HandleFunc("/", registryHandler)
 			if err := http.ListenAndServe(":8081", nil); err != nil {
 				panic(err)
 			}
