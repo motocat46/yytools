@@ -117,3 +117,17 @@ internal 的使用规则
 迁移策略
 •	新代码必须遵守本分层规则
 •	旧路径用 Deprecated: 注释标记，新代码全部用新路径，视情况直接删除旧路径
+
+内部访问控制（公司内部业务项目）
+
+yytools 作为公开库不设访问限制。公司内部业务项目须在 CI 中配置 depguard，禁止直接导入以下路径，必须通过工程基础层对应封装使用：
+
+| 禁止直接导入 | 应通过 |
+|-------------|--------|
+| `yytools/pkg/infra/concurrency/workerpool` | 工程基础层 `TaskExecutor` |
+| `yytools/pkg/infra/concurrency/unbounded_channel` | 工程基础层对应封装 |
+| `yytools/pkg/infra/timer/timingwheel` | 工程基础层 `AppScheduler` |
+| `yytools/pkg/infra/timer/delayqueue` | 工程基础层 `AppScheduler` |
+| `yytools/pkg/infra/safeexec` | 工程基础层 panic 上报集成 |
+
+以下路径业务项目可直接使用，无约束：`algorithms/*`、`ds/*`、`mechanics/*`、`infra/timeutil`、`infra/timecond`、`infra/os`。
