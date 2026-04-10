@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,12 +20,12 @@ func saveRegistry(t *testing.T) func() {
 func TestRegister_AddsEntry(t *testing.T) {
 	defer saveRegistry(t)()
 
-	Register(VisEntry{Pkg: "pkg/test", SubPkg: "x/", Title: "T", Desc: "d", Path: "/t"})
+	Register(VisEntry{Pkg: "pkg/test", SubPkg: "x/", Title: "T", Desc: "d", Path: "/api/t"})
 	if len(registry) != 1 {
 		t.Fatalf("got %d entries, want 1", len(registry))
 	}
-	if registry[0].Path != "/t" {
-		t.Errorf("got path %q, want /t", registry[0].Path)
+	if registry[0].Path != "/api/t" {
+		t.Errorf("got path %q, want /api/t", registry[0].Path)
 	}
 }
 
@@ -33,28 +34,28 @@ func TestRegistryHandler_KnownPath(t *testing.T) {
 
 	Register(VisEntry{
 		Pkg: "pkg/test", SubPkg: "x/", Title: "T", Desc: "d",
-		Path: "/test-page",
-		Render: func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("chart-content"))
+		Path: "/api/test-page",
+		DataHandler: func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"ok":true}`))
 		},
 	})
 
-	req := httptest.NewRequest("GET", "/test-page", nil)
+	req := httptest.NewRequest("GET", "/api/test-page", nil)
 	rr := httptest.NewRecorder()
 	registryHandler(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("got status %d, want 200", rr.Code)
 	}
-	if !strings.Contains(rr.Body.String(), "chart-content") {
-		t.Errorf("body missing chart-content, got: %q", rr.Body.String())
+	if !strings.Contains(rr.Body.String(), `"ok"`) {
+		t.Errorf("body missing content, got: %q", rr.Body.String())
 	}
 }
 
 func TestRegistryHandler_UnknownPath(t *testing.T) {
 	defer saveRegistry(t)()
 
-	req := httptest.NewRequest("GET", "/no-such-page", nil)
+	req := httptest.NewRequest("GET", "/api/no-such-page", nil)
 	rr := httptest.NewRecorder()
 	registryHandler(rr, req)
 
@@ -63,15 +64,7 @@ func TestRegistryHandler_UnknownPath(t *testing.T) {
 	}
 }
 
-func TestRegistryHandler_Index_ContainsGroupAndCard(t *testing.T) {
-	defer saveRegistry(t)()
-
-	Register(VisEntry{
-		Pkg: "pkg/algorithms", SubPkg: "sort/", Title: "排序测试", Desc: "测试描述",
-		Path:   "/sort/test",
-		Render: func(w http.ResponseWriter, r *http.Request) {},
-	})
-
+func TestRegistryHandler_Index(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	rr := httptest.NewRecorder()
 	registryHandler(rr, req)
@@ -79,31 +72,35 @@ func TestRegistryHandler_Index_ContainsGroupAndCard(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("got status %d, want 200", rr.Code)
 	}
-	body := rr.Body.String()
-	for _, want := range []string{"pkg/algorithms", "排序测试", "测试描述", "/sort/test"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("index missing %q in body", want)
-		}
+	if !strings.Contains(rr.Body.String(), "yytools") {
+		t.Errorf("index missing yytools in body")
 	}
 }
 
-func TestBuildIndexHTML_GroupsSortedAlphabetically(t *testing.T) {
+func TestRegistryHandler_APIRegistry_GroupsSortedAlphabetically(t *testing.T) {
 	defer saveRegistry(t)()
 
-	Register(VisEntry{Pkg: "pkg/ds", SubPkg: "heap/", Title: "堆", Desc: "", Path: "/ds/heap"})
-	Register(VisEntry{Pkg: "pkg/algorithms", SubPkg: "sort/", Title: "排序", Desc: "", Path: "/sort/x"})
+	Register(VisEntry{Pkg: "pkg/ds", SubPkg: "heap/", Title: "堆", Path: "/api/ds/heap"})
+	Register(VisEntry{Pkg: "pkg/algorithms", SubPkg: "sort/", Title: "排序", Path: "/api/sort/x"})
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest("GET", "/api/registry", nil)
 	rr := httptest.NewRecorder()
 	registryHandler(rr, req)
 
-	body := rr.Body.String()
-	idxAlgo := strings.Index(body, "pkg/algorithms")
-	idxDs := strings.Index(body, "pkg/ds")
-	if idxAlgo == -1 || idxDs == -1 {
-		t.Fatal("missing group names in index")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("got status %d, want 200", rr.Code)
 	}
-	if idxAlgo > idxDs {
-		t.Errorf("pkg/algorithms should appear before pkg/ds (alphabetical order)")
+
+	var groups []struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&groups); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if len(groups) != 2 {
+		t.Fatalf("got %d groups, want 2", len(groups))
+	}
+	if groups[0].Name != "pkg/algorithms" || groups[1].Name != "pkg/ds" {
+		t.Errorf("wrong order: %v", groups)
 	}
 }

@@ -16,129 +16,107 @@
 package main
 
 import (
-	"html/template"
+	"embed"
+	"encoding/json"
 	"net/http"
 	"sort"
 )
+
+//go:embed static
+var staticFiles embed.FS
 
 // VisEntry 描述一个可视化页面的完整元数据。
 // Pkg 是分组标签（自由字符串，首页按此字段分组）：
 //   - yytools 单模块可视化使用 "pkg/<顶级包>" 格式，如 "pkg/algorithms"
 //   - 涉及第三方库的对比/评估使用 "benchmarks/<子域>" 格式，如 "benchmarks/ds"
 type VisEntry struct {
-	Pkg    string // 分组标签
-	SubPkg string // 卡片子包注释，如 "sort/"
-	Title  string // 卡片标题
-	Desc   string // 一句描述
-	Path   string // URL 路径，如 "/sort/efficient"
-	Render func(http.ResponseWriter, *http.Request)
+	Pkg         string // 分组标签
+	SubPkg      string // 卡片子包注释，如 "sort/"
+	Title       string // 卡片标题
+	Desc        string // 一句描述
+	Path        string // 数据 API 路径，如 "/api/sort/efficient"
+	DataHandler func(http.ResponseWriter, *http.Request)
 }
 
 var registry []VisEntry
 
-// Register 注册一个可视化条目，由各 graph_*.go 的 init() 调用。
+// Register 注册一个可视化条目，由各 api_*.go 的 init() 调用。
 func Register(e VisEntry) {
 	registry = append(registry, e)
 }
 
 // registryHandler 是统一的 HTTP 入口：
-// "/" 渲染首页，已注册路径调用对应 Render，其余返回 404。
+//
+//	GET /             → static/index.html
+//	GET /chart        → static/chart.html
+//	GET /api/registry → 返回所有 VisEntry 的 JSON（不含 DataHandler）
+//	GET /api/*        → 查 registry，找到调 DataHandler，否则 404
+//	GET /echarts.min.js → static/echarts.min.js
 func registryHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/" {
-		buildIndexHTML(w)
+	switch r.URL.Path {
+	case "/":
+		serveStatic(w, r, "static/index.html", "text/html; charset=utf-8")
+	case "/chart":
+		serveStatic(w, r, "static/chart.html", "text/html; charset=utf-8")
+	case "/echarts.min.js":
+		serveStatic(w, r, "static/echarts.min.js", "application/javascript")
+	case "/api/registry":
+		serveRegistry(w)
+	default:
+		for _, e := range registry {
+			if e.Path == r.URL.Path {
+				w.Header().Set("Content-Type", "application/json")
+				e.DataHandler(w, r)
+				return
+			}
+		}
+		http.NotFound(w, r)
+	}
+}
+
+func serveStatic(w http.ResponseWriter, _ *http.Request, path, contentType string) {
+	data, err := staticFiles.ReadFile(path)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	for _, e := range registry {
-		if e.Path == r.URL.Path {
-			e.Render(w, r)
-			return
-		}
-	}
-	http.NotFound(w, r)
+	w.Header().Set("Content-Type", contentType)
+	w.Write(data)
 }
 
-// groupColors 是分组色板，按分组字母排序后顺序取色，超出则循环。
-var groupColors = []string{
-	"#1a73e8", // 蓝
-	"#e67e22", // 橙
-	"#27ae60", // 绿
-	"#8e44ad", // 紫
-	"#c0392b", // 红
-	"#16a085", // 青
+// registryEntry 是 VisEntry 的 JSON 序列化形式（不含 DataHandler）。
+type registryEntry struct {
+	Pkg    string `json:"pkg"`
+	SubPkg string `json:"subPkg"`
+	Title  string `json:"title"`
+	Desc   string `json:"desc"`
+	Path   string `json:"path"`
 }
 
-type pkgGroup struct {
-	Name    string
-	Color   string
-	Entries []VisEntry
-}
-
-var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>yytools 可视化</title>
-  <style>
-    body { font-family: sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #333; }
-    h1 { font-size: 1.4em; margin-bottom: 1.5em; }
-    .group { margin-bottom: 28px; }
-    .group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-                    padding-bottom: 8px; border-bottom: 2px solid var(--c); }
-    .group-tag { color: white; border-radius: 4px; padding: 2px 12px; font-size: 11px;
-                 font-family: monospace; font-weight: 600; background: var(--c); }
-    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px;
-            text-decoration: none; display: block; transition: border-color .15s, box-shadow .15s; }
-    .card:hover { border-color: var(--c); box-shadow: 0 1px 6px rgba(0,0,0,.1); }
-    .card-subpkg { font-size: 10px; color: #999; font-family: monospace; margin-bottom: 4px; }
-    .card-title { font-weight: 600; color: var(--c); font-size: 13px; }
-    .card-desc { color: #666; font-size: 11px; margin-top: 4px; }
-  </style>
-</head>
-<body>
-  <h1>yytools 可视化示例</h1>
-  {{range .}}
-  <div class="group" style="--c: {{.Color}}">
-    <div class="group-header">
-      <span class="group-tag">{{.Name}}</span>
-    </div>
-    <div class="cards">
-      {{range .Entries}}
-      <a class="card" href="{{.Path}}">
-        <div class="card-subpkg">{{.SubPkg}}</div>
-        <div class="card-title">{{.Title}}</div>
-        <div class="card-desc">{{.Desc}}</div>
-      </a>
-      {{end}}
-    </div>
-  </div>
-  {{end}}
-</body>
-</html>`))
-
-// buildIndexHTML 按 Pkg 分组（字母排序）生成首页，写入 w。
-func buildIndexHTML(w http.ResponseWriter) {
-	groupMap := map[string][]VisEntry{}
+// serveRegistry 按 Pkg 字母排序返回所有条目的 JSON。
+func serveRegistry(w http.ResponseWriter) {
+	// 分组并排序
+	groupMap := map[string][]registryEntry{}
 	var groupOrder []string
 	for _, e := range registry {
 		if _, exists := groupMap[e.Pkg]; !exists {
 			groupOrder = append(groupOrder, e.Pkg)
 		}
-		groupMap[e.Pkg] = append(groupMap[e.Pkg], e)
+		groupMap[e.Pkg] = append(groupMap[e.Pkg], registryEntry{
+			Pkg: e.Pkg, SubPkg: e.SubPkg, Title: e.Title, Desc: e.Desc, Path: e.Path,
+		})
 	}
 	sort.Strings(groupOrder)
 
-	groups := make([]pkgGroup, 0, len(groupOrder))
-	for i, name := range groupOrder {
-		groups = append(groups, pkgGroup{
-			Name:    name,
-			Color:   groupColors[i%len(groupColors)],
-			Entries: groupMap[name],
-		})
+	type group struct {
+		Name    string         `json:"name"`
+		Entries []registryEntry `json:"entries"`
+	}
+	groups := make([]group, 0, len(groupOrder))
+	for _, name := range groupOrder {
+		groups = append(groups, group{Name: name, Entries: groupMap[name]})
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := indexTemplate.Execute(w, groups); err != nil {
-		http.Error(w, "render error", http.StatusInternalServerError)
-	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groups)
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>yytools 可视化</title>
+  <style>
+    body { font-family: sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #333; }
+    h1 { font-size: 1.4em; margin-bottom: 1.5em; }
+    .group { margin-bottom: 28px; }
+    .group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+                    padding-bottom: 8px; border-bottom: 2px solid var(--c); }
+    .group-tag { color: white; border-radius: 4px; padding: 2px 12px; font-size: 11px;
+                 font-family: monospace; font-weight: 600; background: var(--c); }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px;
+            text-decoration: none; display: block; transition: border-color .15s, box-shadow .15s; }
+    .card:hover { border-color: var(--c); box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+    .card-subpkg { font-size: 10px; color: #999; font-family: monospace; margin-bottom: 4px; }
+    .card-title { font-weight: 600; color: var(--c); font-size: 13px; }
+    .card-desc { color: #666; font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>yytools 可视化示例</h1>
+  <div id="app"></div>
+  <script>
+    const colors = ["#1a73e8","#e67e22","#27ae60","#8e44ad","#c0392b","#16a085"];
+    fetch('/api/registry')
+      .then(r => r.json())
+      .then(groups => {
+        const app = document.getElementById('app');
+        groups.forEach((g, i) => {
+          const color = colors[i % colors.length];
+          app.innerHTML += `
+            <div class="group" style="--c:${color}">
+              <div class="group-header"><span class="group-tag">${g.name}</span></div>
+              <div class="cards">
+                ${g.entries.map(e => `
+                  <a class="card" href="/chart?path=${encodeURIComponent(e.path)}">
+                    <div class="card-subpkg">${e.subPkg}</div>
+                    <div class="card-title">${e.title}</div>
+                    <div class="card-desc">${e.desc}</div>
+                  </a>`).join('')}
+              </div>
+            </div>`;
+        });
+      });
+  </script>
+</body>
+</html>
