@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>yytools 可视化</title>
+  <script src="/echarts.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: sans-serif; margin: 0; color: #333; }
+    .nav { display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+           border-bottom: 1px solid #e0e0e0; background: #fff; }
+    .nav a { font-size: 13px; color: #1a73e8; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .nav-title { font-size: 14px; font-weight: 600; color: #333; }
+    .charts { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+    .chart-box { width: 100%; height: 420px; }
+    .error { padding: 40px; color: #c0392b; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/">← 返回首页</a>
+    <span class="nav-title" id="page-title"></span>
+  </div>
+  <div class="charts" id="charts"></div>
+  <script>
+    const path = new URLSearchParams(location.search).get('path');
+    if (!path) { document.getElementById('charts').innerHTML = '<div class="error">缺少 path 参数</div>'; }
+    else {
+      fetch(path)
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('page-title').textContent = data.title || '';
+          document.title = (data.title || 'yytools') + ' — yytools 可视化';
+          const container = document.getElementById('charts');
+          (data.charts || []).forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'chart-box';
+            container.appendChild(div);
+            const chart = echarts.init(div);
+            chart.setOption(buildOption(c));
+          });
+          window.addEventListener('resize', () => {
+            echarts.getInstanceByDom && document.querySelectorAll('.chart-box').forEach(el => {
+              const inst = echarts.getInstanceByDom(el);
+              if (inst) inst.resize();
+            });
+          });
+        })
+        .catch(e => {
+          document.getElementById('charts').innerHTML = `<div class="error">加载失败: ${e}</div>`;
+        });
+    }
+
+    function buildOption(c) {
+      return {
+        title: { text: c.title || '', left: 'center' },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 30 },
+        xAxis: { type: 'category', data: c.xAxis, name: c.xAxisName || '' },
+        yAxis: { type: 'value', name: c.yAxisName || '' },
+        series: (c.series || []).map(s => ({
+          name: s.name,
+          type: c.type || 'line',
+          data: s.data,
+          smooth: c.type !== 'bar',
+        })),
+      };
+    }
+  </script>
+</body>
+</html>
