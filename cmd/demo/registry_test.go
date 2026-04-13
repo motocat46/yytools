@@ -10,6 +10,7 @@ import (
 )
 
 // saveRegistry 保存并清空 registry，返回恢复函数。
+// 注意：直接操作包级变量，与内部实现耦合；demo 工具可接受，生产代码应提供 Reset() API。
 func saveRegistry(t *testing.T) func() {
 	t.Helper()
 	saved := registry
@@ -65,6 +66,8 @@ func TestRegistryHandler_UnknownPath(t *testing.T) {
 }
 
 func TestRegistryHandler_Index(t *testing.T) {
+	defer saveRegistry(t)()
+
 	req := httptest.NewRequest("GET", "/", nil)
 	rr := httptest.NewRecorder()
 	registryHandler(rr, req)

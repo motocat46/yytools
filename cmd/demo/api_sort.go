@@ -53,18 +53,9 @@ type pageData struct {
 func measureSort(arr []int32, sortFn func([]int32)) int64 {
 	aux := make([]int32, len(arr))
 	copy(aux, arr)
-	start := time.Now().UnixNano()
+	start := time.Now()
 	sortFn(aux)
-	return (time.Now().UnixNano() - start) / 1e6
-}
-
-// measureGoSort 使用 slices.Sort 排序，返回耗时毫秒数
-func measureGoSort(arr []int32) int64 {
-	aux := make([]int32, len(arr))
-	copy(aux, arr)
-	start := time.Now().UnixNano()
-	slices.Sort(aux)
-	return (time.Now().UnixNano() - start) / 1e6
+	return time.Since(start).Milliseconds()
 }
 
 func genRandom(n int) []int32 {
@@ -110,17 +101,12 @@ func genManyDuplicates(n int) []int32 {
 // ---- Handlers ----
 
 func handleSortEfficient(w http.ResponseWriter, _ *http.Request) {
-	type entry struct {
-		name   string
-		costs  []int64
-		sortFn func([]int32)
-	}
-	series := []*entry{
+	series := []*sortAlgoEntry{
 		{name: "Quick Sort", sortFn: sort2.QuickSort[int32]},
 		{name: "Quick Sort (Traversal)", sortFn: sort2.QuickSortTraversal[int32]},
 		{name: "Counting Sort", sortFn: sort2.CountingSort[int32]},
 		{name: "Radix Sort", sortFn: sort2.RadixSort[int32]},
-		{name: "Go slices.Sort", sortFn: nil},
+		{name: "Go slices.Sort", sortFn: slices.Sort[[]int32]},
 	}
 	xLabels := make([]string, 10)
 	for i := range xLabels {
@@ -128,20 +114,14 @@ func handleSortEfficient(w http.ResponseWriter, _ *http.Request) {
 		n := int(1e5) * (i + 1)
 		arr := genRandom(n)
 		for _, s := range series {
-			var ms int64
-			if s.sortFn == nil {
-				ms = measureGoSort(arr)
-			} else {
-				ms = measureSort(arr, s.sortFn)
-			}
-			s.costs = append(s.costs, ms)
+			s.costs = append(s.costs, measureSort(arr, s.sortFn))
 		}
 	}
 	ss := make([]chartSeries, len(series))
 	for i, s := range series {
 		ss[i] = chartSeries{Name: s.name, Data: s.costs}
 	}
-	json.NewEncoder(w).Encode(pageData{
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "高效排序对比",
 		Charts: []chartData{{
 			Type: "line", Title: "高效排序对比（10万~100万元素）",
@@ -151,12 +131,7 @@ func handleSortEfficient(w http.ResponseWriter, _ *http.Request) {
 }
 
 func handleSortSimple(w http.ResponseWriter, _ *http.Request) {
-	type entry struct {
-		name   string
-		costs  []int64
-		sortFn func([]int32)
-	}
-	series := []*entry{
+	series := []*sortAlgoEntry{
 		{name: "Selection Sort", sortFn: sort2.SelectionSort[int32]},
 		{name: "Insertion Sort", sortFn: sort2.InsertionSort[int32]},
 		{name: "Quick Sort (参照)", sortFn: sort2.QuickSort[int32]},
@@ -174,7 +149,7 @@ func handleSortSimple(w http.ResponseWriter, _ *http.Request) {
 	for i, s := range series {
 		ss[i] = chartSeries{Name: s.name, Data: s.costs}
 	}
-	json.NewEncoder(w).Encode(pageData{
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "简单排序对比",
 		Charts: []chartData{{
 			Type: "line", Title: "简单排序对比（2千~2万元素）",
@@ -183,15 +158,16 @@ func handleSortSimple(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-type compareAlgoEntry struct {
+type sortAlgoEntry struct {
 	name   string
 	sortFn func([]int32)
+	costs  []int64
 }
 
-var compareAlgos = []compareAlgoEntry{
-	{"QuickSort 递归", sort2.QuickSort[int32]},
-	{"QuickSort 遍历", sort2.QuickSortTraversal[int32]},
-	{"slices.Sort (pdqsort)", nil},
+var compareAlgos = []sortAlgoEntry{
+	{name: "QuickSort 递归", sortFn: sort2.QuickSort[int32]},
+	{name: "QuickSort 遍历", sortFn: sort2.QuickSortTraversal[int32]},
+	{name: "slices.Sort (pdqsort)", sortFn: slices.Sort[[]int32]},
 }
 
 func buildCompareChart(title string, genData func(int) []int32) chartData {
@@ -205,13 +181,7 @@ func buildCompareChart(title string, genData func(int) []int32) chartData {
 		n := int(1e5) * (i + 1)
 		arr := genData(n)
 		for j, algo := range compareAlgos {
-			var ms int64
-			if algo.sortFn == nil {
-				ms = measureGoSort(arr)
-			} else {
-				ms = measureSort(arr, algo.sortFn)
-			}
-			costs[j] = append(costs[j], ms)
+			costs[j] = append(costs[j], measureSort(arr, algo.sortFn))
 		}
 	}
 	ss := make([]chartSeries, len(compareAlgos))
@@ -239,7 +209,7 @@ func handleSortCompare(w http.ResponseWriter, _ *http.Request) {
 	for i, s := range scenarios {
 		charts[i] = buildCompareChart(s.title, s.genData)
 	}
-	json.NewEncoder(w).Encode(pageData{Title: "快排 vs pdqsort", Charts: charts})
+	json.NewEncoder(w).Encode(pageData{Title: "快排 vs pdqsort", Charts: charts}) //nolint:errcheck
 }
 
 func init() {

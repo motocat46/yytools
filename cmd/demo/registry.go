@@ -30,12 +30,12 @@ var staticFiles embed.FS
 //   - yytools 单模块可视化使用 "pkg/<顶级包>" 格式，如 "pkg/algorithms"
 //   - 涉及第三方库的对比/评估使用 "benchmarks/<子域>" 格式，如 "benchmarks/ds"
 type VisEntry struct {
-	Pkg         string // 分组标签
-	SubPkg      string // 卡片子包注释，如 "sort/"
-	Title       string // 卡片标题
-	Desc        string // 一句描述
-	Path        string // 数据 API 路径，如 "/api/sort/efficient"
-	DataHandler func(http.ResponseWriter, *http.Request)
+	Pkg         string `json:"pkg"`
+	SubPkg      string `json:"subPkg"`
+	Title       string `json:"title"`
+	Desc        string `json:"desc"`
+	Path        string `json:"path"`
+	DataHandler func(http.ResponseWriter, *http.Request) `json:"-"`
 }
 
 var registry []VisEntry
@@ -81,36 +81,24 @@ func serveStatic(w http.ResponseWriter, _ *http.Request, path, contentType strin
 		return
 	}
 	w.Header().Set("Content-Type", contentType)
-	w.Write(data)
-}
-
-// registryEntry 是 VisEntry 的 JSON 序列化形式（不含 DataHandler）。
-type registryEntry struct {
-	Pkg    string `json:"pkg"`
-	SubPkg string `json:"subPkg"`
-	Title  string `json:"title"`
-	Desc   string `json:"desc"`
-	Path   string `json:"path"`
+	_, _ = w.Write(data)
 }
 
 // serveRegistry 按 Pkg 字母排序返回所有条目的 JSON。
 func serveRegistry(w http.ResponseWriter) {
-	// 分组并排序
-	groupMap := map[string][]registryEntry{}
+	groupMap := map[string][]VisEntry{}
 	var groupOrder []string
 	for _, e := range registry {
 		if _, exists := groupMap[e.Pkg]; !exists {
 			groupOrder = append(groupOrder, e.Pkg)
 		}
-		groupMap[e.Pkg] = append(groupMap[e.Pkg], registryEntry{
-			Pkg: e.Pkg, SubPkg: e.SubPkg, Title: e.Title, Desc: e.Desc, Path: e.Path,
-		})
+		groupMap[e.Pkg] = append(groupMap[e.Pkg], e)
 	}
 	sort.Strings(groupOrder)
 
 	type group struct {
-		Name    string         `json:"name"`
-		Entries []registryEntry `json:"entries"`
+		Name    string    `json:"name"`
+		Entries []VisEntry `json:"entries"`
 	}
 	groups := make([]group, 0, len(groupOrder))
 	for _, name := range groupOrder {
@@ -118,5 +106,5 @@ func serveRegistry(w http.ResponseWriter) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(groups)
+	_ = json.NewEncoder(w).Encode(groups)
 }

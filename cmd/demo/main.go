@@ -1,5 +1,3 @@
-// Package main.
-
 // 版权所有(Copyright)[yangyuan]
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +16,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -74,8 +73,9 @@ func main() {
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			http.HandleFunc("/", registryHandler)
-			if err := http.ListenAndServe(":8081", nil); err != nil {
-				panic(err)
+			if err := http.ListenAndServe(":8081", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				fmt.Fprintf(os.Stderr, "http server error: %v\n", err)
+				os.Exit(1)
 			}
 		},
 	})
@@ -90,7 +90,7 @@ func main() {
 			for _, bc := range benchCmds {
 				bc.handler(num)
 			}
-			println("\n所有测试完毕...")
+			fmt.Println("\n所有测试完毕...")
 		},
 	})
 

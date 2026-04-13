@@ -33,9 +33,12 @@ const (
 	tieredSimCycles = 500
 )
 
+// tieredSimResult 持有模拟结果。
+// specialCounts 长度由 items 决定，standardCounts 由 Weight 档位数决定，
+// 均在运行时分配，避免硬编码数组大小与 items 不同步导致越界静默丢数据。
 type tieredSimResult struct {
-	standardCounts   [3]int
-	specialCounts    [4]int
+	standardCounts   []int
+	specialCounts    []int
 	specialPosCounts [tieredCycleLen]int
 }
 
@@ -55,7 +58,10 @@ func runTieredCycleSim() tieredSimResult {
 	state := eng.NewState(rand.New(rand.NewPCG(42, 0)))
 	eng.Init(state)
 
-	var res tieredSimResult
+	res := tieredSimResult{
+		standardCounts: make([]int, 3), // 与 Weight 档位数一致
+		specialCounts:  make([]int, len(items)),
+	}
 	for range tieredSimCycles * tieredCycleLen {
 		pos := state.PosInCycle()
 		r, err := eng.NextAutoReset(state)
@@ -103,7 +109,7 @@ func handleDistTiered(w http.ResponseWriter, _ *http.Request) {
 		posData[i] = int64(sim.specialPosCounts[i])
 	}
 
-	json.NewEncoder(w).Encode(pageData{
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "分层周期引擎",
 		Charts: []chartData{
 			{
@@ -144,6 +150,7 @@ func handleDistPWC(w http.ResponseWriter, _ *http.Request) {
 	total := pwc.TotalQuota(items)
 	counts := make([]int64, len(items))
 	for range pwcSimCycles {
+		// 每个周期独立重建 state，模拟玩家每轮独立抽卡
 		state := pwc.NewState()
 		for occIdx := range total {
 			idx, err := layer.Generate(state, occIdx)
@@ -160,7 +167,7 @@ func handleDistPWC(w http.ResponseWriter, _ *http.Request) {
 		expected[i] = int64(item.Quota) * pwcSimCycles
 	}
 
-	json.NewEncoder(w).Encode(pageData{
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "渐进权重周期",
 		Charts: []chartData{{
 			Type:  "bar",
@@ -196,7 +203,7 @@ func handleProb(w http.ResponseWriter, _ *http.Request) {
 	for i, wt := range weights {
 		xLabels[i] = fmt.Sprintf("idx%d (%.1f%%)", i, float64(wt)/float64(total)*100)
 	}
-	json.NewEncoder(w).Encode(pageData{
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "概率分布对比",
 		Charts: []chartData{{
 			Type:      "bar",
