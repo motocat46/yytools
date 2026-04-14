@@ -13,3 +13,5 @@ pkg/ds/.DS_Store
 docs/superpowers/
 .worktrees/
 .DS_Store
+.kiro
+scripts/claude_to_kiro.sh

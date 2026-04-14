@@ -6,6 +6,7 @@
 |--------|------|
 | [heap](heap/README.md) | 最小堆、最大堆、优先级队列（支持 UpdatePriority） |
 | [queue](queue/README.md) | 环形队列，自动扩缩容 |
+| [ring_buffer](ring_buffer/README.md) | 固定容量环形缓冲区，写满时覆盖最旧元素 |
 | [stack](stack/README.md) | LIFO 栈，自动缩容 |
 | [sorted_set](sorted_set/README.md) | 有序集合（跳表实现），类 Redis ZADD/ZRANK/ZRANGE |
 | [lru](lru/README.md) | LRU 缓存（双向链表实现），带 TTL，并发安全；学习目的，生产推荐 hashicorp/golang-lru v2 |

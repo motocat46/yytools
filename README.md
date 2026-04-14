@@ -37,6 +37,7 @@ yytools/
 │   │   ├── heap/              # 最小堆 / 最大堆 / 优先级队列
 │   │   ├── lru/               # LRU 缓存（参考实现，生产建议用 hashicorp/golang-lru v2）
 │   │   ├── queue/             # 环形队列（自动扩缩容）
+│   │   ├── ring_buffer/       # 固定容量环形缓冲区，写满时覆盖最旧元素
 │   │   ├── stack/             # 栈
 │   │   ├── sorted_set/        # 有序集合（跳表实现，类 Redis ZADD）
 │   │   └── trie/              # 前缀树
