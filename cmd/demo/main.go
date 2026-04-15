@@ -20,45 +20,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
-	benchheap "github.com/motocat46/yytools/internal/bench/heap"
-	benchmathx "github.com/motocat46/yytools/internal/bench/mathx"
-	benchprobdist "github.com/motocat46/yytools/internal/bench/probability_distribution"
-	benchqueue "github.com/motocat46/yytools/internal/bench/queue"
-	benchsort "github.com/motocat46/yytools/internal/bench/sort"
-	benchsortedset "github.com/motocat46/yytools/internal/bench/sorted_set"
-	benchstack "github.com/motocat46/yytools/internal/bench/stack"
 )
-
-// benchCmd 描述一个 bench 子命令
-type benchCmd struct {
-	use     string
-	short   string
-	handler func(int)
-}
-
-var benchCmds = []benchCmd{
-	{"heap", "最小堆", benchheap.HeapTest},
-	{"maxheap", "最大堆", benchheap.MaxHeapTest},
-	{"mathcommon", "公共数学方法（比如gcd）", benchmathx.MathCommonTest},
-	{"prob", "概率分布", benchprobdist.ProbabilityDistributionTest},
-	{"pq", "优先级队列", benchheap.PriorityQueueTest},
-	{"queue", "队列", benchqueue.QueueTest},
-	{"sort", "排序", benchsort.SortTest},
-	{"sortedset", "有序集合", benchsortedset.SortedSetTest},
-	{"stack", "栈", benchstack.StackTest},
-}
-
-func parseNum(args []string) int {
-	num, err := strconv.Atoi(args[0])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "iterations 必须是整数: %v\n", err)
-		os.Exit(1)
-	}
-	return num
-}
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -66,7 +30,6 @@ func main() {
 		Short: "yytools demo — 算法与数据结构演示",
 	}
 
-	// http 子命令：启动可视化服务
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "http",
 		Short: "启动可视化 HTTP 服务（:8081）",
@@ -79,32 +42,6 @@ func main() {
 			}
 		},
 	})
-
-	// all 子命令：运行全部 bench
-	rootCmd.AddCommand(&cobra.Command{
-		Use:   "all <iterations>",
-		Short: "运行所有 bench 命令",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			num := parseNum(args)
-			for _, bc := range benchCmds {
-				bc.handler(num)
-			}
-			fmt.Println("\n所有测试完毕...")
-		},
-	})
-
-	// 逐一注册各 bench 子命令
-	for _, bc := range benchCmds {
-		rootCmd.AddCommand(&cobra.Command{
-			Use:   bc.use + " <iterations>",
-			Short: bc.short,
-			Args:  cobra.ExactArgs(1),
-			Run: func(cmd *cobra.Command, args []string) {
-				bc.handler(parseNum(args))
-			},
-		})
-	}
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
