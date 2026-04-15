@@ -15,3 +15,4 @@ docs/superpowers/
 .DS_Store
 .kiro
 scripts/claude_to_kiro.sh
+.superpowers
