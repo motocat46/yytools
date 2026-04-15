@@ -3,16 +3,6 @@
 github.com/anishathalye/porcupine
 # github.com/go-echarts/go-echarts/v2 v2.4.0-rc1
 ## explicit; go 1.18
-github.com/go-echarts/go-echarts/v2/actions
-github.com/go-echarts/go-echarts/v2/charts
-github.com/go-echarts/go-echarts/v2/components
-github.com/go-echarts/go-echarts/v2/datasets
-github.com/go-echarts/go-echarts/v2/event
-github.com/go-echarts/go-echarts/v2/opts
-github.com/go-echarts/go-echarts/v2/render
-github.com/go-echarts/go-echarts/v2/templates
-github.com/go-echarts/go-echarts/v2/types
-github.com/go-echarts/go-echarts/v2/util
 # github.com/inconshreveable/mousetrap v1.1.0
 ## explicit; go 1.18
 github.com/inconshreveable/mousetrap
