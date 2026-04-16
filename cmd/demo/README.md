@@ -11,13 +11,14 @@ go run ./cmd/demo http
 
 浏览器访问 http://localhost:8081，首页按包分组列出所有可视化页面。
 
-## 当前可视化（32 个）
+## 当前可视化（34 个）
 
 ### pkg/algorithms
 | 页面 | 说明 |
 |------|------|
 | 二分搜索性能 | BinarySearch vs 线性搜索 O(n)；三种变体（BinarySearch/LeftBound/RightBound）耗时 vs 规模 |
 | GCD 递归 vs 迭代 | GcdR（递归）vs GcdI（迭代）耗时 vs 输入量级 |
+| Fibonacci 三路耗时 | FibN O(1)静态查找表 vs Calculate 冷启O(n) vs Calculate 暖缓存O(1)；各整数类型最大下标对比 |
 | Bits 操作性能 | CountingBits（Kernighan O(k)）vs math/bits.OnesCount64（POPCNT O(1)）位密度自适应性 |
 | Overflow 检测耗时 | AddInt/SubInt/MulInt/DivInt vs 裸运算基准 |
 | RandInt 均匀性与性能 | RandInt 分布均匀性；各宽度类型耗时 vs 标准库 |
@@ -49,6 +50,7 @@ go run ./cmd/demo http
 | 页面 | 说明 |
 |------|------|
 | DelayQueue 吞吐 | Offer O(log n) 耗时 vs 规模；TryPoll 命中/未命中/空队列对比 |
+| SafeExec 开销 | 无 panic 路径：裸调用 vs SafeExec vs SafeExecErr（100万次）；panic 路径含 debug.Stack()（1000次） |
 | TimingWheel 吞吐 | Cancel+AfterFunc O(1) 稳态耗时 vs 规模；并发度吞吐对比 |
 | UnboundedChannel 吞吐对比 | 各容量配置吞吐；并发生产者吞吐 vs 并发度 |
 | WorkerPool 并发吞吐 | 吞吐 vs worker 数；RWMutex vs Mutex Submit 吞吐 |
