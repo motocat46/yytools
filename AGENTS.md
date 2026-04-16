@@ -1,1 +1,1 @@
-@CLAUDE.md
+@PROJECT_GUIDE.md

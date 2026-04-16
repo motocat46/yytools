@@ -14,7 +14,9 @@
       "WebFetch(domain:github.com)",
       "Bash(echo \"EXIT: $?\")",
       "Read(//Users/yangyuan/.claude/**)",
-      "Read(//Users/yangyuan/.claude/plugins/cache/claude-plugins-official/superpowers/**)"
+      "Read(//Users/yangyuan/.claude/plugins/cache/claude-plugins-official/superpowers/**)",
+      "Bash(pkill -f \"demo http\")",
+      "Bash(curl -s http://localhost:8081/*)"
     ],
     "deny": []
   },
