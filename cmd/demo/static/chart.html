@@ -12,26 +12,40 @@
     .nav a { font-size: 13px; color: #1a73e8; text-decoration: none; }
     .nav a:hover { text-decoration: underline; }
     .nav-title { font-size: 14px; font-weight: 600; color: #333; }
+    .nav-sep { color: #bbb; font-size: 13px; }
     .charts { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
     .chart-box { width: 100%; height: 420px; }
     .error { padding: 40px; color: #c0392b; }
   </style>
 </head>
 <body>
-  <div class="nav">
+  <div class="nav" id="nav">
     <a href="/">← 返回首页</a>
-    <span class="nav-title" id="page-title"></span>
   </div>
   <div class="charts" id="charts"></div>
   <script>
     const path = new URLSearchParams(location.search).get('path');
+    const group = new URLSearchParams(location.search).get('group');
     if (!path) { document.getElementById('charts').innerHTML = '<div class="error">缺少 path 参数</div>'; }
     else {
       fetch(path)
         .then(r => r.json())
         .then(data => {
-          document.getElementById('page-title').textContent = data.title || '';
-          document.title = (data.title || 'yytools') + ' — yytools 可视化';
+          const title = data.title || '';
+          document.title = (title || 'yytools') + ' — yytools 可视化';
+          const navEl = document.getElementById('nav');
+          if (group) {
+            navEl.innerHTML = `
+              <a href="/">首页</a>
+              <span class="nav-sep">›</span>
+              <a href="/?group=${encodeURIComponent(group)}">${group}</a>
+              <span class="nav-sep">›</span>
+              <span class="nav-title">${title}</span>`;
+          } else {
+            navEl.innerHTML = `
+              <a href="/">← 返回首页</a>
+              <span class="nav-title">${title}</span>`;
+          }
           const container = document.getElementById('charts');
           (data.charts || []).forEach(c => {
             const div = document.createElement('div');
