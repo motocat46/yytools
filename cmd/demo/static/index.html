@@ -6,16 +6,31 @@
   <style>
     body { font-family: sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #333; }
     h1 { font-size: 1.4em; margin-bottom: 1.5em; }
-    .group { margin-bottom: 28px; }
-    .group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-                    padding-bottom: 8px; border-bottom: 2px solid var(--c); }
-    .group-tag { color: white; border-radius: 4px; padding: 2px 12px; font-size: 11px;
-                 font-family: monospace; font-weight: 600; background: var(--c); }
+
+    /* 首页：分组卡片 */
+    .group-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .group-card { border: 2px solid var(--c); border-radius: 8px; padding: 20px;
+                  text-decoration: none; display: block;
+                  transition: box-shadow .15s; }
+    .group-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+    .group-card-name { font-weight: 700; color: var(--c); font-family: monospace; font-size: 13px; }
+    .group-card-count { color: #888; font-size: 12px; margin-top: 6px; }
+
+    /* 分组详情页 */
+    .nav { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .nav a { color: #1a73e8; text-decoration: none; font-size: 13px; }
+    .nav a:hover { text-decoration: underline; }
+    .nav-title { font-size: 14px; font-weight: 600; }
+    .subpkg-section { margin-bottom: 28px; }
+    .subpkg-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+                     padding-bottom: 6px; border-bottom: 2px solid var(--c); }
+    .subpkg-tag { color: white; border-radius: 4px; padding: 2px 10px; font-size: 11px;
+                  font-family: monospace; font-weight: 600; background: var(--c); }
     .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px;
-            text-decoration: none; display: block; transition: border-color .15s, box-shadow .15s; }
+            text-decoration: none; display: block;
+            transition: border-color .15s, box-shadow .15s; }
     .card:hover { border-color: var(--c); box-shadow: 0 1px 6px rgba(0,0,0,.1); }
-    .card-subpkg { font-size: 10px; color: #999; font-family: monospace; margin-bottom: 4px; }
     .card-title { font-weight: 600; color: var(--c); font-size: 13px; }
     .card-desc { color: #666; font-size: 11px; margin-top: 4px; }
   </style>
@@ -24,27 +39,85 @@
   <h1>yytools 可视化示例</h1>
   <div id="app"></div>
   <script>
-    const colors = ["#1a73e8","#e67e22","#27ae60","#8e44ad","#c0392b","#16a085"];
+    const COLORS = ["#1a73e8","#e67e22","#27ae60","#8e44ad","#c0392b","#16a085"];
+    const groupParam = new URLSearchParams(location.search).get('group');
+
     fetch('/api/registry')
       .then(r => r.json())
       .then(groups => {
-        const app = document.getElementById('app');
-        groups.forEach((g, i) => {
-          const color = colors[i % colors.length];
-          app.innerHTML += `
-            <div class="group" style="--c:${color}">
-              <div class="group-header"><span class="group-tag">${g.name}</span></div>
-              <div class="cards">
-                ${g.entries.map(e => `
-                  <a class="card" href="/chart?path=${encodeURIComponent(e.path)}">
-                    <div class="card-subpkg">${e.subPkg}</div>
-                    <div class="card-title">${e.title}</div>
-                    <div class="card-desc">${e.desc}</div>
-                  </a>`).join('')}
-              </div>
-            </div>`;
-        });
+        if (groupParam) {
+          renderGroupPage(groups, groupParam);
+        } else {
+          renderHomePage(groups);
+        }
       });
+
+    // 首页：每个 Pkg 渲染一张大卡片，显示名称和条目数
+    function renderHomePage(groups) {
+      const app = document.getElementById('app');
+      const cards = groups.map((g, i) => {
+        const color = COLORS[i % COLORS.length];
+        return `<a class="group-card" href="/?group=${encodeURIComponent(g.name)}" style="--c:${color}">
+          <div class="group-card-name">${g.name}</div>
+          <div class="group-card-count">${g.entries.length} 个示例</div>
+        </a>`;
+      }).join('');
+      app.innerHTML = `<div class="group-cards">${cards}</div>`;
+    }
+
+    // 分组详情页：条目按 SubPkg 分区展示，空 SubPkg 排最后
+    function renderGroupPage(groups, pkgName) {
+      const group = groups.find(g => g.name === pkgName);
+      if (!group) {
+        document.getElementById('app').innerHTML =
+          `<p style="color:#c0392b">分组 "${pkgName}" 不存在</p>`;
+        return;
+      }
+
+      // 按 SubPkg 聚合，保持 registry 中的原始顺序
+      const subPkgOrder = [];
+      const subPkgMap = {};
+      group.entries.forEach(e => {
+        const key = e.subPkg || '';
+        if (!subPkgMap[key]) {
+          subPkgOrder.push(key);
+          subPkgMap[key] = [];
+        }
+        subPkgMap[key].push(e);
+      });
+
+      // 有名字的子包在前，空 subPkg 排最后
+      const namedKeys = subPkgOrder.filter(k => k !== '');
+      const orderedKeys = subPkgOrder.includes('') ? [...namedKeys, ''] : namedKeys;
+
+      const groupIdx = groups.findIndex(g => g.name === pkgName);
+      const color = COLORS[groupIdx % COLORS.length];
+
+      let html = `
+        <div class="nav">
+          <a href="/">← 返回首页</a>
+          <span class="nav-title" style="color:${color}">${pkgName}</span>
+        </div>`;
+
+      orderedKeys.forEach(key => {
+        const entries = subPkgMap[key];
+        // 有名字的子包显示标题栏，空 SubPkg 不显示标题
+        const headerHtml = key
+          ? `<div class="subpkg-header" style="--c:${color}">
+               <span class="subpkg-tag">${key}</span>
+             </div>`
+          : '';
+        const cardsHtml = entries.map(e => `
+          <a class="card" href="/chart?path=${encodeURIComponent(e.path)}" style="--c:${color}">
+            <div class="card-title">${e.title}</div>
+            <div class="card-desc">${e.desc}</div>
+          </a>`).join('');
+        html += `<div class="subpkg-section">${headerHtml}<div class="cards">${cardsHtml}</div></div>`;
+      });
+
+      document.getElementById('app').innerHTML = html;
+      document.title = pkgName + ' — yytools 可视化';
+    }
   </script>
 </body>
 </html>

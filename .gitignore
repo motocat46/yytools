@@ -16,3 +16,4 @@ docs/superpowers/
 .kiro
 scripts/claude_to_kiro.sh
 .superpowers
+.claude/settings.local.json
