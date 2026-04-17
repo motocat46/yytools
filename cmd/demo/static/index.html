@@ -23,6 +23,7 @@
     .nav a { color: #1a73e8; text-decoration: none; font-size: 13px; }
     .nav a:hover { text-decoration: underline; }
     .nav-title { font-size: 14px; font-weight: 600; }
+    .nav-sep { color: #bbb; font-size: 13px; }
     .subpkg-section { margin-bottom: 28px; }
     .subpkg-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
                      padding-bottom: 6px; border-bottom: 2px solid var(--c); }
@@ -101,7 +102,8 @@
 
       let html = `
         <div class="nav">
-          <a href="/">← 返回首页</a>
+          <a href="/">首页</a>
+          <span class="nav-sep">›</span>
           <span class="nav-title" style="color:${color}">${pkgName}</span>
         </div>`;
 
@@ -114,7 +116,7 @@
              </div>`
           : '';
         const cardsHtml = entries.map(e => `
-          <a class="card" href="/chart?path=${encodeURIComponent(e.path)}" style="--c:${color}">
+          <a class="card" href="/chart?path=${encodeURIComponent(e.path)}&group=${encodeURIComponent(pkgName)}" style="--c:${color}">
             <div class="card-title">${e.title}</div>
             <div class="card-desc">${e.desc}</div>
           </a>`).join('');
