@@ -59,9 +59,12 @@ yytools/
 │   ├── numconst/              # 数字和时间常量（时间单位等）
 │   ├── mechanics/             # 规则机制（分布策略、调度策略等）
 │   └── slicex/                # 切片工具函数（MinBy、MaxBy 等）
-├── examples/                  # 示例代码（待补充）
+├── examples/                  # 各包 example_test.go 索引（go test -run Example ./...）
 ├── docs/
-│   └── decisions/             # 架构决策记录（待补充）
+│   ├── decisions/             # 架构决策记录（ADR）
+│   ├── layering.md            # 项目分层说明
+│   ├── style.md               # 代码风格规范
+│   └── recommended-libraries.md  # 推荐外部库清单
 └── README.md
 ```
 
@@ -102,7 +105,7 @@ go run ./cmd/demo http            # 启动排序性能可视化服务
 |------|---------|
 | [pkg/algorithms](pkg/algorithms/README.md) | 排序、二分查找、数学工具、唯一 ID 生成 |
 | [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合、LRU 缓存、前缀树 |
-| [pkg/mechanics](pkg/mechanics/distribution/README.md) | 游戏规则机制：渐进式权重周期、双层保底抽卡引擎 |
+| [pkg/mechanics](pkg/mechanics/README.md) | 游戏规则机制：渐进式权重周期、双层保底抽卡引擎、随机份额分配 |
 | [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、时间条件判断、OS 封装、无界 Channel、时间轮、延迟队列 |
 | [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架、CPU 特性检测 |
 | [pkg/slicex](pkg/slicex/README.md) | 切片工具函数（MinBy、MaxBy 等） |
