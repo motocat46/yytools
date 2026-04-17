@@ -40,6 +40,20 @@ type VisEntry struct {
 
 var registry []VisEntry
 
+// GroupMeta 保存分组的显示元数据，由 RegisterGroup 注册。
+type GroupMeta struct {
+	Icon string `json:"icon"`
+	Desc string `json:"desc"`
+}
+
+var groupMeta = map[string]GroupMeta{}
+
+// RegisterGroup 注册分组的图标和描述，由 groups.go 的 init() 调用。
+// 同一 pkg 多次调用时后者覆盖前者。
+func RegisterGroup(pkg, icon, desc string) {
+	groupMeta[pkg] = GroupMeta{Icon: icon, Desc: desc}
+}
+
 // Register 注册一个可视化条目，由各 api_*.go 的 init() 调用。
 func Register(e VisEntry) {
 	registry = append(registry, e)
@@ -97,12 +111,15 @@ func serveRegistry(w http.ResponseWriter) {
 	sort.Strings(groupOrder)
 
 	type group struct {
-		Name    string    `json:"name"`
+		Name    string     `json:"name"`
+		Icon    string     `json:"icon"`
+		Desc    string     `json:"desc"`
 		Entries []VisEntry `json:"entries"`
 	}
 	groups := make([]group, 0, len(groupOrder))
 	for _, name := range groupOrder {
-		groups = append(groups, group{Name: name, Entries: groupMap[name]})
+		meta := groupMeta[name]
+		groups = append(groups, group{Name: name, Icon: meta.Icon, Desc: meta.Desc, Entries: groupMap[name]})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
