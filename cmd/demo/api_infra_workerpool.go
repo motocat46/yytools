@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -85,6 +86,55 @@ func handleInfraWorkerPool(w http.ResponseWriter, _ *http.Request) {
 		mutexPool.Close()
 	}
 
+	// Chart 3：任务排队延迟 P50/P90/P99 vs worker 数
+	// 固定 4 个并发提交方，每次提交 wpLatencyTasks 个任务；
+	// 任务体记录从 Submit 到执行开始的排队时延（µs）。
+	const (
+		wpLatencyTasks     = 10_000
+		wpLatencySubmitters = 4
+	)
+	latencyWorkerCounts := []int{1, 2, 4, 8, 16, 32}
+	xLabels3 := make([]string, len(latencyWorkerCounts))
+	p50s := make([]int64, len(latencyWorkerCounts))
+	p90s := make([]int64, len(latencyWorkerCounts))
+	p99s := make([]int64, len(latencyWorkerCounts))
+
+	for i, workers := range latencyWorkerCounts {
+		xLabels3[i] = fmt.Sprintf("%d", workers)
+
+		pool := wp.NewWorkerPool(workers, wpLatencyTasks)
+		ctx := context.Background()
+		latencies := make([]int64, 0, wpLatencyTasks)
+		var mu sync.Mutex
+		var wg sync.WaitGroup
+
+		perSubmitter := wpLatencyTasks / wpLatencySubmitters
+		for range wpLatencySubmitters {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for range perSubmitter {
+					submitAt := time.Now()
+					pool.Submit(ctx, func() { //nolint:errcheck
+						queueUs := time.Since(submitAt).Microseconds()
+						mu.Lock()
+						latencies = append(latencies, queueUs)
+						mu.Unlock()
+					})
+				}
+			}()
+		}
+		wg.Wait()
+		pool.Wait()
+		pool.Close()
+
+		sort.Slice(latencies, func(a, b int) bool { return latencies[a] < latencies[b] })
+		n := len(latencies)
+		p50s[i] = latencies[n*50/100]
+		p90s[i] = latencies[n*90/100]
+		p99s[i] = latencies[n*99/100]
+	}
+
 	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "WorkerPool 并发吞吐",
 		Charts: []chartData{
@@ -109,6 +159,18 @@ func handleInfraWorkerPool(w http.ResponseWriter, _ *http.Request) {
 					{Name: "Mutex（Submit 串行）", Data: mutexThroughput},
 				},
 			},
+			{
+				Type:      "line",
+				Title:     fmt.Sprintf("任务排队延迟分布 vs worker 数（%d 提交方，%d 个任务）", wpLatencySubmitters, wpLatencyTasks),
+				XAxis:     xLabels3,
+				XAxisName: "worker 数",
+				YAxisName: "µs",
+				Series: []chartSeries{
+					{Name: "P50 排队延迟", Data: p50s},
+					{Name: "P90 排队延迟", Data: p90s},
+					{Name: "P99 排队延迟", Data: p99s},
+				},
+			},
 		},
 	})
 }
@@ -116,7 +178,7 @@ func handleInfraWorkerPool(w http.ResponseWriter, _ *http.Request) {
 func init() {
 	Register(VisEntry{
 		Pkg: "pkg/infra", SubPkg: "concurrency/workerpool/", Title: "WorkerPool 并发吞吐",
-		Desc: "吞吐 vs worker 数（10万无操作任务）；RWMutex vs Mutex Submit 吞吐 vs 并发提交方数",
+		Desc: "吞吐 vs worker 数（10万无操作任务）；RWMutex vs Mutex Submit 吞吐 vs 并发提交方数；任务排队延迟 P50/P90/P99 vs worker 数",
 		Path: "/api/infra/workerpool", DataHandler: handleInfraWorkerPool,
 	})
 }

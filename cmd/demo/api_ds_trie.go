@@ -26,6 +26,8 @@ import (
 	trie_pkg "github.com/motocat46/yytools/pkg/ds/trie"
 )
 
+const triePrefixOpsPerMeasure = 200
+
 const (
 	trieOpsPerMeasure = 1000
 	trieCharset       = "abcdefghijklmnopqrstuvwxyz"
@@ -135,6 +137,49 @@ func handleDsTrie(w http.ResponseWriter, _ *http.Request) {
 		mapSearchNs[i] = time.Since(start).Nanoseconds() / trieOpsPerMeasure
 	}
 
+	// Chart 3：WithPrefix vs map O(n) 全量扫描耗时 vs 词典规模
+	// 固定前缀长度 4，key 长 16；前缀取自词典中第一个词的前 4 字符，确保有命中
+	const (
+		prefixKeyLen  = 16
+		prefixLen     = 4
+		prefixOps     = triePrefixOpsPerMeasure
+	)
+	prefixDictSizes := []int{10000, 50000, 100000, 200000, 500000}
+	xLabels3 := make([]string, len(prefixDictSizes))
+	withPrefixNs := make([]int64, len(prefixDictSizes))
+	mapScanNs := make([]int64, len(prefixDictSizes))
+
+	for i, n := range prefixDictSizes {
+		xLabels3[i] = fmt.Sprintf("%d万", n/10000)
+
+		t3, words3 := fillTrie(n, prefixKeyLen)
+		prefix := words3[0][:prefixLen] // 确保有命中结果的前缀
+
+		// 构建等价 map
+		m3 := make(map[string]bool, n)
+		for _, w := range words3 {
+			m3[w] = true
+		}
+
+		// Trie WithPrefix：O(L + k)，与词典规模无关
+		start := time.Now()
+		for range prefixOps {
+			_ = t3.WithPrefix(prefix)
+		}
+		withPrefixNs[i] = time.Since(start).Nanoseconds() / prefixOps
+
+		// map 全量扫描：O(n)，随词典线性增长
+		start = time.Now()
+		for range prefixOps {
+			for w := range m3 {
+				if strings.HasPrefix(w, prefix) {
+					_ = w
+				}
+			}
+		}
+		mapScanNs[i] = time.Since(start).Nanoseconds() / prefixOps
+	}
+
 	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
 		Title: "Trie 操作耗时",
 		Charts: []chartData{
@@ -161,6 +206,17 @@ func handleDsTrie(w http.ResponseWriter, _ *http.Request) {
 					{Name: "map[string]bool lookup", Data: mapSearchNs},
 				},
 			},
+			{
+				Type:      "line",
+				Title:     fmt.Sprintf("WithPrefix vs map O(n) 扫描 — 前缀枚举耗时 vs 词典规模（前缀长 %d，key 长 %d，每规模 %d 次）", prefixLen, prefixKeyLen, prefixOps),
+				XAxis:     xLabels3,
+				XAxisName: "词典规模",
+				YAxisName: "ns/op",
+				Series: []chartSeries{
+					{Name: "Trie WithPrefix（O(L+k)，近似水平）", Data: withPrefixNs},
+					{Name: "map 全量扫描（O(n)，线性增长）", Data: mapScanNs},
+				},
+			},
 		},
 	})
 }
@@ -168,7 +224,7 @@ func handleDsTrie(w http.ResponseWriter, _ *http.Request) {
 func init() {
 	Register(VisEntry{
 		Pkg: "pkg/ds", SubPkg: "trie/", Title: "Trie 操作耗时",
-		Desc: "Insert/Search/HasPrefix 耗时 vs key 长度（O(L)特性）；Trie vs map Search 耗时 vs 词典规模",
+		Desc: "Insert/Search/HasPrefix 耗时 vs key 长度（O(L)特性）；Trie vs map Search 耗时 vs 词典规模；WithPrefix vs map O(n) 扫描耗时 vs 词典规模",
 		Path: "/api/ds/trie", DataHandler: handleDsTrie,
 	})
 }

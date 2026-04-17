@@ -12,6 +12,9 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 | 请求合并（singleflight） | `golang.org/x/sync/singleflight` | 防缓存击穿，相同 key 的并发请求只执行一次 |
 | 并发度控制（semaphore） | `golang.org/x/sync/semaphore` | 加权信号量，控制同时执行的 goroutine 数量 |
 | 布隆过滤器 | `github.com/bits-and-blooms/bloom/v3` | 误判率计算、动态扩容、序列化均已支持 |
+| 位图（稠密小宇宙） | `github.com/bits-and-blooms/bitset` | 稠密位操作首选；内存模型为连续 `[]uint64`（N 位占 N/8 字节），Set/Clear/Test/AND/OR/XOR 直接映射 CPU 指令，稠密场景速度最快；适合权限掩码、特征标志等位宽有限的场景；~1.5k stars，同作者维护 |
+| 位图（稀疏大宇宙） | `github.com/RoaringBitmap/roaring` | 压缩整数集合；自适应容器（稀疏用数组、稠密用 bitmap、连续段用 run），稀疏时内存远优于 bitset；支持 Rank/Select、跨语言序列化格式；InfluxDB、Netflix、Elasticsearch、Apache Spark 均在用；~2.9k stars。**选法：** 存「第 i 位是否为 1」用 bitset；存「整数 N 是否在集合里」且整数范围大或稀疏时用 roaring |
+| 图算法 | `github.com/dominikbraun/graph` | BFS/DFS/Dijkstra/拓扑排序/环检测/强连通分量/最小生成树；原生泛型 API，支持有向/无向/加权图，含 Graphviz 可视化输出；~90% 测试覆盖率；~2.1k stars |
 | 双端队列（Deque） | `github.com/gammazero/deque` | Ring buffer，所有操作 O(1) 均摊；PushFront/PushBack/PopFront/PopBack |
 | 切片/Map 工具函数 | `github.com/samber/lo` | 泛型版 Chunk/Flatten/Unique/GroupBy/Zip/Keys/Values/Filter/Map 等，覆盖 slicex/mapx 常见需求 |
 | 一致性哈希 | `github.com/buraksezer/consistent` | 虚拟节点、权重、bounded loads 全支持；适用于缓存分片、负载均衡 |
@@ -45,3 +48,10 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 遇到已有成熟实现的场景，优先引入经过生产验证的库，不在 yytools 中重复造轮子。
 
 判断是否应自己实现的标准：yytools 的实现是否比现有成熟库更有价值（如更轻量、更贴合 yytools API 风格、减少外部依赖）？若否，直接用成熟库。
+
+## 如何寻找候选库
+
+在决定引入或自己实现之前，按顺序执行以下两步：
+
+1. **先查 [awesome-go.com](https://awesome-go.com)**：Go 生态最权威的社区精选目录，按场景分类，覆盖全面，是查找候选库的第一入口。
+2. **再结合经验或 Google 搜索验证**：确认候选库的维护状态（最近提交、stars 趋势、open issues）、生产用户、与场景的契合度，选出最成熟可靠的选项后再决定是否引入。

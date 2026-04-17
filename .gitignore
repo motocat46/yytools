@@ -17,3 +17,4 @@ docs/superpowers/
 scripts/claude_to_kiro.sh
 .superpowers
 .claude/settings.local.json
+.configaudit.toml

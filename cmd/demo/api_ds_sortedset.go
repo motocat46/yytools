@@ -202,6 +202,96 @@ func handleDsSortedSetVsSlice(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+// lbEntry 是有序切片实现的排行榜条目。
+type lbEntry struct {
+	key   int
+	score float64
+}
+
+func handleDsSortedSetLeaderboard(w http.ResponseWriter, _ *http.Request) {
+	// 混合负载：80% UpdateScore + 20% GetRangeByRankDesc（Top-10）
+	// 衡量总吞吐（万 ops/秒）vs 排行榜规模
+	const (
+		lbOps    = 10_000 // 每规模操作次数
+		lbTopK   = 10
+		lbUpdate = 8 // 每 10 次操作中 8 次更新、2 次查询
+	)
+
+	sizes := []int{10000, 30000, 50000, 100000, 200000}
+	xLabels := make([]string, len(sizes))
+	ssThroughput := make([]int64, len(sizes))
+	sliceThroughput := make([]int64, len(sizes))
+
+	for i, n := range sizes {
+		xLabels[i] = fmt.Sprintf("%d万", n/10000)
+		rng := rand.New(rand.NewPCG(42, 0))
+
+		// 预填充 SortedSet
+		ss := ss_pkg.NewSortedSet[int, struct{}]()
+		scores := make([]float64, n)
+		for j := range n {
+			scores[j] = float64(rng.IntN(10_000_000))
+			ss.Insert(ss_pkg.NewNodeData(j, scores[j], struct{}{}))
+		}
+
+		// SortedSet 混合负载
+		rng2 := rand.New(rand.NewPCG(99, 0))
+		start := time.Now()
+		for op := range lbOps {
+			if op%10 < lbUpdate {
+				key := rng2.IntN(n)
+				ss.UpdateScore(key, float64(rng2.IntN(10_000_000)))
+			} else {
+				ss.GetRangeByRankDesc(1, lbTopK)
+			}
+		}
+		elapsed := time.Since(start)
+		ssThroughput[i] = int64(lbOps) * 1_000_000 / elapsed.Microseconds() / 10_000
+
+		// 有序切片混合负载（每次更新后 sort.Slice 重排）
+		sl := make([]lbEntry, n)
+		for j := range n {
+			sl[j] = lbEntry{j, scores[j]}
+		}
+		sort.Slice(sl, func(a, b int) bool { return sl[a].score > sl[b].score })
+
+		rng3 := rand.New(rand.NewPCG(99, 0))
+		start = time.Now()
+		for op := range lbOps {
+			if op%10 < lbUpdate {
+				key := rng3.IntN(n)
+				newScore := float64(rng3.IntN(10_000_000))
+				for k := range sl {
+					if sl[k].key == key {
+						sl[k].score = newScore
+						break
+					}
+				}
+				sort.Slice(sl, func(a, b int) bool { return sl[a].score > sl[b].score })
+			} else {
+				_ = sl[:lbTopK]
+			}
+		}
+		elapsed = time.Since(start)
+		sliceThroughput[i] = int64(lbOps) * 1_000_000 / elapsed.Microseconds() / 10_000
+	}
+
+	json.NewEncoder(w).Encode(pageData{ //nolint:errcheck
+		Title: "SortedSet 排行榜场景模拟",
+		Charts: []chartData{{
+			Type:      "line",
+			Title:     fmt.Sprintf("排行榜混合吞吐 vs 规模（%d%%更新分数 + %d%%查 Top-%d，共 %d 次操作）", lbUpdate*10, (10-lbUpdate)*10, lbTopK, lbOps),
+			XAxis:     xLabels,
+			XAxisName: "排行榜规模",
+			YAxisName: "万 ops/秒",
+			Series: []chartSeries{
+				{Name: fmt.Sprintf("SortedSet（O(log n) 更新 + O(%d) 查询）", lbTopK), Data: ssThroughput},
+				{Name: "有序切片（每次更新后 sort.Slice 重排，O(n log n)）", Data: sliceThroughput},
+			},
+		}},
+	})
+}
+
 func init() {
 	Register(VisEntry{
 		Pkg: "pkg/ds", SubPkg: "sorted_set/", Title: "SortedSet 各操作耗时",
@@ -212,5 +302,10 @@ func init() {
 		Pkg: "pkg/ds", SubPkg: "sorted_set/", Title: "跳表 vs 有序切片",
 		Desc: "批量 Insert 均摊 ns/op 对比：O(log n) vs O(n)（500~20000 元素）",
 		Path: "/api/ds/sortedset/vs", DataHandler: handleDsSortedSetVsSlice,
+	})
+	Register(VisEntry{
+		Pkg: "pkg/ds", SubPkg: "sorted_set/", Title: "排行榜场景模拟",
+		Desc: "80% UpdateScore + 20% Top-10 查询混合吞吐（万ops/秒）vs 规模；SortedSet vs 有序切片重排",
+		Path: "/api/ds/sortedset/leaderboard", DataHandler: handleDsSortedSetLeaderboard,
 	})
 }
