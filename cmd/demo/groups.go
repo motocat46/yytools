@@ -17,7 +17,7 @@ package main
 
 func init() {
 	RegisterGroup("pkg/algorithms", "⚡", "排序、搜索、数学工具、ID 生成")
-	RegisterGroup("pkg/ds", "🗂️", "堆、队列、跳表、LRU、Trie")
+	RegisterGroup("pkg/ds", "🗂️", "堆、队列、跳表、LRU、Trie、滑动窗口")
 	RegisterGroup("pkg/infra", "🔧", "并发原语、定时器、安全执行")
 	RegisterGroup("pkg/mechanics", "🎮", "概率分布与周期引擎")
 	RegisterGroup("pkg/slicex", "📦", "切片工具函数")
