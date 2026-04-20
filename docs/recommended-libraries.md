@@ -16,6 +16,7 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 | 位图（稀疏大宇宙） | `github.com/RoaringBitmap/roaring` | 压缩整数集合；自适应容器（稀疏用数组、稠密用 bitmap、连续段用 run），稀疏时内存远优于 bitset；支持 Rank/Select、跨语言序列化格式；InfluxDB、Netflix、Elasticsearch、Apache Spark 均在用；~2.9k stars。**选法：** 存「第 i 位是否为 1」用 bitset；存「整数 N 是否在集合里」且整数范围大或稀疏时用 roaring |
 | 图算法 | `github.com/dominikbraun/graph` | BFS/DFS/Dijkstra/拓扑排序/环检测/强连通分量/最小生成树；原生泛型 API，支持有向/无向/加权图，含 Graphviz 可视化输出；~90% 测试覆盖率；~2.1k stars |
 | 双端队列（Deque） | `github.com/gammazero/deque` | Ring buffer，所有操作 O(1) 均摊；PushFront/PushBack/PopFront/PopBack |
+| 综合数据结构库 | `github.com/emirpasic/gods` | Go 生态最全面的数据结构综合库；含 ArrayList/LinkedList、HashSet/TreeSet、HashMap/TreeMap/BTreeMap、RedBlackTree/AVLTree/BTree/BinaryHeap、PriorityQueue 等；v2 提供泛型 API；~16k stars。**不含**：Union-Find、Fenwick Tree、Segment Tree、Trie（专项需求仍需单独实现） |
 | 切片/Map 工具函数 | `github.com/samber/lo` | 泛型版 Chunk/Flatten/Unique/GroupBy/Zip/Keys/Values/Filter/Map 等，覆盖 slicex/mapx 常见需求 |
 | 一致性哈希 | `github.com/buraksezer/consistent` | 虚拟节点、权重、bounded loads 全支持；适用于缓存分片、负载均衡 |
 | singleflight 泛型封装 | `golang.org/x/sync/singleflight`（标准库）+ 自行封装泛型 wrapper | 标准库返回 `any`，需类型安全时自行写 ~10 行泛型 `Do[V any]` 包装即可，无需引入外部库 |
