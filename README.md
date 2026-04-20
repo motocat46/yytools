@@ -40,7 +40,8 @@ yytools/
 │   │   ├── ring_buffer/       # 固定容量环形缓冲区，写满时覆盖最旧元素
 │   │   ├── stack/             # 栈
 │   │   ├── sorted_set/        # 有序集合（跳表实现，类 Redis ZADD）
-│   │   └── trie/              # 前缀树
+│   │   ├── trie/              # 前缀树
+│   │   └── slidingwindow/     # 固定容量滑动窗口，O(1) Sum/Avg/Max/Min（单调双端队列）
 │   ├── infra/                 # 基础设施工具
 │   │   ├── concurrency/
 │   │   │   ├── unbounded_channel/  # 无大小限制的 Channel
@@ -104,7 +105,7 @@ go run ./cmd/demo http            # 启动排序性能可视化服务
 | 模块 | 功能简介 |
 |------|---------|
 | [pkg/algorithms](pkg/algorithms/README.md) | 排序、二分查找、数学工具、唯一 ID 生成 |
-| [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合、LRU 缓存、前缀树 |
+| [pkg/ds](pkg/ds/README.md) | 堆、队列、栈、有序集合、LRU 缓存、前缀树、滑动窗口 |
 | [pkg/mechanics](pkg/mechanics/README.md) | 游戏规则机制：渐进式权重周期、双层保底抽卡引擎、随机份额分配 |
 | [pkg/infra](pkg/infra/README.md) | panic 安全执行、时间工具、时间条件判断、OS 封装、无界 Channel、时间轮、延迟队列 |
 | [pkg/common](pkg/common/README.md) | 泛型类型约束、运行时断言框架、CPU 特性检测 |

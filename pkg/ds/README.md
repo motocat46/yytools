@@ -11,3 +11,4 @@
 | [sorted_set](sorted_set/README.md) | 有序集合（跳表实现），类 Redis ZADD/ZRANK/ZRANGE |
 | [lru](lru/README.md) | LRU 缓存（双向链表实现），带 TTL，并发安全；学习目的，生产推荐 hashicorp/golang-lru v2 |
 | [trie](trie/README.md) | 前缀树，支持 Unicode；Search/HasPrefix/WithPrefix/Delete，并发安全 |
+| [slidingwindow](slidingwindow/README.md) | 固定容量滑动窗口，O(1) Sum/Avg/Max/Min（单调双端队列） |
