@@ -43,7 +43,8 @@ yytools/
 │   │   ├── trie/              # 前缀树
 │   │   ├── slidingwindow/     # 固定容量滑动窗口，O(1) Sum/Avg/Max/Min（单调双端队列）
 │   │   ├── unionfind/         # 泛型并查集（DSU），O(α) Union/Find/Connected/Size/Count
-│   │   └── fenwicktree/       # 泛型树状数组（BIT），O(log n) 单点更新 + 前缀和 / 区间和
+│   │   ├── fenwicktree/       # 泛型树状数组（BIT），O(log n) 单点更新 + 前缀和 / 区间和
+│   │   └── sparsetable/       # 泛型稀疏表，O(n log n) 预处理后 O(1) 区间 min/max/GCD（仅静态数据）
 │   ├── infra/                 # 基础设施工具
 │   │   ├── concurrency/
 │   │   │   ├── unbounded_channel/  # 无大小限制的 Channel
