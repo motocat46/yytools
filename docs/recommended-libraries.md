@@ -15,8 +15,10 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 | 位图（稠密小宇宙） | `github.com/bits-and-blooms/bitset` | 稠密位操作首选；内存模型为连续 `[]uint64`（N 位占 N/8 字节），Set/Clear/Test/AND/OR/XOR 直接映射 CPU 指令，稠密场景速度最快；适合权限掩码、特征标志等位宽有限的场景；~1.5k stars，同作者维护 |
 | 位图（稀疏大宇宙） | `github.com/RoaringBitmap/roaring` | 压缩整数集合；自适应容器（稀疏用数组、稠密用 bitmap、连续段用 run），稀疏时内存远优于 bitset；支持 Rank/Select、跨语言序列化格式；InfluxDB、Netflix、Elasticsearch、Apache Spark 均在用；~2.9k stars。**选法：** 存「第 i 位是否为 1」用 bitset；存「整数 N 是否在集合里」且整数范围大或稀疏时用 roaring |
 | 图算法 | `github.com/dominikbraun/graph` | BFS/DFS/Dijkstra/拓扑排序/环检测/强连通分量/最小生成树；原生泛型 API，支持有向/无向/加权图，含 Graphviz 可视化输出；~90% 测试覆盖率；~2.1k stars |
+| 多模式字符串匹配（Aho-Corasick） | `github.com/cloudflare/ahocorasick` | 在文本中同时匹配多个关键词，O(n + 模式总长 + 匹配数)；Cloudflare 生产验证，BSD-3-Clause；~710 stars。**限制**：返回命中的词典下标，不返回文本中的位置偏移（offset）；无泛型，仅 `[]byte`/`[]string` 接口。适用场景：聊天过滤、关键词检测（只需判断是否命中）；需要精确 offset 时须自行实现 |
 | 双端队列（Deque） | `github.com/gammazero/deque` | Ring buffer，所有操作 O(1) 均摊；PushFront/PushBack/PopFront/PopBack |
 | 综合数据结构库 | `github.com/emirpasic/gods` | Go 生态最全面的数据结构综合库；含 ArrayList/LinkedList、HashSet/TreeSet、HashMap/TreeMap/BTreeMap、RedBlackTree/AVLTree/BTree/BinaryHeap、PriorityQueue 等；v2 提供泛型 API；~16k stars。**不含**：Union-Find、Fenwick Tree、Segment Tree、Trie（专项需求仍需单独实现） |
+| 泛型 Set（集合） | `github.com/deckarep/golang-set` | 泛型集合类型，支持 Union/Intersection/Difference/Contains；线程安全与非线程安全两种变体；Python set 语义；Docker、Ethereum、Hashicorp 等生产验证；~4.7k stars，v2 要求 Go 1.18+ |
 | 切片/Map 工具函数 | `github.com/samber/lo` | 泛型版 Chunk/Flatten/Unique/GroupBy/Zip/Keys/Values/Filter/Map 等，覆盖 slicex/mapx 常见需求 |
 | 一致性哈希 | `github.com/buraksezer/consistent` | 虚拟节点、权重、bounded loads 全支持；适用于缓存分片、负载均衡 |
 | singleflight 泛型封装 | `golang.org/x/sync/singleflight`（标准库）+ 自行封装泛型 wrapper | 标准库返回 `any`，需类型安全时自行写 ~10 行泛型 `Do[V any]` 包装即可，无需引入外部库 |
@@ -32,6 +34,7 @@ yytools 专注于轻量、无外部依赖的通用工具。以下场景已有成
 | 环境变量解析 | `github.com/caarlos0/env` | struct tag 解析环境变量，零依赖，支持 `time.Duration`、自定义类型、required/default；~6.1k stars |
 | 高性能结构化日志 | `go.uber.org/zap` | 比 `slog` 默认实现快 5-10x；可通过 `zapslog` 桥接作为 `slog.Handler` backend，业务代码仍面向标准 `slog` API |
 | 精确十进制计算 | `github.com/shopspring/decimal` | 避免浮点精度问题；金融/计费/汇率场景必备；支持四则运算、比较、序列化 |
+| 数值计算（线性代数/统计） | `gonum.org/v1/gonum` | Go 生态最全面的科学计算库；mat（矩阵）、stat（统计分布）、optimize（优化）、spatial（空间计算）等；~8.4k stars，活跃维护（v0.17.0，2026-01）。**注意**：依赖体积较大，无泛型；游戏开发主要价值在矩阵变换和统计分布，轻量场景直接用标准库 `math` 够用 |
 | goroutine 泄漏检测 | `go.uber.org/goleak` | 测试结束后检测残留 goroutine；用法：`defer goleak.VerifyNone(t)` 或 `TestMain` 中 `goleak.VerifyTestMain(m)`；**可作为 yytools test-only 依赖** |
 | goroutine pool | `github.com/panjf2000/ants` | 高性能有界 goroutine 池；`Release()`/`ReleaseTimeout()` 均等 worker 全部退出才返回，`Close()` 语义完整；~14k stars |
 | 定时任务调度 | `github.com/robfig/cron` | 标准 cron 表达式 + 秒级调度；`Stop()` 返回 `context.Context`，调用方通过 `<-ctx.Done()` 等待所有 job 完成；~14k stars |
