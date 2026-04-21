@@ -80,26 +80,26 @@ go test -bench=. -benchtime=3s -benchmem -count=1 ./pkg/ds/segtree/
 （运行后填写实际结果）
 
 ```text
-BenchmarkSegTree_Set/n=100-10             待填
-BenchmarkSegTree_Set/n=1000-10            待填
-BenchmarkSegTree_Set/n=10000-10           待填
-BenchmarkSegTree_Set/n=100000-10          待填
-BenchmarkSegTree_Set/n=1000000-10         待填
-BenchmarkSegTree_Apply/n=100-10           待填
-BenchmarkSegTree_Apply/n=1000-10          待填
-BenchmarkSegTree_Apply/n=10000-10         待填
-BenchmarkSegTree_Apply/n=100000-10        待填
-BenchmarkSegTree_Apply/n=1000000-10       待填
-BenchmarkSegTree_Query/n=100-10           待填
-BenchmarkSegTree_Query/n=1000-10          待填
-BenchmarkSegTree_Query/n=10000-10         待填
-BenchmarkSegTree_Query/n=100000-10        待填
-BenchmarkSegTree_Query/n=1000000-10       待填
-BenchmarkSegTree_Mixed/n=100-10           待填
-BenchmarkSegTree_Mixed/n=1000-10          待填
-BenchmarkSegTree_Mixed/n=10000-10         待填
-BenchmarkSegTree_Mixed/n=100000-10        待填
-BenchmarkSegTree_Mixed/n=1000000-10       待填
+BenchmarkSegTree_Set/n=100-10             78.67 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Set/n=1000-10            112.5 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Set/n=10000-10           156.6 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Set/n=100000-10          200.4 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Set/n=1000000-10         318.1 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Apply/n=100-10           122.1 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Apply/n=1000-10          201.3 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Apply/n=10000-10         290.7 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Apply/n=100000-10        399.3 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Apply/n=1000000-10       606.9 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Query/n=100-10           109.0 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Query/n=1000-10          181.4 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Query/n=10000-10         255.6 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Query/n=100000-10        370.8 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Query/n=1000000-10       532.4 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Mixed/n=100-10           119.1 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Mixed/n=1000-10          174.0 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Mixed/n=10000-10         241.7 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Mixed/n=100000-10        332.2 ns/op    0 B/op    0 allocs/op
+BenchmarkSegTree_Mixed/n=1000000-10       561.9 ns/op    0 B/op    0 allocs/op
 ```
 
 结论：所有操作 `0 allocs/op`，ns/op 随 n 增长呈 log 级缓慢上升（每规模倍增约增加一个 log 步）。
