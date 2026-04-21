@@ -41,6 +41,49 @@ mathx.Min(3, 5)   // 3
 mathx.Max(3.14, 2.71) // 3.14
 ```
 
+### PowMod（快速幂取模）
+
+`PowMod(base, exp, mod int64) int64`
+
+计算 `(base^exp) % mod`，时间复杂度 `O(log exp)`，零分配。
+要求 `mod > 0`、`exp >= 0`，并且中间乘积不溢出的前提为 `mod^2 < 2^63`。
+
+```go
+mathx.PowMod(2, 10, 1_000_000_007) // 1024
+mathx.PowMod(3, 0, 7)              // 1
+```
+
+### Comb（组合数单次查询）
+
+`Comb(n, k, mod int64) int64`
+
+返回 `C(n,k) mod mod`，时间复杂度 `O(k)`，适合偶发单次查询。
+当前实现基于 Fermat 小定理，要求：
+
+- `mod` 为质数
+- `n < mod`
+- `k < 0` 或 `k > n` 时返回 `0`
+
+```go
+mathx.Comb(5, 2, 1_000_000_007)  // 10
+mathx.Comb(10, 3, 1_000_000_007) // 120
+```
+
+### CombTable（组合数预计算表）
+
+`NewCombTable(maxN int, mod int64) *CombTable`
+
+`.C(n, k int) int64`
+
+建表时间 `O(maxN)`，单次查询 `O(1)`，适合同一质数模下大量查询。
+当前实现要求 `maxN < mod`；若需要处理 `n >= mod`，应改用 Lucas 定理。
+
+```go
+ct := mathx.NewCombTable(1000, 1_000_000_007)
+ct.C(20, 10)  // 184756
+ct.C(100, 3)  // 161700
+```
+
 ## 子模块
 
 | 子模块 | 功能 |
