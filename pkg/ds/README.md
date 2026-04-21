@@ -14,3 +14,4 @@
 | [slidingwindow](slidingwindow/README.md) | 固定容量滑动窗口，O(1) Sum/Avg/Max/Min（单调双端队列） |
 | [unionfind](unionfind/README.md) | 泛型并查集（DSU），O(α) Union/Find/Connected/Size/Count，支持任意 comparable 类型 |
 | [fenwicktree](fenwicktree/README.md) | 泛型树状数组（BIT），O(log n) 单点更新 + 前缀和 / 区间和，支持任意 Number 类型 |
+| [segtree](segtree/README.md) | ACL 风格泛型线段树（lazy 传播），O(log n) 区间更新 + 区间查询，支持任意 monoid |
