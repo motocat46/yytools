@@ -85,3 +85,43 @@ func TestNew_InitAllIdentity(t *testing.T) {
 		t.Errorf("QueryAll() 初始应为 0，got %d", got)
 	}
 }
+
+func TestSet_Basic(t *testing.T) {
+	s := newRangeAddSum(5)
+	s.Set(2, 10)
+	// Set 后 Query 还不存在，先用 QueryAll 验证
+	if got := s.QueryAll(); got != 10 {
+		t.Errorf("QueryAll() after Set(2,10): got %d, want 10", got)
+	}
+}
+
+func TestSet_BoundaryFirst(t *testing.T) {
+	s := newRangeAddSum(5)
+	s.Set(0, 42)
+	if got := s.QueryAll(); got != 42 {
+		t.Errorf("QueryAll() after Set(0,42): got %d, want 42", got)
+	}
+}
+
+func TestSet_BoundaryLast(t *testing.T) {
+	s := newRangeAddSum(5)
+	s.Set(4, 99)
+	if got := s.QueryAll(); got != 99 {
+		t.Errorf("QueryAll() after Set(4,99): got %d, want 99", got)
+	}
+}
+
+func TestSet_OutOfBoundsPanics(t *testing.T) {
+	s := newRangeAddSum(5)
+	for _, i := range []int{-1, 5} {
+		i := i
+		t.Run(itoa(i), func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("Set(%d, 0) 应触发 panic", i)
+				}
+			}()
+			s.Set(i, 0)
+		})
+	}
+}

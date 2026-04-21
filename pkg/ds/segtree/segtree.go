@@ -93,3 +93,26 @@ func (s *SegTree[T, L]) pushdown(v, lsize, rsize int) {
 	s.lazy[2*v+1] = s.compose(s.lazy[v], s.lazy[2*v+1])
 	s.lazy[v] = s.lazyZero
 }
+
+// Set 将下标 i 的元素赋值为 val。i ∈ [0, n)，O(log n)。
+// 越界触发 assert panic。
+func (s *SegTree[T, L]) Set(i int, val T) {
+	assert.Assert(i >= 0 && i < s.n, "segtree: Set 下标越界，i=", i, "n=", s.n)
+	s.setAt(1, 0, s.n-1, i, val)
+}
+
+func (s *SegTree[T, L]) setAt(v, l, r, i int, val T) {
+	if l == r {
+		s.tree[v] = val
+		s.lazy[v] = s.lazyZero
+		return
+	}
+	mid := (l + r) / 2
+	s.pushdown(v, mid-l+1, r-mid)
+	if i <= mid {
+		s.setAt(2*v, l, mid, i, val)
+	} else {
+		s.setAt(2*v+1, mid+1, r, i, val)
+	}
+	s.pushup(v)
+}
