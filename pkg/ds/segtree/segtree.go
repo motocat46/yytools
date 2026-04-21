@@ -13,8 +13,8 @@
 //
 // 作者:  yangyuan
 
-// Package segtree 提供 ACL 风格的泛型线段树骨架。
-// 当前已实现构造、长度查询、单点赋值和全量查询；区间查询与更复杂更新在后续任务补齐。
+// Package segtree 提供 ACL 风格的泛型 lazy 线段树骨架。
+// 当前已实现构造、长度查询、单点赋值、区间 lazy 更新、区间查询和全量查询。
 package segtree
 
 import "github.com/motocat46/yytools/pkg/common/assert"
