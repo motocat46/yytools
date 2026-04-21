@@ -97,7 +97,9 @@ func (s *SegTree[T, L]) pushdown(v, lsize, rsize int) {
 // Set 将下标 i 的元素赋值为 val。i ∈ [0, n)，O(log n)。
 // 越界触发 assert panic。
 func (s *SegTree[T, L]) Set(i int, val T) {
-	assert.Assert(i >= 0 && i < s.n, "segtree: Set 下标越界，i=", i, "n=", s.n)
+	if i < 0 || i >= s.n {
+		assert.Assert(false, "segtree: Set 下标越界，i=", i, "n=", s.n)
+	}
 	s.setAt(1, 0, s.n-1, i, val)
 }
 
@@ -116,4 +118,57 @@ func (s *SegTree[T, L]) setAt(v, l, r, i int, val T) {
 		s.setAt(2*v+1, mid+1, r, i, val)
 	}
 	s.pushup(v)
+}
+
+// Apply 对区间 [l, r] 内每个元素应用 lazy。l ≤ r，均 ∈ [0, n)，O(log n)。
+// 越界或 l > r 触发 assert panic。
+func (s *SegTree[T, L]) Apply(l, r int, lazy L) {
+	if l < 0 || r >= s.n || l > r {
+		assert.Assert(false, "segtree: Apply 参数非法，l=", l, "r=", r, "n=", s.n)
+	}
+	s.applyRange(1, 0, s.n-1, l, r, lazy)
+}
+
+func (s *SegTree[T, L]) applyRange(v, nodeL, nodeR, l, r int, lazy L) {
+	if l <= nodeL && nodeR <= r {
+		s.tree[v] = s.apply(s.tree[v], lazy, nodeR-nodeL+1)
+		s.lazy[v] = s.compose(lazy, s.lazy[v])
+		return
+	}
+	mid := (nodeL + nodeR) / 2
+	s.pushdown(v, mid-nodeL+1, nodeR-mid)
+	if l <= mid {
+		s.applyRange(2*v, nodeL, mid, l, r, lazy)
+	}
+	if r > mid {
+		s.applyRange(2*v+1, mid+1, nodeR, l, r, lazy)
+	}
+	s.pushup(v)
+}
+
+// Query 返回区间 [l, r] 的合并结果。l ≤ r，均 ∈ [0, n)，O(log n)。
+// 越界或 l > r 触发 assert panic。
+func (s *SegTree[T, L]) Query(l, r int) T {
+	if l < 0 || r >= s.n || l > r {
+		assert.Assert(false, "segtree: Query 参数非法，l=", l, "r=", r, "n=", s.n)
+	}
+	return s.queryRange(1, 0, s.n-1, l, r)
+}
+
+func (s *SegTree[T, L]) queryRange(v, nodeL, nodeR, l, r int) T {
+	if l <= nodeL && nodeR <= r {
+		return s.tree[v]
+	}
+	mid := (nodeL + nodeR) / 2
+	s.pushdown(v, mid-nodeL+1, nodeR-mid)
+	if r <= mid {
+		return s.queryRange(2*v, nodeL, mid, l, r)
+	}
+	if l > mid {
+		return s.queryRange(2*v+1, mid+1, nodeR, l, r)
+	}
+	return s.merge(
+		s.queryRange(2*v, nodeL, mid, l, r),
+		s.queryRange(2*v+1, mid+1, nodeR, l, r),
+	)
 }
