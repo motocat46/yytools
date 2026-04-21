@@ -1,0 +1,93 @@
+// Copyright [yangyuan]
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// 作者:  yangyuan
+
+// Package segtree 实现 ACL 风格泛型线段树（Segment Tree with Lazy Propagation）。
+// 支持两个独立类型参数 T（节点值）和 L（lazy 标记），调用方注入 merge/apply/compose 函数。
+// 提供 O(log n) 的单点赋值、区间 lazy 更新和区间查询；对外 0-indexed，非并发安全。
+package segtree
+
+import "github.com/motocat46/yytools/pkg/common/assert"
+
+// SegTree 是 ACL 风格泛型线段树（带 lazy 传播）。
+// 零值不可用，必须通过 New 创建；非并发安全。
+type SegTree[T, L any] struct {
+	n        int
+	tree     []T
+	lazy     []L
+	identity T
+	merge    func(T, T) T
+	lazyZero L
+	apply    func(T, L, int) T
+	compose  func(L, L) L
+}
+
+// New 创建容量为 n 的线段树。
+//
+// 参数语义：
+//   - identity：T 的单位元（sum→0, min→MaxInt, max→MinInt）；merge(identity, x)==x 须成立
+//   - merge：合并两段结果，须满足结合律
+//   - lazyZero：lazy 的零值，表示"无操作"；apply(val, lazyZero, size)==val 须成立；compose(lazyZero, x)==x 须成立
+//   - apply：将 lazy 作用到节点值；第三个参数为区间长度（sum 场景需用到）
+//   - compose：组合两个 lazy，新 lazy 在前，旧 lazy 在后
+//
+// n 须 > 0，否则 assert panic。
+func New[T, L any](
+	n int,
+	identity T,
+	merge func(T, T) T,
+	lazyZero L,
+	apply func(T, L, int) T,
+	compose func(L, L) L,
+) *SegTree[T, L] {
+	assert.Assert(n > 0, "segtree: n 须 > 0，实际值:", n)
+	s := &SegTree[T, L]{
+		n:        n,
+		tree:     make([]T, 4*n),
+		lazy:     make([]L, 4*n),
+		identity: identity,
+		merge:    merge,
+		lazyZero: lazyZero,
+		apply:    apply,
+		compose:  compose,
+	}
+	for i := range s.tree {
+		s.tree[i] = identity
+	}
+	for i := range s.lazy {
+		s.lazy[i] = lazyZero
+	}
+	return s
+}
+
+// Len 返回容量 n。O(1)。
+func (s *SegTree[T, L]) Len() int { return s.n }
+
+// QueryAll 返回全区间 [0, n) 的合并结果。O(1)。
+func (s *SegTree[T, L]) QueryAll() T { return s.tree[1] }
+
+// pushup 用左右子节点更新当前节点。
+func (s *SegTree[T, L]) pushup(v int) {
+	s.tree[v] = s.merge(s.tree[2*v], s.tree[2*v+1])
+}
+
+// pushdown 将当前节点 lazy 下传给左右子节点，然后将自身 lazy 清零。
+// lsize/rsize 为左右子区间长度。始终下传（不判零值），依赖 lazyZero 为 apply 单位元。
+func (s *SegTree[T, L]) pushdown(v, lsize, rsize int) {
+	s.tree[2*v] = s.apply(s.tree[2*v], s.lazy[v], lsize)
+	s.tree[2*v+1] = s.apply(s.tree[2*v+1], s.lazy[v], rsize)
+	s.lazy[2*v] = s.compose(s.lazy[v], s.lazy[2*v])
+	s.lazy[2*v+1] = s.compose(s.lazy[v], s.lazy[2*v+1])
+	s.lazy[v] = s.lazyZero
+}
