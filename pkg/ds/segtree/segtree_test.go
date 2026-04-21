@@ -95,6 +95,24 @@ func TestSet_Basic(t *testing.T) {
 	}
 }
 
+func TestSet_OverwritesSameIndex(t *testing.T) {
+	s := newRangeAddSum(5)
+	s.Set(2, 10)
+	s.Set(2, 3)
+	if got := s.QueryAll(); got != 3 {
+		t.Errorf("QueryAll() after Set(2,10) then Set(2,3): got %d, want 3", got)
+	}
+}
+
+func TestSet_SumsDifferentIndexes(t *testing.T) {
+	s := newRangeAddSum(5)
+	s.Set(1, 4)
+	s.Set(3, 6)
+	if got := s.QueryAll(); got != 10 {
+		t.Errorf("QueryAll() after Set(1,4) then Set(3,6): got %d, want 10", got)
+	}
+}
+
 func TestSet_BoundaryFirst(t *testing.T) {
 	s := newRangeAddSum(5)
 	s.Set(0, 42)

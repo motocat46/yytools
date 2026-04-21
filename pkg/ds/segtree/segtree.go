@@ -14,7 +14,7 @@
 // 作者:  yangyuan
 
 // Package segtree 提供 ACL 风格的泛型线段树骨架。
-// 当前 Task 1 仅实现构造、长度查询和全量查询；更新与区间查询在后续任务补齐。
+// 当前已实现构造、长度查询、单点赋值和全量查询；区间查询与更复杂更新在后续任务补齐。
 package segtree
 
 import "github.com/motocat46/yytools/pkg/common/assert"
@@ -101,6 +101,7 @@ func (s *SegTree[T, L]) Set(i int, val T) {
 	s.setAt(1, 0, s.n-1, i, val)
 }
 
+// setAt 在区间 [l, r] 内递归定位下标 i，并用 val 覆盖叶子后向上回收。
 func (s *SegTree[T, L]) setAt(v, l, r, i int, val T) {
 	if l == r {
 		s.tree[v] = val
