@@ -13,9 +13,8 @@
 //
 // 作者:  yangyuan
 
-// Package segtree 实现 ACL 风格泛型线段树（Segment Tree with Lazy Propagation）。
-// 支持两个独立类型参数 T（节点值）和 L（lazy 标记），调用方注入 merge/apply/compose 函数。
-// 提供 O(log n) 的单点赋值、区间 lazy 更新和区间查询；对外 0-indexed，非并发安全。
+// Package segtree 提供 ACL 风格的泛型线段树骨架。
+// 当前 Task 1 仅实现构造、长度查询和全量查询；更新与区间查询在后续任务补齐。
 package segtree
 
 import "github.com/motocat46/yytools/pkg/common/assert"
@@ -52,6 +51,9 @@ func New[T, L any](
 	compose func(L, L) L,
 ) *SegTree[T, L] {
 	assert.Assert(n > 0, "segtree: n 须 > 0，实际值:", n)
+	assert.Assert(merge != nil, "segtree: merge 不能为空")
+	assert.Assert(apply != nil, "segtree: apply 不能为空")
+	assert.Assert(compose != nil, "segtree: compose 不能为空")
 	s := &SegTree[T, L]{
 		n:        n,
 		tree:     make([]T, 4*n),
