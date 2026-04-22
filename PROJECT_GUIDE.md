@@ -16,11 +16,12 @@ yytools: Go utilities library. Cover algorithms, data structures, common tools. 
 
 ### Core Structure
 - `pkg/`: core packages by domain
-  - `algorithms/`: `binary_search/`, `mathx/` (`bits/`, `overflow/`, `probability_distribution/`, `random/`), `sort/`, `idgen/snowflake/`
+  - `algorithms/`: `binary_search/`, `mathx/` (`bits/`, `overflow/`, `probability_distribution/`, `random/`, `sampling/`), `sort/`, `idgen/snowflake/`
   - `slicex/`: slice helpers (`MinInSlice`, `MaxInSlice`, `MinBy`, `MaxBy`, etc.)
   - `common/`: `assert/`, `base/`, `cpu/`
   - `numconst/`: numeric + time constants
-  - `ds/`: `heap/`, `queue/`, `stack/`, `sorted_set/`, `lru/`, `trie/`, `sparsetable/`
+  - `ds/`: `heap/`, `queue/`, `stack/`, `sorted_set/`, `lru/`, `trie/`, `sparsetable/`, `ring_buffer/`, `slidingwindow/`, `fenwicktree/`, `segtree/`, `unionfind/`
+  - `mechanics/`: `distribution/` (`progressive_weight_cycle/`, `random_split/`, `tiered_cycle/`)
   - `infra/`: `safeexec/`, `timeutil/`, `timecond/`, `os/`, `concurrency/unbounded_channel/`, `concurrency/workerpool/`, `timer/timingwheel/`, `timer/delayqueue/`
     - `unbounded_channel/`: 机制层，调用方管生命周期
     - `workerpool/`: 机制层，调用方管生命周期；内部业务项目经工程基础层 `TaskExecutor`
