@@ -20,7 +20,7 @@ yytools: Go utilities library. Cover algorithms, data structures, common tools. 
   - `slicex/`: slice helpers (`MinInSlice`, `MaxInSlice`, `MinBy`, `MaxBy`, etc.)
   - `common/`: `assert/`, `base/`, `cpu/`
   - `numconst/`: numeric + time constants
-  - `ds/`: `heap/`, `queue/`, `stack/`, `sorted_set/`, `lru/`, `trie/`
+  - `ds/`: `heap/`, `queue/`, `stack/`, `sorted_set/`, `lru/`, `trie/`, `sparsetable/`
   - `infra/`: `safeexec/`, `timeutil/`, `timecond/`, `os/`, `concurrency/unbounded_channel/`, `concurrency/workerpool/`, `timer/timingwheel/`, `timer/delayqueue/`
     - `unbounded_channel/`: 机制层，调用方管生命周期
     - `workerpool/`: 机制层，调用方管生命周期；内部业务项目经工程基础层 `TaskExecutor`
@@ -83,6 +83,11 @@ git 失败通常反映意图，不当偶发错误绕过。
 | `DESIGN.md` | 选型理由、关键决策、踩坑 |
 
 pre-commit hook 自动检查。缺任一文件直接拒绝 commit。纯常量包等例外可用 `git commit --no-verify`，message 说明原因。
+
+**首次克隆后激活 hook（必须）：**
+```bash
+git config core.hooksPath .githooks
+```
 
 ### 数据结构 API 边界规范
 

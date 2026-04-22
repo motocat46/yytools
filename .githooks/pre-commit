@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pre-commit: 两项检查
+#   1. 新建 pkg/ 叶子包必须在同一次 commit 中包含 README.md + TEST.md + DESIGN.md
+#   2. 全量测试（含竞态检测）通过
+
+set -euo pipefail
+
+# ── 检查 1：新建 pkg/ 包文档完整性 ─────────────────────────────────────────
+
+staged=$(git diff --cached --name-only 2>/dev/null) || true
+
+staged_dirs=$(printf '%s\n' "$staged" \
+    | grep '^pkg/.*\.go$' \
+    | sed 's|/[^/]*$||' \
+    | sort -u) || true
+
+if [ -n "$staged_dirs" ]; then
+    doc_fail=0
+    head_go_files=$(git ls-tree -r HEAD --name-only 2>/dev/null || true)
+    while IFS= read -r dir; do
+        [ -z "$dir" ] && continue
+        # 在 HEAD 中该目录已有 .go 文件 → 已有包，跳过
+        if printf '%s\n' "$head_go_files" | grep -q "^${dir}/[^/]*\.go$"; then
+            continue
+        fi
+        # 新包：README.md + TEST.md + DESIGN.md 必须出现在本次提交的 index 快照中。
+        # 不能只看 staged 列表；文档可能已在较早一次提交中加入，本次只改 .go 文件。
+        for doc in README.md TEST.md DESIGN.md; do
+            if ! git cat-file -e ":${dir}/${doc}" 2>/dev/null; then
+                printf '  缺少 %s/%s\n' "$dir" "$doc"
+                doc_fail=1
+            fi
+        done
+    done <<< "$staged_dirs"
+
+    if [ "$doc_fail" -ne 0 ]; then
+        printf '\n❌ pre-commit 拒绝：新建 pkg/ 叶子包必须在同一次 commit 中包含 README.md + TEST.md + DESIGN.md\n'
+        printf '   纯常量包等例外情况请使用 git commit --no-verify 并在 message 中说明原因\n'
+        exit 1
+    fi
+fi
+
+# ── 检查 2：全量测试（含竞态检测）─────────────────────────────────────────
+
+echo "▶ 运行测试（-race）..."
+go test -race ./... -count=1
+
+echo "✓ 测试全部通过。"
